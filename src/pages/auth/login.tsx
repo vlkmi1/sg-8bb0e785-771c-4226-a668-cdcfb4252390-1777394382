@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Brain } from "lucide-react";
 import Link from "next/link";
 import { SEO } from "@/components/SEO";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Login() {
   const router = useRouter();
@@ -16,16 +17,57 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
+
+    console.log("Login: Starting login process...");
 
     try {
-      await authService.signIn(email, password);
-      router.push("/");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Chyba při přihlášení");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      console.log("Login: Auth response:", {
+        hasData: !!data,
+        hasSession: !!data?.session,
+        hasUser: !!data?.user,
+        userId: data?.user?.id,
+        email: data?.user?.email,
+        error: error?.message
+      });
+
+      if (error) {
+        console.error("Login: Auth error:", error);
+        throw error;
+      }
+
+      if (!data.session) {
+        console.error("Login: No session returned from Supabase");
+        throw new Error("Přihlášení selhalo - nebyla vytvořena session");
+      }
+
+      console.log("Login: Session created successfully, redirecting...");
+      
+      toast({
+        title: "Úspěch",
+        description: "Přihlášení proběhlo úspěšně",
+      });
+
+      // Počkat chvíli, aby se session uložila
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Login: Error:", error);
+      setError(error.message || "Nepodařilo se přihlásit");
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se přihlásit",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -61,7 +103,7 @@ export default function Login() {
             <CardDescription>Vstupte do světa AI modelů</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               {error && (
                 <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
                   {error}
