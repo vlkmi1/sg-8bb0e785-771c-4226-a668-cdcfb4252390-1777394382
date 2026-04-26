@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
-export type SocialPlatform = "facebook" | "instagram" | "linkedin" | "twitter";
+export type SocialPlatform = "facebook" | "instagram" | "linkedin" | "twitter" | "youtube" | "tiktok";
 export type PostStatus = "draft" | "scheduled" | "published" | "failed";
 
 export type SocialPost = Tables<"social_posts">;
@@ -121,6 +121,19 @@ export const socialPostsService = {
       instagram: `✨ ${topic}\n\n📸 Tento obsah inspiruje! 🎨\n\n#${topic.replace(/\s/g, "")} #InstaDaily #Inspiration`,
       linkedin: `${topic}\n\nProfesionální pohled na tuto problematiku. Jaké jsou vaše zkušenosti?\n\n#${topic.replace(/\s/g, "")} #LinkedIn #Professional`,
       twitter: `🚀 ${topic}\n\nKrátce a výstižně o aktuálním tématu!\n\n#${topic.replace(/\s/g, "")}`,
+    };
+
+    return templates[platform] || topic;
+  },
+
+  getTemplateForPlatform(platform: SocialPlatform, topic: string): string {
+    const templates: Record<SocialPlatform, string> = {
+      facebook: `${topic}\n\nCo si o tom myslíte? Podělte se o svůj názor v komentářích! 💬`,
+      instagram: `${topic} ✨\n\n#${topic.replace(/\s/g, "")} #AI #Tech #Innovation`,
+      linkedin: `🚀 ${topic}\n\nV dnešní době je důležité držet krok s nejnovějším vývojem. Rád se s vámi podělím o své poznatky.\n\n#ProfessionalDevelopment #Technology`,
+      twitter: `${topic}\n\n#${topic.replace(/\s/g, "")}`,
+      youtube: `${topic}\n\n📹 Sledujte celé video pro více informací!\n👍 Dejte like, pokud se vám to líbí\n🔔 Zapněte notifikace pro další obsah\n\n#${topic.replace(/\s/g, "")} #YouTube #Video`,
+      tiktok: `${topic} 🎵\n\n✨ Sleduj pro víc\n❤️ Like pokud souhlasíš\n💬 Napiš do komentářů\n\n#${topic.replace(/\s/g, "")} #FYP #Viral #TikTok`,
     };
 
     return templates[platform] || topic;

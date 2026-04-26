@@ -28,6 +28,8 @@ const SOCIAL_PLATFORMS = [
   { id: "instagram", name: "Instagram", icon: "📷", description: "Fotky a Stories" },
   { id: "linkedin", name: "LinkedIn", icon: "💼", description: "Profesionální síť" },
   { id: "twitter", name: "Twitter/X", icon: "𝕏", description: "Krátké zprávy a tweety" },
+  { id: "youtube", name: "YouTube", icon: "📹", description: "Video obsah a komunita" },
+  { id: "tiktok", name: "TikTok", icon: "🎵", description: "Krátká videa a trendy" },
 ];
 
 export default function Settings() {

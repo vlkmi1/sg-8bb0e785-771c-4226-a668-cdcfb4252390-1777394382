@@ -10,20 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Share2, Sparkles, LogOut, Loader2, Coins, Calendar, Trash2, Eye, Settings } from "lucide-react";
+import { Share2, Sparkles, LogOut, Loader2, Coins, Calendar, Trash2, Eye, Settings, ImageIcon } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { SocialPreview } from "@/components/SocialPreview";
-import { socialPostsService, type SocialPlatform, type SocialPost } from "@/services/socialPostsService";
+import { socialPostsService, type SocialPlatform, type SocialPost, type SocialAccount } from "@/services/socialPostsService";
 import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
 
-const PLATFORM_INFO = {
-  facebook: { name: "Facebook", icon: "📘", color: "bg-blue-600" },
-  instagram: { name: "Instagram", icon: "📷", color: "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600" },
-  linkedin: { name: "LinkedIn", icon: "💼", color: "bg-blue-700" },
-  twitter: { name: "Twitter/X", icon: "𝕏", color: "bg-blue-400" },
-};
+const PLATFORMS = [
+  { id: "facebook", name: "Facebook", icon: "📘", description: "Standardní příspěvek" },
+  { id: "instagram", name: "Instagram", icon: "📷", description: "Fotka s popiskem" },
+  { id: "linkedin", name: "LinkedIn", icon: "💼", description: "Profesionální post" },
+  { id: "twitter", name: "Twitter/X", icon: "𝕏", description: "Tweet (max 280 znaků)" },
+  { id: "youtube", name: "YouTube", icon: "📹", description: "Video popis a komunita" },
+  { id: "tiktok", name: "TikTok", icon: "🎵", description: "Krátké video s textem" },
+];
 
 export default function SocialPosts() {
   const router = useRouter();
