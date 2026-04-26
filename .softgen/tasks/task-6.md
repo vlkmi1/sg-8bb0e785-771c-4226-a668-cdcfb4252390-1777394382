@@ -1,6 +1,6 @@
 ---
 title: Kreditní systém pro generování
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [backend, credits, ui]
@@ -13,13 +13,13 @@ position: 5
 Implementace jednoduchého kreditního systému pro sledování zbývajících generací. Uživatelé mají určitý počet kreditů, které se odečítají při každém volání AI (chat zprávy, generování obrázků).
 
 ## Checklist
-- [ ] Přidat pole credits (integer) do tabulky profiles s defaultní hodnotou
-- [ ] Vytvořit službu pro správu kreditů (kontrola, odečet, přidání)
-- [ ] Zobrazit zbývající kredity v hlavičce aplikace
-- [ ] Upravit chat službu aby odečítala kredity při posílání zprávy
-- [ ] Upravit image generation službu aby odečítala kredity
-- [ ] Přidat admin rozhraní pro přidávání kreditů uživatelům
-- [ ] Zobrazit varování když kredity dojdou
+- [x] Přidat pole credits (integer) do tabulky profiles s defaultní hodnotou
+- [x] Vytvořit službu pro správu kreditů (kontrola, odečet, přidání)
+- [x] Zobrazit zbývající kredity v hlavičce aplikace
+- [x] Upravit chat službu aby odečítala kredity při posílání zprávy
+- [x] Upravit image generation službu aby odečítala kredity
+- [x] Přidat admin rozhraní pro přidávání kreditů uživatelům
+- [x] Zobrazit varování když kredity dojdou
 
 ## Acceptance
 - Uživatel vidí své zbývající kredity v hlavičce

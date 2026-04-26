@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, Sparkles, LogOut, Loader2 } from "lucide-react";
+import { ImageIcon, Sparkles, LogOut, Loader2, Coins } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ImageGallery } from "@/components/ImageGallery";
 import { imageGenerationService, type ImageProvider, type GeneratedImage } from "@/services/imageGenerationService";
+import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
 
 const IMAGE_PROVIDERS = [
@@ -32,10 +33,21 @@ export default function Generate() {
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [activeTab, setActiveTab] = useState("generate");
+  const [credits, setCredits] = useState(0);
 
   useEffect(() => {
     loadImages();
+    loadCredits();
   }, []);
+
+  const loadCredits = async () => {
+    try {
+      const userCredits = await creditsService.getCredits();
+      setCredits(userCredits);
+    } catch (error) {
+      console.error("Error loading credits:", error);
+    }
+  };
 
   const loadImages = async () => {
     try {
@@ -50,6 +62,11 @@ export default function Generate() {
     e.preventDefault();
     if (!prompt.trim()) return;
 
+    if (credits < 2) {
+      alert("Nemáte dostatek kreditů. Generování obrázku stojí 2 kredity. Kontaktujte administrátora.");
+      return;
+    }
+
     setLoading(true);
     try {
       await imageGenerationService.generateImage({
@@ -57,12 +74,18 @@ export default function Generate() {
         provider,
         size,
       });
+
+      const newCredits = await creditsService.deductCredits(2);
+      setCredits(newCredits);
       
       await loadImages();
       setPrompt("");
       setActiveTab("gallery");
     } catch (error) {
       console.error("Error generating image:", error);
+      if (error instanceof Error && error.message.includes("Insufficient credits")) {
+        alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
+      }
     } finally {
       setLoading(false);
     }
@@ -95,6 +118,11 @@ export default function Generate() {
                 <h1 className="text-lg font-heading font-bold">Generování obrázků</h1>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
+                  <Coins className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-medium">{credits}</span>
+                  <span className="text-xs text-muted-foreground">kreditů</span>
+                </div>
                 <Button variant="ghost" onClick={() => router.push("/")}>
                   Dashboard
                 </Button>

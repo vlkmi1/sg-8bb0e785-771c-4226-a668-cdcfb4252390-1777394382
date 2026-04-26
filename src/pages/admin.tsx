@@ -1,17 +1,21 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Shield, Key, CheckCircle2, XCircle, Home, LogOut, Save, Trash2 } from "lucide-react";
+import { Shield, Key, CheckCircle2, XCircle, LogOut, Coins, Plus } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
-import { adminService, type AdminSetting } from "@/services/adminService";
-import { useToast } from "@/hooks/use-toast";
+import { adminService } from "@/services/adminService";
+import { creditsService } from "@/services/creditsService";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+type AdminSetting = Tables<"admin_settings">;
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5, DALL-E" },
@@ -25,140 +29,107 @@ const AI_PROVIDERS = [
 
 export default function Admin() {
   const router = useRouter();
-  const { toast } = useToast();
-  const [settings, setSettings] = useState<AdminSetting[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [adminSettings, setAdminSettings] = useState<AdminSetting[]>([]);
+  const [users, setUsers] = useState<Array<{ id: string; email: string; full_name: string | null; credits: number }>>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [modelName, setModelName] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [creditsToAdd, setCreditsToAdd] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadSettings();
+    loadAdminSettings();
+    loadUsers();
   }, []);
 
-  const loadSettings = async () => {
+  const loadAdminSettings = async () => {
     try {
       const data = await adminService.getAdminSettings();
-      setSettings(data);
+      setAdminSettings(data);
     } catch (error) {
-      console.error("Error loading settings:", error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se načíst nastavení",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error("Error loading admin settings:", error);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const data = await creditsService.getAllUsersCredits();
+      setUsers(data);
+    } catch (error) {
+      console.error("Error loading users:", error);
     }
   };
 
   const handleOpenDialog = (providerId: string) => {
     setSelectedProvider(providerId);
-    const existing = settings.find(s => s.provider === providerId);
+    const existing = adminSettings.find(s => s.provider === providerId);
     if (existing) {
       setApiKey(existing.api_key);
-      setModelName(existing.model_name || "");
     } else {
       setApiKey("");
-      setModelName("");
     }
     setDialogOpen(true);
   };
 
-  const handleSave = async (e: FormEvent) => {
+  const handleSaveApiKey = async (e: FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim()) return;
 
-    setSaving(true);
+    setLoading(true);
     try {
-      const existing = settings.find(s => s.provider === selectedProvider);
+      const existing = adminSettings.find(s => s.provider === selectedProvider);
       
       if (existing) {
         await adminService.updateAdminSetting(selectedProvider, {
           api_key: apiKey,
-          model_name: modelName || undefined,
-        });
-        toast({
-          title: "Uloženo",
-          description: `API klíč pro ${AI_PROVIDERS.find(p => p.id === selectedProvider)?.name} byl aktualizován`,
         });
       } else {
         await adminService.createAdminSetting({
           provider: selectedProvider,
           api_key: apiKey,
-          model_name: modelName || undefined,
-        });
-        toast({
-          title: "Přidáno",
-          description: `API klíč pro ${AI_PROVIDERS.find(p => p.id === selectedProvider)?.name} byl přidán`,
         });
       }
 
-      await loadSettings();
+      await loadAdminSettings();
       setDialogOpen(false);
       setApiKey("");
-      setModelName("");
     } catch (error) {
       console.error("Error saving setting:", error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se uložit API klíč",
-        variant: "destructive",
-      });
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleToggle = async (provider: string, isActive: boolean) => {
-    try {
-      await adminService.toggleAdminSetting(provider, !isActive);
-      await loadSettings();
-      toast({
-        title: isActive ? "Deaktivováno" : "Aktivováno",
-        description: `API klíč pro ${AI_PROVIDERS.find(p => p.id === provider)?.name} byl ${isActive ? 'deaktivován' : 'aktivován'}`,
-      });
-    } catch (error) {
-      console.error("Error toggling setting:", error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se změnit stav",
-        variant: "destructive",
-      });
-    }
-  };
+  const handleAddCredits = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId || !creditsToAdd) return;
 
-  const handleDelete = async (provider: string) => {
-    if (!confirm(`Opravdu chcete smazat API klíč pro ${AI_PROVIDERS.find(p => p.id === provider)?.name}?`)) {
+    const amount = parseInt(creditsToAdd);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Zadejte platné číslo kreditů");
       return;
     }
 
+    setLoading(true);
     try {
-      await adminService.deleteAdminSetting(provider);
-      await loadSettings();
-      toast({
-        title: "Smazáno",
-        description: `API klíč pro ${AI_PROVIDERS.find(p => p.id === provider)?.name} byl smazán`,
-      });
+      await creditsService.addCredits(selectedUserId, amount);
+      await loadUsers();
+      setCreditsDialogOpen(false);
+      setSelectedUserId("");
+      setCreditsToAdd("");
     } catch (error) {
-      console.error("Error deleting setting:", error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se smazat API klíč",
-        variant: "destructive",
-      });
+      console.error("Error adding credits:", error);
+      alert("Chyba při přidávání kreditů");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
-  };
-
-  const getProviderSetting = (providerId: string) => {
-    return settings.find(s => s.provider === providerId);
   };
 
   return (
@@ -190,132 +161,216 @@ export default function Admin() {
         </header>
 
         <main className="container mx-auto px-6 py-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-2xl font-heading font-bold mb-2">Centrální API klíče</h2>
-              <p className="text-muted-foreground">
-                Nastavte API klíče pro jednotlivé poskytovatele. Všichni uživatelé budou využívat tyto centrální klíče.
-              </p>
-            </div>
+          <Tabs defaultValue="api-keys" className="space-y-6">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+              <TabsTrigger value="api-keys">API klíče</TabsTrigger>
+              <TabsTrigger value="credits">Kredity uživatelů</TabsTrigger>
+            </TabsList>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {AI_PROVIDERS.map((provider) => {
-                  const setting = getProviderSetting(provider.id);
-                  const isConfigured = !!setting;
-                  const isActive = setting?.is_active ?? false;
-
-                  return (
-                    <Card key={provider.id} className="relative overflow-hidden">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="text-3xl">{provider.icon}</div>
-                            <div>
-                              <CardTitle className="font-heading text-lg">{provider.name}</CardTitle>
-                              <CardDescription className="text-sm">{provider.description}</CardDescription>
-                            </div>
-                          </div>
-                          {isConfigured && (
-                            <div className="flex flex-col items-end gap-2">
-                              <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-accent" : ""}>
-                                {isActive ? (
-                                  <>
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Aktivní
-                                  </>
-                                ) : (
-                                  <>
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Neaktivní
-                                  </>
+            <TabsContent value="api-keys" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <Key className="h-5 w-5 text-primary" />
+                    Centrální API klíče
+                  </CardTitle>
+                  <CardDescription>
+                    Spravujte API klíče pro všechny AI poskytovatele. Tyto klíče používají všichni uživatelé platformy.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Poskytovatel</TableHead>
+                        <TableHead>Stav</TableHead>
+                        <TableHead>Poslední aktualizace</TableHead>
+                        <TableHead className="text-right">Akce</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {AI_PROVIDERS.map((provider) => {
+                        const setting = adminSettings.find(s => s.provider === provider.id);
+                        return (
+                          <TableRow key={provider.id}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">{provider.icon}</span>
+                                <div>
+                                  <div className="font-semibold">{provider.name}</div>
+                                  <div className="text-xs text-muted-foreground">{provider.category}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {setting?.is_active ? (
+                                <Badge variant="default" className="bg-accent">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Aktivní
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Neaktivní
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {setting?.updated_at 
+                                ? new Date(setting.updated_at).toLocaleDateString("cs-CZ")
+                                : "—"
+                              }
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-2 justify-end">
+                                <Dialog 
+                                  open={dialogOpen && selectedProvider === provider.id} 
+                                  onOpenChange={(open) => {
+                                    setDialogOpen(open);
+                                    if (open) setSelectedProvider(provider.id);
+                                  }}
+                                >
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      {setting ? "Upravit" : "Přidat"} klíč
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle className="font-heading">
+                                        {provider.name} API klíč
+                                      </DialogTitle>
+                                      <DialogDescription>
+                                        Nastavte centrální API klíč pro {provider.name}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleSaveApiKey} className="space-y-4 py-4">
+                                      <div className="space-y-2">
+                                        <Label htmlFor="apiKey">API klíč</Label>
+                                        <Input
+                                          id="apiKey"
+                                          type="password"
+                                          placeholder="sk-..."
+                                          value={apiKey}
+                                          onChange={(e) => setApiKey(e.target.value)}
+                                          required
+                                        />
+                                      </div>
+                                      <Button type="submit" className="w-full" disabled={loading}>
+                                        {loading ? "Ukládání..." : "Uložit klíč"}
+                                      </Button>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
+                                {setting?.is_active && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleToggleProvider(provider.id)}
+                                    disabled={loading}
+                                  >
+                                    Deaktivovat
+                                  </Button>
                                 )}
-                              </Badge>
-                              <Switch
-                                checked={isActive}
-                                onCheckedChange={() => handleToggle(provider.id, isActive)}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {setting?.model_name && (
-                          <div className="text-sm text-muted-foreground mb-3">
-                            Model: <span className="font-medium text-foreground">{setting.model_name}</span>
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <Button
-                            variant={isConfigured ? "outline" : "default"}
-                            className="flex-1"
-                            onClick={() => handleOpenDialog(provider.id)}
-                          >
-                            <Key className="h-4 w-4 mr-2" />
-                            {isConfigured ? "Upravit klíč" : "Přidat API klíč"}
-                          </Button>
-                          {isConfigured && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleDelete(provider.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </main>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="font-heading">
-                {AI_PROVIDERS.find(p => p.id === selectedProvider)?.name} - API Klíč
-              </DialogTitle>
-              <DialogDescription>
-                Zadejte centrální API klíč pro všechny uživatele
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSave} className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">API Klíč</Label>
-                <Input
-                  id="apiKey"
-                  type="password"
-                  placeholder="sk-..."
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="modelName">Model (volitelné)</Label>
-                <Input
-                  id="modelName"
-                  placeholder="gpt-4, claude-3-opus..."
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={saving || !apiKey.trim()}>
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? "Ukládání..." : "Uložit API klíč"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            <TabsContent value="credits" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <Coins className="h-5 w-5 text-accent" />
+                    Správa kreditů uživatelů
+                  </CardTitle>
+                  <CardDescription>
+                    Přidávejte kredity uživatelům pro generování AI obsahu
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Uživatel</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right">Kredity</TableHead>
+                        <TableHead className="text-right">Akce</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">
+                            {user.full_name || "—"}
+                          </TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={user.credits < 10 ? "destructive" : "default"}>
+                              {user.credits} kreditů
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Dialog 
+                              open={creditsDialogOpen && selectedUserId === user.id} 
+                              onOpenChange={(open) => {
+                                setCreditsDialogOpen(open);
+                                if (open) setSelectedUserId(user.id);
+                              }}
+                            >
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Přidat kredity
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle className="font-heading">
+                                    Přidat kredity
+                                  </DialogTitle>
+                                  <DialogDescription>
+                                    Přidejte kredity uživateli {user.email}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleAddCredits} className="space-y-4 py-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="credits">Počet kreditů</Label>
+                                    <Input
+                                      id="credits"
+                                      type="number"
+                                      min="1"
+                                      placeholder="např. 50"
+                                      value={creditsToAdd}
+                                      onChange={(e) => setCreditsToAdd(e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    Aktuální zůstatek: <strong>{user.credits} kreditů</strong>
+                                  </div>
+                                  <Button type="submit" className="w-full" disabled={loading}>
+                                    {loading ? "Přidávání..." : "Přidat kredity"}
+                                  </Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </main>
       </div>
     </AdminGuard>
   );
