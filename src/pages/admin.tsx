@@ -8,12 +8,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp } from "lucide-react";
+import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { adminService, type AdminSetting } from "@/services/adminService";
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
@@ -44,6 +54,89 @@ const AI_PROVIDERS = [
   { id: "capcut", name: "CapCut AI", icon: "✂️", description: "TikTok Video Editor AI" },
 ];
 
+// Provider to modules mapping
+const PROVIDER_MODULES = {
+  openai: [
+    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat GPT modely do chatu" },
+    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet AI asistenty s GPT" },
+  ],
+  anthropic: [
+    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Claude modely do chatu" },
+    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Claude" },
+  ],
+  google: [
+    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Gemini do chatu" },
+    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Gemini" },
+  ],
+  mistral: [
+    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Mistral modely do chatu" },
+    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Mistral" },
+  ],
+  xai: [
+    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Grok do chatu" },
+    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Grok" },
+  ],
+  stability: [
+    { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Vytvářet obrázky s Stable Diffusion" },
+    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Generovat avatary influencerů" },
+  ],
+  midjourney: [
+    { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Vytvářet art s Midjourney" },
+  ],
+  fal: [
+    { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Rychlé generování obrázků" },
+    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Rychlé generování videí" },
+  ],
+  runwayml: [
+    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Vytvářet videa s Gen-2" },
+    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Trendy pro sociální sítě" },
+  ],
+  pika: [
+    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Text-to-Video, animace" },
+    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Virální obsah" },
+  ],
+  "stability-video": [
+    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Stable Video Diffusion" },
+  ],
+  heygen: [
+    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Digitální avatary" },
+  ],
+  "d-id": [
+    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Talking heads, avatary" },
+  ],
+  synthesia: [
+    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Video avatary" },
+  ],
+  "runway-gen2": [
+    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Pokročilé video AI" },
+    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Virální obsah Gen-2" },
+  ],
+  suno: [
+    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "AI hudba s vokály" },
+  ],
+  musicgen: [
+    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Instrumentální AI hudba" },
+  ],
+  mubert: [
+    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Real-time AI hudba" },
+  ],
+  aiva: [
+    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Orchestrální skladby" },
+  ],
+  soundraw: [
+    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Royalty-free hudba" },
+  ],
+  "viral-runway": [
+    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Virální video generace" },
+  ],
+  "viral-pika": [
+    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Social media optimalizace" },
+  ],
+  capcut: [
+    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "TikTok AI editor" },
+  ],
+};
+
 export default function Admin() {
   const router = useRouter();
   const [settings, setSettings] = useState<AdminSetting[]>([]);
@@ -55,6 +148,9 @@ export default function Admin() {
   const [selectedProvider, setSelectedProvider] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const [showModuleSuggestions, setShowModuleSuggestions] = useState(false);
+  const [currentProvider, setCurrentProvider] = useState<string | null>(null);
 
   // Plan form states
   const [planForm, setPlanForm] = useState({
@@ -111,26 +207,40 @@ export default function Admin() {
     return data || [];
   };
 
-  const handleSaveApiKey = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!apiKey.trim() || !selectedProvider) return;
+  const handleSaveApiKey = async () => {
+    if (!selectedProvider || !apiKey.trim()) {
+      toast({
+        title: "Chyba",
+        description: "Vyberte poskytovatele a zadejte API klíč",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
-      const existing = await adminService.getAdminSetting(selectedProvider);
-      if (existing) {
-        await adminService.updateAdminSetting(selectedProvider, { api_key: apiKey });
-      } else {
-        await adminService.createAdminSetting({
-          provider: selectedProvider,
-          api_key: apiKey,
-        });
+      await adminService.createOrUpdateApiKey(selectedProvider, apiKey.trim());
+      toast({
+        title: "Úspěch",
+        description: "API klíč byl uložen",
+      });
+      
+      // Show module suggestions if provider has modules
+      if (PROVIDER_MODULES[selectedProvider as keyof typeof PROVIDER_MODULES]) {
+        setCurrentProvider(selectedProvider);
+        setShowModuleSuggestions(true);
       }
-      await loadData();
-      setDialogOpen(false);
+      
+      setSelectedProvider("");
       setApiKey("");
+      loadApiKeys();
     } catch (error) {
       console.error("Error saving API key:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se uložit API klíč",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -556,6 +666,60 @@ export default function Admin() {
           </Tabs>
         </main>
       </div>
+      <AlertDialog open={showModuleSuggestions} onOpenChange={setShowModuleSuggestions}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-accent" />
+              API klíč úspěšně přidán!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-left">
+              Skvělé! Nyní můžete využít{" "}
+              <span className="font-semibold">
+                {AI_PROVIDERS.find(p => p.id === currentProvider)?.name}
+              </span>{" "}
+              v následujících modulech:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="grid gap-3 my-4">
+            {currentProvider && PROVIDER_MODULES[currentProvider as keyof typeof PROVIDER_MODULES]?.map((module, idx) => (
+              <Card 
+                key={idx}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  router.push(module.path);
+                  setShowModuleSuggestions(false);
+                }}
+              >
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className="text-3xl">{module.icon}</div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{module.name}</h4>
+                    <p className="text-sm text-muted-foreground">{module.description}</p>
+                  </div>
+                  <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zavřít</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (currentProvider && PROVIDER_MODULES[currentProvider as keyof typeof PROVIDER_MODULES]) {
+                  const firstModule = PROVIDER_MODULES[currentProvider as keyof typeof PROVIDER_MODULES][0];
+                  router.push(firstModule.path);
+                }
+                setShowModuleSuggestions(false);
+              }}
+            >
+              Vyzkoušet hned
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminGuard>
   );
 }
