@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle } from "lucide-react";
+import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles } from "lucide-react";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { AuthGuard } from "@/components/AuthGuard";
 
@@ -171,6 +171,31 @@ export default function Dashboard() {
                   </Card>
                 );
               })}
+
+              <Card className="relative overflow-hidden group hover:shadow-lg transition-shadow border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="p-3 bg-primary/10 rounded-xl mb-2">
+                      <ImageIcon className="h-8 w-8 text-primary" />
+                    </div>
+                    <Badge variant="default" className="bg-accent">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Nové
+                    </Badge>
+                  </div>
+                  <CardTitle className="font-heading">Image Generation</CardTitle>
+                  <CardDescription>DALL-E, Stable Diffusion, Midjourney</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button 
+                    className="w-full"
+                    onClick={() => router.push("/generate")}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Vygenerovat obrázek
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </main>

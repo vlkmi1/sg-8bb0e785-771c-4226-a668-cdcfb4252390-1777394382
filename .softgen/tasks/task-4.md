@@ -1,6 +1,6 @@
 ---
 title: Modul pro generování obrázků
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [frontend, image-generation, storage]
@@ -13,13 +13,13 @@ position: 3
 Přidání modulu pro generování obrázků pomocí AI (DALL-E, Stable Diffusion, Midjourney). Uživatelé zadají textový prompt a AI vygeneruje obrázek.
 
 ## Checklist
-- [ ] Vytvořit tabulku generated_images s prompt, image_url, provider, user_id
-- [ ] Nastavit Supabase Storage bucket pro obrázky
-- [ ] Vytvořit stránku /generate s formulářem pro prompt
-- [ ] Přidat výběr poskytovatele pro generování (OpenAI DALL-E, Stability AI)
-- [ ] Galerie vygenerovaných obrázků s možností stažení
-- [ ] Service pro ukládání a načítání obrázků
-- [ ] Integrace s kartou "Image Generation" na dashboardu
+- [x] Vytvořit tabulku generated_images s prompt, image_url, provider, user_id
+- [x] Nastavit Supabase Storage bucket pro obrázky
+- [x] Vytvořit stránku /generate s formulářem pro prompt
+- [x] Přidat výběr poskytovatele pro generování (OpenAI DALL-E, Stability AI)
+- [x] Galerie vygenerovaných obrázků s možností stažení
+- [x] Service pro ukládání a načítání obrázků
+- [x] Integrace s kartou "Image Generation" na dashboardu
 
 ## Acceptance
 - Uživatel může zadat prompt a vybrat AI model pro generování
