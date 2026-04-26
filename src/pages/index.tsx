@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles, Shield } from "lucide-react";
+import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles, Shield, Coins } from "lucide-react";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { adminService } from "@/services/adminService";
+import { creditsService } from "@/services/creditsService";
 import { AuthGuard } from "@/components/AuthGuard";
 
 const AI_PROVIDERS = [
@@ -24,6 +25,7 @@ export default function Home() {
   const router = useRouter();
   const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
   const [isAdmin, setIsAdmin] = useState(false);
+  const [credits, setCredits] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>("openai");
   const [apiKey, setApiKey] = useState("");
@@ -32,11 +34,21 @@ export default function Home() {
   useEffect(() => {
     checkAdminStatus();
     loadConnectedProviders();
+    loadCredits();
   }, []);
 
   const checkAdminStatus = async () => {
     const status = await adminService.isAdmin();
     setIsAdmin(status);
+  };
+
+  const loadCredits = async () => {
+    try {
+      const userCredits = await creditsService.getCredits();
+      setCredits(userCredits);
+    } catch (error) {
+      console.error("Error loading credits:", error);
+    }
   };
 
   const loadConnectedProviders = async () => {
@@ -90,6 +102,11 @@ export default function Home() {
                 <h1 className="text-lg font-heading font-bold">kAIkus</h1>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
+                  <Coins className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-medium">{credits}</span>
+                  <span className="text-xs text-muted-foreground">kreditů</span>
+                </div>
                 {isAdmin && (
                   <Button variant="ghost" onClick={() => router.push("/admin")}>
                     <Shield className="h-5 w-5 mr-2" />

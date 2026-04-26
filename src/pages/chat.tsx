@@ -3,53 +3,73 @@ import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Brain, Send, LogOut, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Brain, Send, Plus, LogOut, Sparkles, Coins, AlertCircle } from "lucide-react";
+import { conversationsService } from "@/services/conversationsService";
+import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
+import { creditsService } from "@/services/creditsService";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
-import { conversationsService, type Message } from "@/services/conversationsService";
-import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
+import type { Tables } from "@/integrations/supabase/types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const AI_PROVIDERS = [
-  { id: "openai", name: "OpenAI" },
-  { id: "anthropic", name: "Anthropic" },
-  { id: "google", name: "Google AI" },
-  { id: "mistral", name: "Mistral AI" },
-  { id: "cohere", name: "Cohere" },
-];
+type Message = Tables<"messages">;
+type Conversation = Tables<"conversations">;
 
 export default function Chat() {
   const router = useRouter();
-  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputMessage, setInputMessage] = useState("");
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showNewConversationDialog, setShowNewConversationDialog] = useState(false);
-  const [newConvTitle, setNewConvTitle] = useState("");
+  const [credits, setCredits] = useState(0);
+  const [showLowCreditsWarning, setShowLowCreditsWarning] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newConversationTitle, setNewConversationTitle] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>("openai");
   const [connectedProviders, setConnectedProviders] = useState<AIProvider[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    loadConversations();
     loadConnectedProviders();
+    loadCredits();
   }, []);
 
   useEffect(() => {
-    if (selectedConversationId) {
+    if (currentConversation) {
       loadMessages();
-    } else {
-      setMessages([]);
     }
-  }, [selectedConversationId]);
+  }, [currentConversation]);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const loadCredits = async () => {
+    try {
+      const userCredits = await creditsService.getCredits();
+      setCredits(userCredits);
+      setShowLowCreditsWarning(userCredits < 10);
+    } catch (error) {
+      console.error("Error loading credits:", error);
+    }
+  };
+
+  const loadConversations = async () => {
+    try {
+      const data = await conversationsService.getConversations();
+      setConversations(data);
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+    }
+  };
 
   const loadConnectedProviders = async () => {
     try {
@@ -61,71 +81,69 @@ export default function Chat() {
   };
 
   const loadMessages = async () => {
-    if (!selectedConversationId) return;
+    if (!currentConversation) return;
     
     try {
-      const data = await conversationsService.getMessages(selectedConversationId);
+      const data = await conversationsService.getMessages(currentConversation.id);
       setMessages(data);
     } catch (error) {
       console.error("Error loading messages:", error);
     }
   };
 
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+  const handleSelectConversation = (conversation: Conversation) => {
+    setCurrentConversation(conversation);
   };
 
-  const handleNewConversation = () => {
-    if (connectedProviders.length === 0) {
-      router.push("/");
-      return;
-    }
-    setShowNewConversationDialog(true);
-  };
-
-  const handleCreateConversation = async () => {
-    if (!newConvTitle.trim()) return;
-
+  const handleDeleteConversation = async (conversation: Conversation) => {
     try {
-      const conversation = await conversationsService.createConversation({
-        title: newConvTitle,
-        model_provider: selectedProvider,
-      });
-      setSelectedConversationId(conversation.id);
-      setNewConvTitle("");
-      setShowNewConversationDialog(false);
+      await conversationsService.deleteConversation(conversation.id);
+      setConversations(conversations.filter(c => c.id !== conversation.id));
+      if (currentConversation?.id === conversation.id) {
+        setCurrentConversation(null);
+      }
     } catch (error) {
-      console.error("Error creating conversation:", error);
+      console.error("Error deleting conversation:", error);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !selectedConversationId) return;
+    if (!input.trim() || !currentConversation || loading) return;
 
-    const userMessage = inputMessage.trim();
-    setInputMessage("");
+    if (credits < 1) {
+      alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
+      return;
+    }
+
+    const userMessage = input.trim();
+    setInput("");
     setLoading(true);
 
     try {
       await conversationsService.createMessage({
-        conversation_id: selectedConversationId,
+        conversation_id: currentConversation.id,
         role: "user",
         content: userMessage,
       });
 
-      const assistantResponse = `Toto je simulovaná odpověď od AI modelu. V plné verzi by zde byla skutečná odpověď z API ${selectedProvider}.`;
-      
+      const newCredits = await creditsService.deductCredits(1);
+      setCredits(newCredits);
+      setShowLowCreditsWarning(newCredits < 10);
+
+      await loadMessages();
+
       await conversationsService.createMessage({
-        conversation_id: selectedConversationId,
+        conversation_id: currentConversation.id,
         role: "assistant",
-        content: assistantResponse,
+        content: `[Simulovaná odpověď od ${currentConversation.model_provider}]\n\nToto je ukázková odpověď. V reálné aplikaci by zde byla odpověď z AI modelu.`,
       });
 
       await loadMessages();
     } catch (error) {
       console.error("Error sending message:", error);
+      if (error instanceof Error && error.message.includes("Insufficient credits")) {
+        alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
+      }
     } finally {
       setLoading(false);
     }
@@ -138,17 +156,9 @@ export default function Chat() {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen bg-background">
-        <div className="w-80 flex-shrink-0">
-          <ConversationSidebar
-            selectedId={selectedConversationId}
-            onSelectConversation={setSelectedConversationId}
-            onNewConversation={handleNewConversation}
-          />
-        </div>
-
-        <div className="flex-1 flex flex-col">
-          <header className="border-b bg-card px-6 py-4">
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="border-b bg-card sticky top-0 z-10">
+          <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-xl">
@@ -157,94 +167,119 @@ export default function Chat() {
                 <h1 className="text-lg font-heading font-bold">kAIkus Chat</h1>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
+                  <Coins className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-medium">{credits}</span>
+                  <span className="text-xs text-muted-foreground">kreditů</span>
+                </div>
                 <Button variant="ghost" onClick={() => router.push("/")}>
-                  Dashboard
+                  Zpět
                 </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}>
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
             </div>
-          </header>
+          </div>
+        </header>
 
-          {!selectedConversationId ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-4 max-w-md">
-                <div className="p-4 bg-primary/10 rounded-full inline-block">
-                  <Brain className="h-12 w-12 text-primary" />
-                </div>
-                <h2 className="text-2xl font-heading font-bold">Vítejte v kAIkus Chat</h2>
-                <p className="text-muted-foreground">
-                  Začněte novou konverzaci nebo vyberte existující z levého panelu.
-                </p>
-                <Button onClick={handleNewConversation}>
-                  Začít novou konverzaci
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <ScrollArea className="flex-1" ref={scrollRef}>
-                <div className="space-y-0">
-                  {messages.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      Konverzace je prázdná. Napište první zprávu.
-                    </div>
-                  ) : (
-                    messages.map((message) => (
-                      <ChatMessage
-                        key={message.id}
-                        role={message.role as "user" | "assistant" | "system"}
-                        content={message.content}
+        <div className="flex-1 flex">
+          <ConversationSidebar
+            conversations={conversations}
+            currentConversation={currentConversation}
+            onSelectConversation={handleSelectConversation}
+            onDeleteConversation={handleDeleteConversation}
+            onNewConversation={() => setDialogOpen(true)}
+          />
+
+          <main className="flex-1 flex flex-col">
+            {currentConversation ? (
+              <>
+                {showLowCreditsWarning && (
+                  <Alert variant="destructive" className="m-4 mb-0">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Pozor! Máte méně než 10 kreditů. Kontaktujte administrátora pro doplnění.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-0">
+                    {messages.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        Konverzace je prázdná. Napište první zprávu.
+                      </div>
+                    ) : (
+                      messages.map((message) => (
+                        <ChatMessage
+                          key={message.id}
+                          role={message.role as "user" | "assistant" | "system"}
+                          content={message.content}
+                        />
+                      ))
+                    )}
+                    {loading && (
+                      <div className="flex gap-4 p-4">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-secondary text-secondary-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">AI Asistent</p>
+                          <p className="text-sm text-muted-foreground mt-2">Píše odpověď...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                <div className="border-t bg-card p-4">
+                  <div className="container max-w-4xl">
+                    <div className="flex gap-2">
+                      <Textarea
+                        placeholder="Napište zprávu..."
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        className="resize-none min-h-[60px]"
+                        rows={2}
                       />
-                    ))
-                  )}
-                  {loading && (
-                    <div className="flex gap-4 p-4">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-secondary text-secondary-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">AI Asistent</p>
-                        <p className="text-sm text-muted-foreground mt-2">Píše odpověď...</p>
-                      </div>
+                      <Button
+                        onClick={handleSendMessage}
+                        disabled={loading || !input.trim()}
+                        size="icon"
+                        className="h-[60px] w-[60px]"
+                      >
+                        <Send className="h-5 w-5" />
+                      </Button>
                     </div>
-                  )}
-                </div>
-              </ScrollArea>
-
-              <div className="border-t bg-card p-4">
-                <div className="container max-w-4xl">
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder="Napište zprávu..."
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                      className="resize-none min-h-[60px]"
-                      rows={2}
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={loading || !inputMessage.trim()}
-                      size="icon"
-                      className="h-[60px] w-[60px]"
-                    >
-                      <Send className="h-5 w-5" />
-                    </Button>
                   </div>
                 </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center space-y-4 max-w-md">
+                  <div className="p-4 bg-primary/10 rounded-full inline-block">
+                    <Brain className="h-12 w-12 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-heading font-bold">Vítejte v kAIkus Chat</h2>
+                  <p className="text-muted-foreground">
+                    Začněte novou konverzaci nebo vyberte existující z levého panelu.
+                  </p>
+                  <Button onClick={() => setDialogOpen(true)}>
+                    Začít novou konverzaci
+                  </Button>
+                </div>
               </div>
-            </>
-          )}
+            )}
+          </main>
         </div>
 
-        <Dialog open={showNewConversationDialog} onOpenChange={setShowNewConversationDialog}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="font-heading">Nová konverzace</DialogTitle>
@@ -258,8 +293,8 @@ export default function Chat() {
                 <Input
                   id="title"
                   placeholder="např. Pomoc s programováním"
-                  value={newConvTitle}
-                  onChange={(e) => setNewConvTitle(e.target.value)}
+                  value={newConversationTitle}
+                  onChange={(e) => setNewConversationTitle(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -277,7 +312,16 @@ export default function Chat() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleCreateConversation} className="w-full" disabled={!newConvTitle.trim()}>
+              <Button onClick={() => {
+                if (!newConversationTitle.trim()) return;
+                setDialogOpen(false);
+                setNewConversationTitle("");
+                setCurrentConversation({
+                  id: "new",
+                  title: newConversationTitle,
+                  model_provider: selectedProvider,
+                } as Conversation);
+              }} className="w-full" disabled={!newConversationTitle.trim()}>
                 Vytvořit konverzaci
               </Button>
             </div>
