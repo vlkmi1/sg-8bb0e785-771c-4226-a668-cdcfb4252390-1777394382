@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -155,6 +155,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "generated_images_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_videos: {
+        Row: {
+          created_at: string | null
+          duration: number | null
+          id: string
+          model_name: string | null
+          prompt: string
+          provider: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          model_name?: string | null
+          prompt: string
+          provider: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          model_name?: string | null
+          prompt?: string
+          provider?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_videos_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
