@@ -47,6 +47,17 @@ export default async function handler(
       .eq("provider", provider)
       .single();
 
+    console.log("API Key Fetch Debug:", {
+      provider,
+      settingError: settingError ? {
+        message: settingError.message,
+        code: settingError.code,
+        details: settingError.details
+      } : null,
+      hasSetting: !!setting,
+      hasApiKey: !!setting?.api_key
+    });
+
     if (settingError) {
       console.error("Error fetching API key:", settingError);
       return res.status(400).json({ 
