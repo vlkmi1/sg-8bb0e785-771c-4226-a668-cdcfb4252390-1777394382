@@ -24,6 +24,7 @@ const AI_MODELS = [
   { id: "claude-3-sonnet", name: "Claude 3 Sonnet", provider: "Anthropic" },
   { id: "gemini-pro", name: "Gemini Pro", provider: "Google" },
   { id: "mistral-large", name: "Mistral Large", provider: "Mistral" },
+  { id: "grok-2", name: "Grok-2", provider: "X AI" },
 ];
 
 export default function Assistants() {

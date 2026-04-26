@@ -55,7 +55,20 @@ export default function Chat() {
   const [newConversationTitle, setNewConversationTitle] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>("openai");
   const [connectedProviders, setConnectedProviders] = useState<AIProvider[]>([]);
+  const [selectedModel, setSelectedModel] = useState("gpt-4");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const models = [
+    { id: "gpt-4", name: "GPT-4", provider: "OpenAI", icon: "🤖" },
+    { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: "OpenAI", icon: "⚡" },
+    { id: "claude-3-opus", name: "Claude 3 Opus", provider: "Anthropic", icon: "🧠" },
+    { id: "claude-3-sonnet", name: "Claude 3 Sonnet", provider: "Anthropic", icon: "🎵" },
+    { id: "claude-3-haiku", name: "Claude 3 Haiku", provider: "Anthropic", icon: "🌸" },
+    { id: "gemini-pro", name: "Gemini Pro", provider: "Google", icon: "🔮" },
+    { id: "mistral-large", name: "Mistral Large", provider: "Mistral", icon: "⚡" },
+    { id: "mistral-medium", name: "Mistral Medium", provider: "Mistral", icon: "🌟" },
+    { id: "grok-2", name: "Grok-2", provider: "X AI", icon: "𝕏" },
+  ];
 
   useEffect(() => {
     loadConversations();
