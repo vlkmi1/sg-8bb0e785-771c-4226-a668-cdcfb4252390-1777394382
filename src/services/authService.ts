@@ -60,18 +60,17 @@ export const authService = {
     return { user: data.user, error: null };
   },
 
-  async signInWithGoogle(): Promise<{ user: User | null; error: AuthError | null }> {
+  async signInWithOAuth(provider: any): Promise<{ error: AuthError | null }> {
     const redirectUrl = `${getRedirectUrl()}/auth/callback`;
     
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
       options: {
         redirectTo: redirectUrl,
       },
     });
 
-    if (error) return { user: null, error };
-    return { user: null, error: null };
+    return { error };
   },
 
   async signOut(): Promise<{ error: AuthError | null }> {
