@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles, Shield, Coins, Play } from "lucide-react";
+import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles, Shield, Coins, Play, Mic, TrendingUp } from "lucide-react";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { adminService } from "@/services/adminService";
 import { creditsService } from "@/services/creditsService";
@@ -115,9 +115,9 @@ export default function Home() {
                     Admin
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => router.push("/chat")}>
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  Chat
+                <Button variant="ghost" onClick={() => router.push("/dashboard")}>
+                  <TrendingUp className="h-5 w-5 mr-2" />
+                  Dashboard
                 </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}>
                   <LogOut className="h-5 w-5" />
@@ -127,12 +127,14 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="container py-8">
+        <main className="container mx-auto px-6 py-8">
           <div className="space-y-8">
-            <div>
-              <h2 className="text-3xl font-heading font-bold mb-2">Dashboard</h2>
-              <p className="text-muted-foreground">
-                Připojte své AI modely a začněte konverzovat
+            <div className="text-center space-y-2">
+              <h1 className="text-4xl font-heading font-bold">
+                Vítejte v <span className="text-primary">kAIkus</span>
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Platforma spojující nejpoužívanější AI modely na jednom místě
               </p>
             </div>
 
@@ -220,14 +222,39 @@ export default function Home() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="p-3 bg-primary/10 rounded-xl mb-2">
+                      <MessageSquare className="h-8 w-8 text-primary" />
+                    </div>
+                    <Badge variant="default" className="bg-accent">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Konverzace
+                    </Badge>
+                  </div>
+                  <CardTitle className="font-heading">AI Chat</CardTitle>
+                  <CardDescription>GPT-4, Claude, Gemini a další</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button 
+                    className="w-full"
+                    onClick={() => router.push("/chat")}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Začít chatovat
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="relative overflow-hidden group hover:shadow-lg transition-shadow border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="p-3 bg-primary/10 rounded-xl mb-2">
                       <ImageIcon className="h-8 w-8 text-primary" />
                     </div>
                     <Badge variant="default" className="bg-accent">
                       <Sparkles className="h-3 w-3 mr-1" />
-                      Nové
+                      Kreativita
                     </Badge>
                   </div>
-                  <CardTitle className="font-heading">Image Generation</CardTitle>
+                  <CardTitle className="font-heading">Generování obrázků</CardTitle>
                   <CardDescription>DALL-E, Stable Diffusion, Midjourney</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -249,10 +276,10 @@ export default function Home() {
                     </div>
                     <Badge variant="default" className="bg-accent">
                       <Sparkles className="h-3 w-3 mr-1" />
-                      Nové
+                      Video
                     </Badge>
                   </div>
-                  <CardTitle className="font-heading">Video Generation</CardTitle>
+                  <CardTitle className="font-heading">Generování videí</CardTitle>
                   <CardDescription>RunwayML, Pika Labs, Stability AI</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -262,6 +289,31 @@ export default function Home() {
                   >
                     <Play className="h-4 w-4 mr-2" />
                     Vygenerovat video
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="relative overflow-hidden group hover:shadow-lg transition-shadow border-primary/20 bg-gradient-to-br from-accent/5 to-primary/5">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="p-3 bg-primary/10 rounded-xl mb-2">
+                      <Mic className="h-8 w-8 text-primary" />
+                    </div>
+                    <Badge variant="default" className="bg-accent">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Hlas
+                    </Badge>
+                  </div>
+                  <CardTitle className="font-heading">Hlasový chat</CardTitle>
+                  <CardDescription>OpenAI Whisper, ElevenLabs, Google</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button 
+                    className="w-full"
+                    onClick={() => router.push("/voice-chat")}
+                  >
+                    <Mic className="h-4 w-4 mr-2" />
+                    Mluvit s AI
                   </Button>
                 </CardContent>
               </Card>

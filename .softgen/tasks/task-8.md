@@ -1,6 +1,6 @@
 ---
 title: Hlasový chat a user dashboard
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [frontend, voice, dashboard, ui]
@@ -13,15 +13,15 @@ position: 7
 Přidání hlasového chatu pro konverzace s AI pomocí řeči a vytvoření centrálního user dashboardu s přehledem aktivit a rychlým přístupem ke všem modulům.
 
 ## Checklist
-- [ ] Vytvořit tabulku voice_conversations s audio_url, transcript, provider
-- [ ] Nastavit Supabase Storage bucket pro audio soubory
-- [ ] Vytvořit stránku /voice-chat s nahráváním/přehráváním audio
-- [ ] Přidat výběr AI modelu pro hlasové zpracování
-- [ ] Service pro ukládání a načítání hlasových konverzací
-- [ ] Vytvořit user dashboard /dashboard s přehledem statistik
-- [ ] Přidat karty pro všechny moduly (Chat, Images, Videos, Voice)
-- [ ] Zobrazit aktuální kredity a poslední aktivity
-- [ ] Integrovat hlasový chat do navigace
+- [x] Vytvořit tabulku voice_conversations s audio_url, transcript, provider
+- [x] Nastavit Supabase Storage bucket pro audio soubory
+- [x] Vytvořit stránku /voice-chat s nahráváním/přehráváním audio
+- [x] Přidat výběr AI modelu pro hlasové zpracování
+- [x] Service pro ukládání a načítání hlasových konverzací
+- [x] Vytvořit user dashboard /dashboard s přehledem statistik
+- [x] Přidat karty pro všechny moduly (Chat, Images, Videos, Voice)
+- [x] Zobrazit aktuální kredity a poslední aktivity
+- [x] Integrovat hlasový chat do navigace
 
 ## Acceptance
 - Uživatel může nahrát/namluvit hlasovou zprávu a AI odpoví
