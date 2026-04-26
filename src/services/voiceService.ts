@@ -38,9 +38,13 @@ export const voiceService = {
   },
 
   async getVoiceConversations(): Promise<VoiceConversation[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from("voice_conversations")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {

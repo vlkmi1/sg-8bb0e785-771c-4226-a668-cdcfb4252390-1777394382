@@ -43,7 +43,7 @@ export const imageGenerationService = {
 
   async getGeneratedImages(): Promise<GeneratedImage[]> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    if (!user) return [];
 
     const { data, error } = await supabase
       .from("generated_images")
