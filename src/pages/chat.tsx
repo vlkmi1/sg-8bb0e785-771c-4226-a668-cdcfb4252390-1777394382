@@ -79,7 +79,11 @@ export default function Chat() {
   const createAutoConversation = async () => {
     try {
       const title = `Chat ${new Date().toLocaleDateString("cs-CZ")}`;
-      const conversation = await conversationsService.createConversation({ title, model_provider: selectedModel });
+      const provider = models.find(m => m.id === selectedModel)?.id || "gpt-4";
+      const conversation = await conversationsService.createConversation({ 
+        title, 
+        model_provider: provider 
+      });
       setConversations([conversation]);
       setCurrentConversation(conversation);
       setMessages([]);
@@ -113,7 +117,11 @@ export default function Chat() {
   const handleNewConversation = async () => {
     const title = `Chat ${new Date().toLocaleDateString("cs-CZ")} ${new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}`;
     try {
-      const conversation = await conversationsService.createConversation({ title, model_provider: selectedModel });
+      const provider = models.find(m => m.id === selectedModel)?.id || "gpt-4";
+      const conversation = await conversationsService.createConversation({ 
+        title, 
+        model_provider: provider 
+      });
       setConversations([conversation, ...conversations]);
       setCurrentConversation(conversation);
       setMessages([]);
@@ -154,7 +162,11 @@ export default function Chat() {
     let conversation = currentConversation;
     if (!conversation) {
       const title = input.slice(0, 50) + (input.length > 50 ? "..." : "");
-      conversation = await conversationsService.createConversation({ title });
+      const provider = models.find(m => m.id === selectedModel)?.id || "gpt-4";
+      conversation = await conversationsService.createConversation({ 
+        title, 
+        model_provider: provider 
+      });
       setConversations([conversation, ...conversations]);
       setCurrentConversation(conversation);
     }
