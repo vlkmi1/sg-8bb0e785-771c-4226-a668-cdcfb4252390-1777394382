@@ -154,7 +154,7 @@ export default function Chat() {
     let conversation = currentConversation;
     if (!conversation) {
       const title = input.slice(0, 50) + (input.length > 50 ? "..." : "");
-      conversation = await conversationsService.createConversation({ title, model_provider: selectedModel });
+      conversation = await conversationsService.createConversation(title, selectedModel);
       setConversations([conversation, ...conversations]);
       setCurrentConversation(conversation);
     }
@@ -165,13 +165,43 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      await conversationsService.createMessage({ conversation_id: conversation.id, role: "user", content: input });
+      // Save user message
+      await conversationsService.createMessage(conversation.id, "user", input, selectedModel);
 
-      const assistantResponse = `Odpověď od ${models.find(m => m.id === selectedModel)?.name}: ${input}`;
-      const assistantMessage: Message = { role: "assistant", content: assistantResponse, model: selectedModel };
+      // Call AI API
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: input,
+          model: selectedModel,
+          conversationId: conversation.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Nepodařilo se získat odpověď");
+      }
+
+      const data = await response.json();
+      const assistantMessage: Message = { 
+        role: "assistant", 
+        content: data.response, 
+        model: selectedModel 
+      };
+      
       setMessages(prev => [...prev, assistantMessage]);
 
-      await conversationsService.createMessage({ conversation_id: conversation.id, role: "assistant", content: assistantResponse });
+      // Save assistant message
+      await conversationsService.createMessage(
+        conversation.id, 
+        "assistant", 
+        data.response, 
+        selectedModel
+      );
 
       // Auto-rename conversation with first message if title is generic
       if (conversation.title.startsWith("Chat ") && messages.length === 0) {
@@ -182,13 +212,16 @@ export default function Chat() {
           c.id === conversation.id ? { ...c, title: autoTitle } : c
         ));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending message:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se odeslat zprávu",
+        description: error.message || "Nepodařilo se odeslat zprávu",
         variant: "destructive",
       });
+      
+      // Remove the user message on error
+      setMessages(prev => prev.slice(0, -1));
     } finally {
       setLoading(false);
     }
