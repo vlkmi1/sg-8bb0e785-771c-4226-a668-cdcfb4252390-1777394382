@@ -547,6 +547,16 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h4 className="font-semibold mb-4">Právní</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/terms" className="hover:text-primary transition-colors">Obchodní podmínky</Link></li>
+                <li><Link href="/privacy-policy" className="hover:text-primary transition-colors">Ochrana soukromí</Link></li>
+              </ul>
+            </div>
+          </div>
+
           <div className="border-t mt-12 pt-8 text-center text-sm text-muted-foreground">
             <p>© 2026 kAIkus. Všechna práva vyhrazena.</p>
           </div>
