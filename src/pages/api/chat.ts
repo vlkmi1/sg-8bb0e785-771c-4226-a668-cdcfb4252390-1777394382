@@ -1,5 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
+// Create admin client with service role key for reading admin_settings
+const supabaseAdmin = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
 
 export default async function handler(
   req: NextApiRequest,
@@ -32,9 +45,6 @@ export default async function handler(
         error: "Server není správně nakonfigurován. Chybí environment variables." 
       });
     }
-
-    // Create admin client with service role key
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Determine provider from model name
     const provider = getProviderFromModel(model);
