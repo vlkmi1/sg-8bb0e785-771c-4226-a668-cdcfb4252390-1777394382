@@ -87,12 +87,30 @@ export const authService = {
   },
 
   async resetPassword(email: string): Promise<{ error: AuthError | null }> {
-    const redirectUrl = `${getRedirectUrl()}/auth/update-password`;
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
-    return { error };
+    try {
+      const response = await fetch("/api/auth/request-password-reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { error: { message: data.error } as AuthError };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error("Reset password error:", error);
+      return { 
+        error: { 
+          message: "Nastala chyba při odesílání emailu" 
+        } as AuthError 
+      };
+    }
   },
 
   async updatePassword(newPassword: string): Promise<{ error: AuthError | null }> {
