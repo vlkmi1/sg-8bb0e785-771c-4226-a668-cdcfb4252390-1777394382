@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+import type { User, Session, Provider } from "@supabase/supabase-js";
 
 export interface AuthUser {
   id: string;
@@ -111,20 +111,29 @@ export const authService = {
   },
 
   // Sign out
-  async signOut(): Promise<{ error: AuthError | null }> {
-    try {
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        return { error: { message: error.message } };
-      }
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
 
-      return { error: null };
-    } catch (error) {
-      return { 
-        error: { message: "An unexpected error occurred during sign out" } 
-      };
-    }
+  async signInWithOAuth(provider: "google" | "apple") {
+    const redirectTo = this.getRedirectUrl();
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: provider as Provider,
+      options: {
+        redirectTo,
+        queryParams: provider === "google" 
+          ? {
+              access_type: "offline",
+              prompt: "consent",
+            }
+          : undefined,
+      },
+    });
+
+    if (error) throw error;
+    return data;
   },
 
   // Reset password
