@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
@@ -279,7 +280,8 @@ export default function Admin() {
 
         <main className="container mx-auto px-6 py-8">
           <Tabs defaultValue="api-keys" className="space-y-6">
-            <TabsList className="grid w-full max-w-4xl mx-auto grid-cols-6">
+            <TabsList className="grid w-full max-w-5xl mx-auto grid-cols-7">
+              <TabsTrigger value="analytics">Analytika</TabsTrigger>
               <TabsTrigger value="api-keys">API klíče</TabsTrigger>
               <TabsTrigger value="subscriptions">Předplatná</TabsTrigger>
               <TabsTrigger value="packages">Balíčky</TabsTrigger>
@@ -287,6 +289,10 @@ export default function Admin() {
               <TabsTrigger value="affiliate">Affiliate</TabsTrigger>
               <TabsTrigger value="users">Uživatelé</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="analytics">
+              <CreditAnalytics />
+            </TabsContent>
 
             <TabsContent value="api-keys" className="space-y-6">
               <Card>
