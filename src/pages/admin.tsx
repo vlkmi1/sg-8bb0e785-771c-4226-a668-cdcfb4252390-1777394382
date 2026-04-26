@@ -78,7 +78,7 @@ export default function Admin() {
   const loadData = async () => {
     try {
       const [settingsData, plansData, packagesData] = await Promise.all([
-        adminService.getSettings(),
+        adminService.getAdminSettings(),
         loadPlans(),
         loadPackages(),
       ]);
@@ -114,10 +114,15 @@ export default function Admin() {
 
     setLoading(true);
     try {
-      await adminService.createOrUpdateSetting({
-        provider: selectedProvider,
-        api_key: apiKey,
-      });
+      const existing = await adminService.getAdminSetting(selectedProvider);
+      if (existing) {
+        await adminService.updateAdminSetting(selectedProvider, { api_key: apiKey });
+      } else {
+        await adminService.createAdminSetting({
+          provider: selectedProvider,
+          api_key: apiKey,
+        });
+      }
       await loadData();
       setDialogOpen(false);
       setApiKey("");
