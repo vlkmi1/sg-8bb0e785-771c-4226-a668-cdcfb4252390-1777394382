@@ -16,6 +16,17 @@ export default async function handler(
       return res.status(400).json({ error: "Email je povinný" });
     }
 
+    // Verify environment variables exist
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error("Missing NEXT_PUBLIC_SUPABASE_URL");
+      return res.status(500).json({ error: "Chyba konfigurace serveru" });
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Missing SUPABASE_SERVICE_ROLE_KEY");
+      return res.status(500).json({ error: "Chyba konfigurace serveru" });
+    }
+
     // Create admin client for server-side operations
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,9 +40,10 @@ export default async function handler(
     );
 
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/update-password`;
+    console.log("Password reset redirect URL:", redirectUrl);
 
     // Use admin client to send password reset email
-    const { error } = await supabaseAdmin.auth.admin.generateLink({
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: email,
       options: {
@@ -44,6 +56,7 @@ export default async function handler(
       return res.status(400).json({ error: error.message });
     }
 
+    console.log("Password reset email sent successfully");
     return res.status(200).json({ 
       message: "Pokud účet existuje, byl odeslán email pro obnovení hesla" 
     });
