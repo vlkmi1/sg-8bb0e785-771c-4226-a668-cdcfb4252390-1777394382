@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink, TestTube2, CheckCircle2, XCircle } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -132,7 +132,7 @@ const PROVIDER_MODULES = {
     { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Virální video generace" },
   ],
   "viral-pika": [
-    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Social media optimalizace" },
+    { name: "Virální videa", path: "/viral-videos", icon: "🔥", description: "Social media optimalizace" },
   ],
   capcut: [
     { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "TikTok AI editor" },
@@ -157,6 +157,7 @@ export default function Admin() {
   const [currentProvider, setCurrentProvider] = useState("");
   const { toast } = useToast();
   const [showModuleSuggestions, setShowModuleSuggestions] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Plan form states
   const [planForm, setPlanForm] = useState({
@@ -223,17 +224,38 @@ export default function Admin() {
       return;
     }
 
+    const providerToSave = selectedProvider;
+    const keyToSave = apiKey.trim();
+
     setLoading(true);
     try {
-      await adminService.saveAdminSetting(selectedProvider, apiKey.trim());
+      await adminService.saveAdminSetting(providerToSave, keyToSave);
       toast({
         title: "Úspěch",
         description: "API klíč byl uložen",
       });
       
+      // Auto-fetch models after saving
+      try {
+        const modelsResponse = await fetch("/api/fetch-models", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: providerToSave, apiKey: keyToSave }),
+        });
+
+        if (modelsResponse.ok) {
+          const { models } = await modelsResponse.json();
+          setAvailableModels(models);
+          setCurrentProvider(providerToSave);
+          setShowModelsDialog(true);
+        }
+      } catch (error) {
+        console.error("Failed to fetch models:", error);
+      }
+      
       // Show module suggestions if provider has modules
-      if (PROVIDER_MODULES[selectedProvider as keyof typeof PROVIDER_MODULES]) {
-        setCurrentProvider(selectedProvider);
+      if (PROVIDER_MODULES[providerToSave as keyof typeof PROVIDER_MODULES]) {
+        setCurrentProvider(providerToSave);
         setShowModuleSuggestions(true);
       }
       
@@ -308,59 +330,6 @@ export default function Admin() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
-  };
-
-  const handleAddApiKey = async (provider: string) => {
-    if (!newApiKey.trim()) {
-      toast({
-        title: "Chyba",
-        description: "Zadejte API klíč",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsAddingKey(true);
-    try {
-      const result = await apiKeysService.addApiKey(provider, newApiKey.trim());
-      
-      if (result) {
-        toast({
-          title: "Úspěch",
-          description: `${provider} API klíč byl přidán`,
-        });
-        
-        setNewApiKey("");
-        setActiveProvider(null);
-        loadApiKeys();
-
-        // Načíst dostupné modely
-        try {
-          const modelsResponse = await fetch("/api/fetch-models", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ provider, apiKey: newApiKey.trim() }),
-          });
-
-          if (modelsResponse.ok) {
-            const { models } = await modelsResponse.json();
-            setAvailableModels(models);
-            setCurrentProvider(provider);
-            setShowModelsDialog(true);
-          }
-        } catch (error) {
-          console.error("Failed to fetch models:", error);
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Chyba",
-        description: error.message || "Nepodařilo se přidat API klíč",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAddingKey(false);
-    }
   };
 
   return (
