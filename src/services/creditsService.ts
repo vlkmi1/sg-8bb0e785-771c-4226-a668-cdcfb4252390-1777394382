@@ -1,19 +1,20 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 export const creditsService = {
   async getCredits(): Promise<number> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    if (!user) return 0;
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from("user_credits")
       .select("credits")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single();
 
     if (error) {
       console.error("Error fetching credits:", error);
-      throw error;
+      return 0;
     }
 
     return data?.credits || 0;
