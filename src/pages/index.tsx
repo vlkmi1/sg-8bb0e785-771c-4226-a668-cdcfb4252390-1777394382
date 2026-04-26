@@ -12,6 +12,7 @@ import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { adminService } from "@/services/adminService";
 import { creditsService } from "@/services/creditsService";
 import { AuthGuard } from "@/components/AuthGuard";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
@@ -107,6 +108,7 @@ export default function Home() {
                   <span className="text-sm font-medium">{credits}</span>
                   <span className="text-xs text-muted-foreground">kreditů</span>
                 </div>
+                <ThemeSwitch />
                 {isAdmin && (
                   <Button variant="ghost" onClick={() => router.push("/admin")}>
                     <Shield className="h-5 w-5 mr-2" />

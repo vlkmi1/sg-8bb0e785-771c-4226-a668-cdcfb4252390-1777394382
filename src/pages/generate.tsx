@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageIcon, Sparkles, LogOut, Loader2, Coins } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ImageGallery } from "@/components/ImageGallery";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { imageGenerationService, type ImageProvider, type GeneratedImage } from "@/services/imageGenerationService";
 import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,6 +124,7 @@ export default function Generate() {
                   <span className="text-sm font-medium">{credits}</span>
                   <span className="text-xs text-muted-foreground">kreditů</span>
                 </div>
+                <ThemeSwitch />
                 <Button variant="ghost" onClick={() => router.push("/")}>
                   Dashboard
                 </Button>

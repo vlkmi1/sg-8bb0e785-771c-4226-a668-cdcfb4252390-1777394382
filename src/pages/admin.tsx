@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Shield, Key, CheckCircle2, XCircle, LogOut, Coins, Plus, Home } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { adminService } from "@/services/adminService";
 import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,15 +157,13 @@ export default function Admin() {
                 <div className="p-2 bg-primary/10 rounded-xl">
                   <Shield className="h-5 w-5 text-primary" />
                 </div>
-                <div>
-                  <h1 className="text-lg font-heading font-bold">Admin Dashboard</h1>
-                  <p className="text-sm text-muted-foreground">Správa centrálních API klíčů</p>
-                </div>
+                <h1 className="text-lg font-heading font-bold">Admin Dashboard</h1>
               </div>
               <div className="flex items-center gap-2">
+                <ThemeSwitch />
                 <Button variant="ghost" onClick={() => router.push("/")}>
                   <Home className="h-5 w-5 mr-2" />
-                  Dashboard
+                  Zpět
                 </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}>
                   <LogOut className="h-5 w-5" />

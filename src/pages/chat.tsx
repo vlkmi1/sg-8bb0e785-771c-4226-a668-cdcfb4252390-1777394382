@@ -16,6 +16,7 @@ import { creditsService } from "@/services/creditsService";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import type { Tables } from "@/integrations/supabase/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -186,6 +187,7 @@ export default function Chat() {
                   <span className="text-sm font-medium">{credits}</span>
                   <span className="text-xs text-muted-foreground">kreditů</span>
                 </div>
+                <ThemeSwitch />
                 <Button variant="ghost" onClick={() => router.push("/")}>
                   Zpět
                 </Button>
