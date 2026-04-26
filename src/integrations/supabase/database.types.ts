@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -198,6 +198,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          credits: number
           email: string | null
           full_name: string | null
           id: string
@@ -207,6 +208,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          credits?: number
           email?: string | null
           full_name?: string | null
           id: string
@@ -216,6 +218,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          credits?: number
           email?: string | null
           full_name?: string | null
           id?: string
@@ -229,7 +232,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_credits: {
+        Args: { amount: number; target_user_id: string }
+        Returns: number
+      }
+      deduct_credits: {
+        Args: { amount: number; user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
