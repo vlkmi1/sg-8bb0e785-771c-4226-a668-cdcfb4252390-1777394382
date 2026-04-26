@@ -357,7 +357,7 @@ export default function Dashboard() {
                     <Mic className="h-8 w-8 text-primary" />
                   </div>
                   <Badge variant="secondary">
-                    {stats.voiceMessages} zpráv
+                    {stats.voiceChats} zpráv
                   </Badge>
                 </div>
                 <CardTitle className="font-heading">Hlasový chat</CardTitle>
