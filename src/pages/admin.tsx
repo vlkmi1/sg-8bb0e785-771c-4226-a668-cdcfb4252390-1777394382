@@ -24,6 +24,8 @@ const AI_PROVIDERS = [
   { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra" },
   { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small" },
   { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed" },
+  { id: "nano-bannana", name: "Nano Bannana", icon: "🍌", description: "Fast AI Model for Quick Tasks" },
+  { id: "nano-bannana-pro", name: "Nano Bannana PRO", icon: "🍌✨", description: "Advanced Nano Bannana Model" },
   { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion, Image Generation" },
   { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation" },
   { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation" },

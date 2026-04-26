@@ -31,6 +31,17 @@ const AI_PROVIDERS = [
   { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed" },
 ];
 
+const AI_MODELS = [
+  { id: "openai", name: "GPT-4", provider: "openai" as const, icon: "🤖" },
+  { id: "openai-turbo", name: "GPT-3.5 Turbo", provider: "openai" as const, icon: "🤖" },
+  { id: "claude-3-opus", name: "Claude 3 Opus", provider: "anthropic" as const, icon: "🧠" },
+  { id: "claude-3-sonnet", name: "Claude 3 Sonnet", provider: "anthropic" as const, icon: "🧠" },
+  { id: "gemini-pro", name: "Gemini Pro", provider: "google" as const, icon: "🔮" },
+  { id: "mistral-large", name: "Mistral Large", provider: "mistral" as const, icon: "⚡" },
+  { id: "nano-bannana", name: "Nano Bannana", provider: "nano-bannana" as const, icon: "🍌" },
+  { id: "nano-bannana-pro", name: "Nano Bannana PRO", provider: "nano-bannana-pro" as const, icon: "🍌✨" },
+];
+
 export default function Chat() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);

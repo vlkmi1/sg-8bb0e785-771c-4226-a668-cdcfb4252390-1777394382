@@ -1,9 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
-export type ApiKey = Tables<"api_keys">;
+export type AIProvider = 
+  | "openai" 
+  | "anthropic" 
+  | "google" 
+  | "mistral" 
+  | "cohere"
+  | "nano-bannana"
+  | "nano-bannana-pro"
+  | "stability"
+  | "midjourney";
 
-export type AIProvider = "openai" | "anthropic" | "google" | "mistral" | "cohere";
+export type ApiKey = Tables<"user_api_keys">;
 
 export interface CreateApiKeyData {
   provider: AIProvider;
