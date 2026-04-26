@@ -2,7 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type AIInfluencer = Tables<"ai_influencers">;
-export type InfluencerVideo = Tables<"influencer_videos">;
+export type InfluencerVideo = Tables<"influencer_videos"> & {
+  ai_influencers?: {
+    name: string;
+    avatar_url: string | null;
+  } | null;
+};
 
 export type VoiceType = "neutral" | "energetic" | "calm" | "professional" | "friendly";
 export type Personality = "professional" | "casual" | "humorous" | "inspirational" | "educational";

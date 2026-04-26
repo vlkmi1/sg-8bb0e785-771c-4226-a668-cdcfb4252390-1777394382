@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User 
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video 
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -15,6 +15,7 @@ import { videoGenerationService } from "@/services/videoGenerationService";
 import { voiceService } from "@/services/voiceService";
 import { adminService } from "@/services/adminService";
 import { supabase } from "@/integrations/supabase/client";
+import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 
 export default function Dashboard() {
   const router = useRouter();
