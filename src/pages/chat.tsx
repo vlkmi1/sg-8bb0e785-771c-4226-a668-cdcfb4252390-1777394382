@@ -154,7 +154,7 @@ export default function Chat() {
     let conversation = currentConversation;
     if (!conversation) {
       const title = input.slice(0, 50) + (input.length > 50 ? "..." : "");
-      conversation = await conversationsService.createConversation({ title, model: selectedModel });
+      conversation = await conversationsService.createConversation({ title });
       setConversations([conversation, ...conversations]);
       setCurrentConversation(conversation);
     }
@@ -169,8 +169,7 @@ export default function Chat() {
       await conversationsService.createMessage({
         conversation_id: conversation.id,
         role: "user",
-        content: input,
-        model: selectedModel
+        content: input
       });
 
       // Call AI API
@@ -204,8 +203,7 @@ export default function Chat() {
       await conversationsService.createMessage({
         conversation_id: conversation.id,
         role: "assistant",
-        content: data.response,
-        model: selectedModel
+        content: data.response
       });
 
       // Auto-rename conversation with first message if title is generic
