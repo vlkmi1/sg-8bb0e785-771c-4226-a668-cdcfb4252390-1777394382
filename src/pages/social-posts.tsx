@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Share2, Sparkles, LogOut, Trash2, Edit, Calendar, Clock, Loader2, ImageIcon } from "lucide-react";
+import { Share2, Sparkles, LogOut, Trash2, Edit, Calendar, Clock, Loader2, ImageIcon, Coins, Settings, Eye } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { SocialPreview } from "@/components/SocialPreview";
@@ -41,6 +41,7 @@ export default function SocialPosts() {
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
   const [credits, setCredits] = useState(0);
   const [previewPost, setPreviewPost] = useState<SocialPost | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -67,7 +68,7 @@ export default function SocialPosts() {
       
       // Vygenerujeme příspěvek pro každou vybranou platformu zvlášť
       await Promise.all(selectedPlatforms.map(async (plat) => {
-        newContents[plat] = await socialPostsService.generatePostContent(plat, topic);
+        newContents[plat] = await socialPostsService.generateContent(plat, topic);
       }));
 
       setContents(newContents);
@@ -98,7 +99,6 @@ export default function SocialPosts() {
           platform: plat,
           content: contents[plat] || "",
           scheduled_time: scheduledTime ? scheduledTime.toISOString() : undefined,
-          status: scheduledTime ? "scheduled" : "draft",
         })
       ));
 

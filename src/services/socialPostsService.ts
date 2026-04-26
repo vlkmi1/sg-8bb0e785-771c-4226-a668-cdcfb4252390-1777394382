@@ -12,6 +12,7 @@ export interface CreatePostParams {
   content: string;
   image_url?: string;
   scheduled_time?: string;
+  status?: PostStatus;
 }
 
 export interface CreateAccountParams {
