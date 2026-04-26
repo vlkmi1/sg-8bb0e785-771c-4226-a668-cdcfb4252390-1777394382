@@ -1,6 +1,6 @@
 ---
 title: Dashboard a správa API klíčů
-status: todo
+status: done
 priority: high
 type: feature
 tags: [frontend, dashboard]
@@ -13,12 +13,12 @@ position: 1
 Hlavní dashboard s kartami AI modelů a rozhraní pro správu API klíčů jednotlivých poskytovatelů.
 
 ## Checklist
-- [ ] Dashboard s přehledem 4-5 AI poskytovatelů (OpenAI, Anthropic, Google, Mistral)
-- [ ] Karty modelů s ikonami a stavem připojení
-- [ ] Modal/stránka pro správu API klíčů
-- [ ] Formulář pro přidání/editaci klíče s validací
-- [ ] Zobrazení stavu připojení (connected/disconnected)
-- [ ] Service pro ukládání a načítání API klíčů
+- [x] Dashboard s přehledem 4-5 AI poskytovatelů (OpenAI, Anthropic, Google, Mistral)
+- [x] Karty modelů s ikonami a stavem připojení
+- [x] Modal/stránka pro správu API klíčů
+- [x] Formulář pro přidání/editaci klíče s validací
+- [x] Zobrazení stavu připojení (connected/disconnected)
+- [x] Service pro ukládání a načítání API klíčů
 
 ## Acceptance
 - Dashboard zobrazuje dostupné AI modely

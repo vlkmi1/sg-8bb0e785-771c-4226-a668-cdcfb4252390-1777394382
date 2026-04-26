@@ -1,6 +1,6 @@
 ---
 title: Databázové schéma a autentizace
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [backend, auth, database]
@@ -13,12 +13,12 @@ position: 0
 Vytvoření databázového schématu pro uživatele, profily, API klíče a konverzace. Nastavení autentizace s email/heslem.
 
 ## Checklist
-- [ ] Vytvořit tabulku profiles s user_id, full_name, avatar_url
-- [ ] Vytvořit tabulku api_keys s provider, encrypted_key, user_id
-- [ ] Vytvořit tabulku conversations s title, model_provider, user_id
-- [ ] Vytvořit tabulku messages s conversation_id, role, content
-- [ ] Nastavit RLS policies pro všechny tabulky
-- [ ] Vytvořit auth službu pro přihlášení/registraci
+- [x] Vytvořit tabulku profiles s user_id, full_name, avatar_url
+- [x] Vytvořit tabulku api_keys s provider, encrypted_key, user_id
+- [x] Vytvořit tabulku conversations s title, model_provider, user_id
+- [x] Vytvořit tabulku messages s conversation_id, role, content
+- [x] Nastavit RLS policies pro všechny tabulky
+- [x] Vytvořit auth službu pro přihlášení/registraci
 
 ## Acceptance
 - Uživatel se může registrovat a přihlásit
