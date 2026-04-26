@@ -3,32 +3,99 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-interface ChatRequest {
-  message: string;
-  model: string;
-  conversationId?: string;
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const { message, model, conversationId } = req.body;
+
+    if (!message || !model) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Create admin client with service role key
+    if (!supabaseServiceKey) {
+      console.error("SUPABASE_SERVICE_ROLE_KEY is not set");
+      return res.status(500).json({ error: "Server configuration error" });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Determine provider from model name
+    const provider = getProviderFromModel(model);
+    console.log("Model:", model, "Provider:", provider);
+
+    // Get API key from admin_settings
+    const { data: setting, error: settingError } = await supabaseAdmin
+      .from("admin_settings")
+      .select("api_key")
+      .eq("provider", provider)
+      .single();
+
+    if (settingError || !setting?.api_key) {
+      console.error("API key not found for provider:", provider, settingError);
+      return res.status(400).json({ 
+        error: `API klíč pro ${provider} není nastaven. Přidejte ho v admin panelu.` 
+      });
+    }
+
+    const apiKey = setting.api_key;
+
+    // Call appropriate AI API based on provider
+    let response: string;
+    
+    try {
+      switch (provider) {
+        case "openai":
+          response = await callOpenAI(message, model, apiKey);
+          break;
+        case "anthropic":
+          response = await callAnthropic(message, model, apiKey);
+          break;
+        case "google":
+          response = await callGoogle(message, model, apiKey);
+          break;
+        case "mistral":
+          response = await callMistral(message, model, apiKey);
+          break;
+        case "xai":
+          response = await callXAI(message, model, apiKey);
+          break;
+        default:
+          return res.status(400).json({ error: "Nepodporovaný AI model" });
+      }
+
+      return res.status(200).json({ response });
+    } catch (apiError: any) {
+      console.error("AI API Error:", apiError);
+      return res.status(500).json({ 
+        error: apiError.message || "Chyba při komunikaci s AI modelem" 
+      });
+    }
+  } catch (error: any) {
+    console.error("Chat API Error:", error);
+    return res.status(500).json({ 
+      error: error.message || "Nepodařilo se zpracovat požadavek" 
+    });
+  }
 }
 
-interface ChatResponse {
-  response: string;
-  error?: string;
+function getProviderFromModel(model: string): string {
+  if (model.startsWith("gpt")) return "openai";
+  if (model.startsWith("claude")) return "anthropic";
+  if (model.startsWith("gemini")) return "google";
+  if (model.startsWith("mistral")) return "mistral";
+  if (model.startsWith("grok")) return "xai";
+  return "openai"; // default
 }
 
-async function getApiKey(provider: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("admin_settings")
-    .select("api_key")
-    .eq("provider", provider)
-    .eq("is_active", true)
-    .single();
-
-  if (error || !data) return null;
-  return data.api_key;
-}
-
-async function callOpenAI(apiKey: string, model: string, message: string): Promise<string> {
+async function callOpenAI(message: string, model: string, apiKey: string): Promise<string> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -36,7 +103,7 @@ async function callOpenAI(apiKey: string, model: string, message: string): Promi
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model,
+      model: model,
       messages: [{ role: "user", content: message }],
       temperature: 0.7,
     }),
@@ -48,10 +115,10 @@ async function callOpenAI(apiKey: string, model: string, message: string): Promi
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
 }
 
-async function callAnthropic(apiKey: string, model: string, message: string): Promise<string> {
+async function callAnthropic(message: string, model: string, apiKey: string): Promise<string> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -60,8 +127,8 @@ async function callAnthropic(apiKey: string, model: string, message: string): Pr
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model,
-      max_tokens: 4096,
+      model: model,
+      max_tokens: 1024,
       messages: [{ role: "user", content: message }],
     }),
   });
@@ -72,32 +139,33 @@ async function callAnthropic(apiKey: string, model: string, message: string): Pr
   }
 
   const data = await response.json();
-  return data.content[0].text;
+  return data.content[0]?.text || "Nepodařilo se získat odpověď.";
 }
 
-async function callGoogle(apiKey: string, message: string): Promise<string> {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: message }]
-      }]
-    }),
-  });
+async function callGoogle(message: string, model: string, apiKey: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: message }] }],
+      }),
+    }
+  );
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || "Google API error");
+    throw new Error(error.error?.message || "Google AI API error");
   }
 
   const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
+  return data.candidates[0]?.content?.parts[0]?.text || "Nepodařilo se získat odpověď.";
 }
 
-async function callMistral(apiKey: string, model: string, message: string): Promise<string> {
+async function callMistral(message: string, model: string, apiKey: string): Promise<string> {
   const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -105,7 +173,7 @@ async function callMistral(apiKey: string, model: string, message: string): Prom
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model,
+      model: model,
       messages: [{ role: "user", content: message }],
     }),
   });
@@ -116,10 +184,10 @@ async function callMistral(apiKey: string, model: string, message: string): Prom
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
 }
 
-async function callXAI(apiKey: string, model: string, message: string): Promise<string> {
+async function callXAI(message: string, model: string, apiKey: string): Promise<string> {
   const response = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -127,9 +195,8 @@ async function callXAI(apiKey: string, model: string, message: string): Promise<
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model,
+      model: model,
       messages: [{ role: "user", content: message }],
-      temperature: 0.7,
     }),
   });
 
@@ -139,81 +206,5 @@ async function callXAI(apiKey: string, model: string, message: string): Promise<
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ChatResponse>
-) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ response: "", error: "Method not allowed" });
-  }
-
-  try {
-    const { message, model } = req.body as ChatRequest;
-
-    if (!message || !model) {
-      return res.status(400).json({ response: "", error: "Message and model are required" });
-    }
-
-    // Determine provider from model
-    let provider = "";
-    const apiModel = model;
-
-    if (model.startsWith("gpt-")) {
-      provider = "openai";
-    } else if (model.startsWith("claude-")) {
-      provider = "anthropic";
-    } else if (model.startsWith("gemini-")) {
-      provider = "google";
-    } else if (model.startsWith("mistral-")) {
-      provider = "mistral";
-    } else if (model.startsWith("grok-")) {
-      provider = "xai";
-    } else {
-      return res.status(400).json({ response: "", error: "Unknown model" });
-    }
-
-    // Get API key
-    const apiKey = await getApiKey(provider);
-    if (!apiKey) {
-      return res.status(500).json({ 
-        response: "", 
-        error: `API klíč pro ${provider} není nakonfigurován. Kontaktujte administrátora.` 
-      });
-    }
-
-    // Call appropriate AI service
-    let response: string;
-    
-    switch (provider) {
-      case "openai":
-        response = await callOpenAI(apiKey, apiModel, message);
-        break;
-      case "anthropic":
-        response = await callAnthropic(apiKey, apiModel, message);
-        break;
-      case "google":
-        response = await callGoogle(apiKey, message);
-        break;
-      case "mistral":
-        response = await callMistral(apiKey, apiModel, message);
-        break;
-      case "xai":
-        response = await callXAI(apiKey, apiModel, message);
-        break;
-      default:
-        throw new Error("Unsupported provider");
-    }
-
-    return res.status(200).json({ response });
-
-  } catch (error: any) {
-    console.error("Chat API error:", error);
-    return res.status(500).json({ 
-      response: "", 
-      error: error.message || "Nepodařilo se získat odpověď od AI modelu" 
-    });
-  }
+  return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
 }

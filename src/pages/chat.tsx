@@ -198,8 +198,15 @@ export default function Chat() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Nepodařilo se získat odpověď");
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Nepodařilo se získat odpověď");
+        } else {
+          const errorText = await response.text();
+          console.error("Non-JSON error response:", errorText);
+          throw new Error("Chyba serveru. Zkontrolujte API klíče v admin panelu.");
+        }
       }
 
       const data = await response.json();
