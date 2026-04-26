@@ -112,25 +112,22 @@ async function testAnthropic(apiKey: string): Promise<{ success: boolean; messag
 async function testGoogle(apiKey: string): Promise<{ success: boolean; message: string }> {
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: "Hi" }] }],
-        }),
+          contents: [{ parts: [{ text: "Hello" }] }]
+        })
       }
     );
 
     if (!response.ok) {
       const error = await response.json();
-      return { 
-        success: false, 
-        message: error.error?.message || "Neplatný API klíč" 
-      };
+      throw new Error(error.error?.message || `HTTP ${response.status}`);
     }
 
-    return { success: true, message: "API klíč funguje správně!" };
+    return { success: true, message: "Google API klíč je platný a funguje" };
   } catch (error: any) {
     return { success: false, message: error.message };
   }
