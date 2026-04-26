@@ -1,6 +1,6 @@
 ---
 title: Chat rozhraní
-status: todo
+status: done
 priority: high
 type: feature
 tags: [frontend, chat]
@@ -13,13 +13,13 @@ position: 2
 Chat rozhraní pro komunikaci s vybranými AI modely včetně historie konverzací.
 
 ## Checklist
-- [ ] Stránka /chat s layoutem: sidebar konverzací + chat plocha
-- [ ] Seznam konverzací v sidebaru
-- [ ] Výběr AI modelu před zahájením chatu
-- [ ] Chat komponenta s zprávami (user/assistant)
-- [ ] Input pole s odesíláním zpráv
-- [ ] Načítání stavu při volání API
-- [ ] Možnost vytvoření nové konverzace
+- [x] Stránka /chat s layoutem: sidebar konverzací + chat plocha
+- [x] Seznam konverzací v sidebaru
+- [x] Výběr AI modelu před zahájením chatu
+- [x] Chat komponenta s zprávami (user/assistant)
+- [x] Input pole s odesíláním zpráv
+- [x] Načítání stavu při volání API
+- [x] Možnost vytvoření nové konverzace
 
 ## Acceptance
 - Uživatel může vybrat AI model a zahájit konverzaci
