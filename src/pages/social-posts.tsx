@@ -201,8 +201,8 @@ export default function SocialPosts() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.entries(PLATFORM_INFO).map(([key, info]) => (
-                              <SelectItem key={key} value={key}>
+                            {PLATFORMS.map((info) => (
+                              <SelectItem key={info.id} value={info.id}>
                                 <span className="flex items-center gap-2">
                                   <span>{info.icon}</span>
                                   {info.name}
@@ -292,14 +292,13 @@ export default function SocialPosts() {
                   <CardHeader>
                     <CardTitle className="font-heading">Náhled</CardTitle>
                     <CardDescription>
-                      Jak bude příspěvek vypadat na {PLATFORM_INFO[platform].name}
+                      Jak bude příspěvek vypadat na {PLATFORMS.find(p => p.id === platform)?.name || platform}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex justify-center">
                     <SocialPreview
                       platform={platform}
                       content={content || "Text příspěvku se zobrazí zde..."}
-                      imageUrl={imageUrl}
                     />
                   </CardContent>
                 </Card>
@@ -397,7 +396,6 @@ export default function SocialPosts() {
                   <SocialPreview
                     platform={previewPost.platform as SocialPlatform}
                     content={previewPost.content}
-                    imageUrl={previewPost.image_url || undefined}
                   />
                 </div>
               )}
