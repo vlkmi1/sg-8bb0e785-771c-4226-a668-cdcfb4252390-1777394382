@@ -10,7 +10,7 @@ export interface GenerateImageParams {
   model_name?: string;
 }
 
-export interface GeneratedImage extends Tables<"generated_images"> {}
+export type GeneratedImage = Tables<"generated_images">;
 
 export const imageGenerationService = {
   async generateImage(params: GenerateImageParams): Promise<GeneratedImage> {
