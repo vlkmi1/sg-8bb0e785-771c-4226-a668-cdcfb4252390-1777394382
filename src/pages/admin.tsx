@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { useToast } from "@/hooks/use-toast";
 import { adminService, type AdminSetting } from "@/services/adminService";
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -219,7 +220,7 @@ export default function Admin() {
 
     setLoading(true);
     try {
-      await adminService.createOrUpdateApiKey(selectedProvider, apiKey.trim());
+      await adminService.saveAdminSetting(selectedProvider, apiKey.trim());
       toast({
         title: "Úspěch",
         description: "API klíč byl uložen",
@@ -233,7 +234,7 @@ export default function Admin() {
       
       setSelectedProvider("");
       setApiKey("");
-      loadApiKeys();
+      loadData();
     } catch (error) {
       console.error("Error saving API key:", error);
       toast({
