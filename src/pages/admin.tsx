@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Shield, Key, CheckCircle2, XCircle, LogOut, Coins, Plus } from "lucide-react";
+import { Shield, Key, CheckCircle2, XCircle, LogOut, Coins, Plus, Home } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { adminService } from "@/services/adminService";
 import { creditsService } from "@/services/creditsService";
@@ -127,6 +127,18 @@ export default function Admin() {
     }
   };
 
+  const handleToggleProvider = async (providerId: string) => {
+    setLoading(true);
+    try {
+      await adminService.toggleAdminSetting(providerId);
+      await loadAdminSettings();
+    } catch (error) {
+      console.error("Error toggling provider:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
@@ -198,7 +210,7 @@ export default function Admin() {
                                 <span className="text-2xl">{provider.icon}</span>
                                 <div>
                                   <div className="font-semibold">{provider.name}</div>
-                                  <div className="text-xs text-muted-foreground">{provider.category}</div>
+                                  <div className="text-xs text-muted-foreground">{provider.description}</div>
                                 </div>
                               </div>
                             </TableCell>

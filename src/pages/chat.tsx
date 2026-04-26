@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Brain, Send, Plus, LogOut, Sparkles, Coins, AlertCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Brain, Send, Plus, LogOut, Sparkles, Coins, AlertCircle, Loader2 } from "lucide-react";
 import { conversationsService } from "@/services/conversationsService";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { creditsService } from "@/services/creditsService";
@@ -20,6 +21,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Message = Tables<"messages">;
 type Conversation = Tables<"conversations">;
+
+const AI_PROVIDERS = [
+  { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
+  { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku" },
+  { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra" },
+  { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small" },
+  { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed" },
+];
 
 export default function Chat() {
   const router = useRouter();
@@ -91,8 +100,13 @@ export default function Chat() {
     }
   };
 
-  const handleSelectConversation = (conversation: Conversation) => {
-    setCurrentConversation(conversation);
+  const handleSelectConversation = (idOrConversation: any) => {
+    if (typeof idOrConversation === "string") {
+      const conv = conversations.find(c => c.id === idOrConversation);
+      if (conv) setCurrentConversation(conv);
+    } else {
+      setCurrentConversation(idOrConversation);
+    }
   };
 
   const handleDeleteConversation = async (conversation: Conversation) => {
