@@ -1,17 +1,19 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Key, User, Bell, Shield, LogOut, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Settings as SettingsIcon, Key, LogOut, User, Bell, CheckCircle2, XCircle, Share2, Trash2, Plus } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
+import { socialPostsService, type SocialAccount, type SocialPlatform } from "@/services/socialPostsService";
+import { supabase } from "@/integrations/supabase/client";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
@@ -21,16 +23,28 @@ const AI_PROVIDERS = [
   { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed" },
 ];
 
-export default function SettingsPage() {
+const SOCIAL_PLATFORMS = [
+  { id: "facebook", name: "Facebook", icon: "📘", description: "Sdílení příspěvků na Facebook" },
+  { id: "instagram", name: "Instagram", icon: "📷", description: "Fotky a Stories" },
+  { id: "linkedin", name: "LinkedIn", icon: "💼", description: "Profesionální síť" },
+  { id: "twitter", name: "Twitter/X", icon: "𝕏", description: "Krátké zprávy a tweety" },
+];
+
+export default function Settings() {
   const router = useRouter();
   const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [socialDialogOpen, setSocialDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>("openai");
+  const [selectedSocialPlatform, setSelectedSocialPlatform] = useState<SocialPlatform>("facebook");
   const [apiKey, setApiKey] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadConnectedProviders();
+    loadSocialAccounts();
   }, []);
 
   const loadConnectedProviders = async () => {
@@ -43,7 +57,17 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveApiKey = async () => {
+  const loadSocialAccounts = async () => {
+    try {
+      const accounts = await socialPostsService.getAccounts();
+      setSocialAccounts(accounts);
+    } catch (error) {
+      console.error("Error loading social accounts:", error);
+    }
+  };
+
+  const handleSaveApiKey = async (e: FormEvent) => {
+    e.preventDefault();
     if (!apiKey.trim()) return;
 
     setLoading(true);
@@ -62,6 +86,37 @@ export default function SettingsPage() {
     }
   };
 
+  const handleConnectSocial = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!accountName.trim()) return;
+
+    setLoading(true);
+    try {
+      await socialPostsService.createAccount({
+        platform: selectedSocialPlatform,
+        account_name: accountName,
+      });
+      await loadSocialAccounts();
+      setSocialDialogOpen(false);
+      setAccountName("");
+    } catch (error) {
+      console.error("Error connecting social account:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnectSocial = async (id: string) => {
+    if (!confirm("Opravdu chcete odpojit tento účet?")) return;
+
+    try {
+      await socialPostsService.deleteAccount(id);
+      await loadSocialAccounts();
+    } catch (error) {
+      console.error("Error disconnecting account:", error);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
@@ -75,14 +130,13 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-xl">
-                  <Settings className="h-5 w-5 text-primary" />
+                  <SettingsIcon className="h-5 w-5 text-primary" />
                 </div>
                 <h1 className="text-lg font-heading font-bold">Nastavení</h1>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeSwitch />
                 <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                  <TrendingUp className="h-5 w-5 mr-2" />
                   Dashboard
                 </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}>
@@ -95,19 +149,11 @@ export default function SettingsPage() {
 
         <main className="container mx-auto px-6 py-8">
           <Tabs defaultValue="api" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3">
-              <TabsTrigger value="api">
-                <Key className="h-4 w-4 mr-2" />
-                API klíče
-              </TabsTrigger>
-              <TabsTrigger value="profile">
-                <User className="h-4 w-4 mr-2" />
-                Profil
-              </TabsTrigger>
-              <TabsTrigger value="preferences">
-                <Bell className="h-4 w-4 mr-2" />
-                Předvolby
-              </TabsTrigger>
+            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4">
+              <TabsTrigger value="api">API klíče</TabsTrigger>
+              <TabsTrigger value="social">Sociální sítě</TabsTrigger>
+              <TabsTrigger value="profile">Profil</TabsTrigger>
+              <TabsTrigger value="preferences">Předvolby</TabsTrigger>
             </TabsList>
 
             <TabsContent value="api" className="space-y-6">
@@ -115,18 +161,18 @@ export default function SettingsPage() {
                 <CardHeader>
                   <CardTitle className="font-heading flex items-center gap-2">
                     <Key className="h-5 w-5 text-primary" />
-                    Správa API klíčů
+                    Osobní API klíče
                   </CardTitle>
                   <CardDescription>
-                    Spravujte své osobní API klíče pro jednotlivé AI poskytovatele. Tyto klíče budou použity místo centrálních klíčů.
+                    Spravujte své API klíče pro různé AI poskytovatele
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     {AI_PROVIDERS.map((provider) => {
                       const isConnected = connectedProviders.has(provider.id);
                       return (
-                        <Card key={provider.id} className="relative overflow-hidden">
+                        <Card key={provider.id}>
                           <CardHeader>
                             <div className="flex items-start justify-between">
                               <div className="text-3xl mb-2">{provider.icon}</div>
@@ -142,23 +188,21 @@ export default function SettingsPage() {
                                 </Badge>
                               )}
                             </div>
-                            <CardTitle className="text-base font-heading">{provider.name}</CardTitle>
+                            <CardTitle className="text-base">{provider.name}</CardTitle>
                             <CardDescription className="text-xs">{provider.description}</CardDescription>
                           </CardHeader>
                           <CardContent>
                             <Dialog 
                               open={dialogOpen && selectedProvider === provider.id} 
-                              onOpenChange={setDialogOpen}
+                              onOpenChange={(open) => {
+                                setDialogOpen(open);
+                                if (open) setSelectedProvider(provider.id as AIProvider);
+                              }}
                             >
                               <DialogTrigger asChild>
-                                <Button 
-                                  variant={isConnected ? "outline" : "default"}
-                                  className="w-full"
-                                  size="sm"
-                                  onClick={() => setSelectedProvider(provider.id as AIProvider)}
-                                >
-                                  <Key className="h-3 w-3 mr-2" />
-                                  {isConnected ? "Změnit klíč" : "Přidat API klíč"}
+                                <Button variant={isConnected ? "outline" : "default"} className="w-full">
+                                  <Key className="h-4 w-4 mr-2" />
+                                  {isConnected ? "Změnit klíč" : "Přidat klíč"}
                                 </Button>
                               </DialogTrigger>
                               <DialogContent>
@@ -167,10 +211,10 @@ export default function SettingsPage() {
                                     {provider.name} API klíč
                                   </DialogTitle>
                                   <DialogDescription>
-                                    Zadejte svůj API klíč pro {provider.name}. Klíč bude bezpečně uložen a šifrován.
+                                    Zadejte svůj API klíč pro {provider.name}
                                   </DialogDescription>
                                 </DialogHeader>
-                                <div className="space-y-4 py-4">
+                                <form onSubmit={handleSaveApiKey} className="space-y-4 py-4">
                                   <div className="space-y-2">
                                     <Label htmlFor="apiKey">API klíč</Label>
                                     <Input
@@ -179,16 +223,13 @@ export default function SettingsPage() {
                                       placeholder="sk-..."
                                       value={apiKey}
                                       onChange={(e) => setApiKey(e.target.value)}
+                                      required
                                     />
                                   </div>
-                                  <Button 
-                                    onClick={handleSaveApiKey} 
-                                    className="w-full"
-                                    disabled={loading || !apiKey}
-                                  >
+                                  <Button type="submit" className="w-full" disabled={loading}>
                                     {loading ? "Ukládání..." : "Uložit klíč"}
                                   </Button>
-                                </div>
+                                </form>
                               </DialogContent>
                             </Dialog>
                           </CardContent>
@@ -196,20 +237,137 @@ export default function SettingsPage() {
                       );
                     })}
                   </div>
+
+                  <Card className="bg-muted/50">
+                    <CardHeader>
+                      <CardTitle className="text-sm">ℹ️ O bezpečnosti</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                      Vaše API klíče jsou bezpečně uloženy a šifrovány. Nikdy je nesdílíme s třetími stranami.
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
+            </TabsContent>
 
-              <Card className="border-muted">
+            <TabsContent value="social" className="space-y-6">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-heading flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    Informace o API klíčích
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <Share2 className="h-5 w-5 text-primary" />
+                    Připojené sociální sítě
                   </CardTitle>
+                  <CardDescription>
+                    Spravujte své účty na sociálních sítích pro automatické publikování
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-2">
-                  <p>• Pokud nepřidáte vlastní klíč, budou použity centrální API klíče spravované administrátorem</p>
-                  <p>• Vaše klíče jsou šifrovány a bezpečně uloženy v databázi</p>
-                  <p>• Můžete je kdykoli změnit nebo odstranit</p>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-end">
+                    <Dialog open={socialDialogOpen} onOpenChange={setSocialDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Připojit účet
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle className="font-heading">
+                            Připojit sociální účet
+                          </DialogTitle>
+                          <DialogDescription>
+                            Vyberte platformu a zadejte název účtu
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleConnectSocial} className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="platform">Platforma</Label>
+                            <select
+                              id="platform"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                              value={selectedSocialPlatform}
+                              onChange={(e) => setSelectedSocialPlatform(e.target.value as SocialPlatform)}
+                            >
+                              {SOCIAL_PLATFORMS.map((platform) => (
+                                <option key={platform.id} value={platform.id}>
+                                  {platform.icon} {platform.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="accountName">Název účtu</Label>
+                            <Input
+                              id="accountName"
+                              placeholder="@username nebo Název stránky"
+                              value={accountName}
+                              onChange={(e) => setAccountName(e.target.value)}
+                              required
+                            />
+                          </div>
+                          <Button type="submit" className="w-full" disabled={loading}>
+                            {loading ? "Připojování..." : "Připojit účet"}
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  {socialAccounts.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Zatím nemáte připojené žádné sociální sítě
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Platforma</TableHead>
+                          <TableHead>Účet</TableHead>
+                          <TableHead>Stav</TableHead>
+                          <TableHead className="text-right">Akce</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {socialAccounts.map((account) => {
+                          const platform = SOCIAL_PLATFORMS.find(p => p.id === account.platform);
+                          return (
+                            <TableRow key={account.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{platform?.icon}</span>
+                                  <span>{platform?.name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>{account.account_name}</TableCell>
+                              <TableCell>
+                                <Badge variant={account.is_active ? "default" : "secondary"}>
+                                  {account.is_active ? "Aktivní" : "Neaktivní"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDisconnectSocial(account.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+
+                  <Card className="bg-muted/50">
+                    <CardHeader>
+                      <CardTitle className="text-sm">ℹ️ Poznámka</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                      Pro plné publikování na sociální sítě je potřeba OAuth autorizace. Aktuálně můžete připojit účty a vytvářet příspěvky, které následně publikujete manuálně.
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -219,15 +377,15 @@ export default function SettingsPage() {
                 <CardHeader>
                   <CardTitle className="font-heading flex items-center gap-2">
                     <User className="h-5 w-5 text-primary" />
-                    Informace o profilu
+                    Profil
                   </CardTitle>
                   <CardDescription>
-                    Spravujte své osobní údaje a nastavení účtu.
+                    Spravujte své osobní údaje
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    Tato sekce bude brzy dostupná
+                <CardContent>
+                  <p className="text-muted-foreground text-center py-8">
+                    Správa profilu bude brzy k dispozici
                   </p>
                 </CardContent>
               </Card>
@@ -238,15 +396,15 @@ export default function SettingsPage() {
                 <CardHeader>
                   <CardTitle className="font-heading flex items-center gap-2">
                     <Bell className="h-5 w-5 text-primary" />
-                    Předvolby a notifikace
+                    Předvolby
                   </CardTitle>
                   <CardDescription>
-                    Přizpůsobte si chování aplikace podle svých potřeb.
+                    Přizpůsobte si aplikaci podle svých potřeb
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    Tato sekce bude brzy dostupná
+                <CardContent>
+                  <p className="text-muted-foreground text-center py-8">
+                    Nastavení předvoleb bude brzy k dispozici
                   </p>
                 </CardContent>
               </Card>

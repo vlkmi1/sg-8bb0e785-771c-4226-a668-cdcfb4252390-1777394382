@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { 
   MessageSquare, ImageIcon, Video, Mic, TrendingUp, 
-  Sparkles, LogOut, Shield, Coins, Home, Clock, Settings
+  Sparkles, LogOut, Shield, Coins, Home, Clock, Settings, Share2
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -344,6 +344,54 @@ export default function Dashboard() {
                     Hlasový chat
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
+              onClick={() => router.push("/voice-chat")}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-primary/10 rounded-xl">
+                    <Mic className="h-8 w-8 text-primary" />
+                  </div>
+                  <Badge variant="secondary">
+                    {stats.voiceMessages} zpráv
+                  </Badge>
+                </div>
+                <CardTitle className="font-heading">Hlasový chat</CardTitle>
+                <CardDescription>OpenAI, ElevenLabs, Google</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  <Mic className="h-4 w-4 mr-2" />
+                  Mluvit s AI
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-secondary/20 bg-gradient-to-br from-secondary/5 to-accent/5"
+              onClick={() => router.push("/social-posts")}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-secondary/10 rounded-xl">
+                    <Share2 className="h-8 w-8 text-secondary" />
+                  </div>
+                  <Badge variant="secondary">
+                    Nové
+                  </Badge>
+                </div>
+                <CardTitle className="font-heading">Social Media</CardTitle>
+                <CardDescription>Generování a plánování příspěvků</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Vytvořit příspěvek
+                </Button>
               </CardContent>
             </Card>
           </div>
