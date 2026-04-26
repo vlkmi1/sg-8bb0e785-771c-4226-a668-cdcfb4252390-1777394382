@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { 
   MessageSquare, ImageIcon, Video, Mic, TrendingUp, 
-  Sparkles, LogOut, Shield, Coins, Home, Clock
+  Sparkles, LogOut, Shield, Coins, Home, Clock, Settings
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -152,15 +152,12 @@ export default function Dashboard() {
                   <span className="text-xs text-muted-foreground">kreditů</span>
                 </div>
                 <ThemeSwitch />
-                {isAdmin && (
-                  <Button variant="ghost" onClick={() => router.push("/admin")}>
-                    <Shield className="h-5 w-5 mr-2" />
-                    Admin
-                  </Button>
-                )}
+                <Button variant="ghost" onClick={() => router.push("/settings")}>
+                  <Settings className="h-5 w-5 mr-2" />
+                  Nastavení
+                </Button>
                 <Button variant="ghost" onClick={() => router.push("/")}>
-                  <Home className="h-5 w-5 mr-2" />
-                  Home
+                  Zpět
                 </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}>
                   <LogOut className="h-5 w-5" />
