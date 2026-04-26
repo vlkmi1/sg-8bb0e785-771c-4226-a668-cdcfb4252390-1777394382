@@ -1,6 +1,8 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/router";
 import { authService } from "@/services/authService";
+import { affiliateService } from "@/services/affiliateService";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +13,21 @@ import { SEO } from "@/components/SEO";
 
 export default function Register() {
   const router = useRouter();
+  const { ref } = router.query;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (ref && typeof ref === "string") {
+      setReferralCode(ref);
+      // Track click on referral link
+      affiliateService.trackClick(ref);
+    }
+  }, [ref]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -35,6 +47,18 @@ export default function Register() {
 
     try {
       await authService.signUp(email, password);
+      
+      // Process referral if code exists
+      if (referralCode) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.rpc("process_referral", {
+            new_user_id: user.id,
+            ref_code: referralCode,
+          });
+        }
+      }
+      
       router.push("/");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Chyba při registraci");
@@ -182,6 +206,17 @@ export default function Register() {
                   Přihlaste se
                 </Link>
               </p>
+
+              {referralCode && (
+                <div className="mt-4 p-3 bg-accent/10 border border-accent/20 rounded-lg text-center">
+                  <p className="text-sm text-accent font-medium">
+                    🎁 Registrujete se přes referral link
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Získáte 50 kreditů zdarma při registraci
+                  </p>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>
