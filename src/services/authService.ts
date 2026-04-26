@@ -7,12 +7,10 @@ export interface AuthUser {
   created_at: string;
 }
 
-// Get current app URL dynamically
+// Get current app URL from environment variable
 function getRedirectUrl(): string {
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Always use NEXT_PUBLIC_SITE_URL - this is already configured in Supabase
+  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 }
 
 export const authService = {
