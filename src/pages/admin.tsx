@@ -8,13 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Shield, Key, CheckCircle2, XCircle, LogOut, Coins, Plus, Home } from "lucide-react";
+import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { adminService } from "@/services/adminService";
-import { creditsService } from "@/services/creditsService";
-import { supabase } from "@/integrations/supabase/client";
+import { adminService, type AdminSetting } from "@/services/adminService";
 import type { Tables } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
 
 type AdminSetting = Tables<"admin_settings">;
 
@@ -44,113 +43,86 @@ const AI_PROVIDERS = [
 
 export default function Admin() {
   const router = useRouter();
-  const [adminSettings, setAdminSettings] = useState<AdminSetting[]>([]);
-  const [users, setUsers] = useState<Array<{ id: string; email: string; full_name: string | null; credits: number }>>([]);
+  const [settings, setSettings] = useState<AdminSetting[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [creditsToAdd, setCreditsToAdd] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Plan form states
+  const [planForm, setPlanForm] = useState({
+    tier: "basic",
+    name: "",
+    price: 0,
+    credits_included: 0,
+    features: [] as string[],
+    modules: [] as string[],
+  });
+
+  // Package form states
+  const [packageForm, setPackageForm] = useState({
+    name: "",
+    credits: 0,
+    price: 0,
+    bonus_credits: 0,
+  });
+
   useEffect(() => {
-    loadAdminSettings();
-    loadUsers();
+    loadData();
   }, []);
 
-  const loadAdminSettings = async () => {
+  const loadData = async () => {
     try {
-      const data = await adminService.getAdminSettings();
-      setAdminSettings(data);
+      const [settingsData, plansData, packagesData] = await Promise.all([
+        adminService.getSettings(),
+        loadPlans(),
+        loadPackages(),
+      ]);
+      setSettings(settingsData);
+      setPlans(plansData);
+      setPackages(packagesData);
     } catch (error) {
-      console.error("Error loading admin settings:", error);
+      console.error("Error loading data:", error);
     }
   };
 
-  const loadUsers = async () => {
-    try {
-      const data = await creditsService.getAllUsersCredits();
-      setUsers(data);
-    } catch (error) {
-      console.error("Error loading users:", error);
-    }
+  const loadPlans = async () => {
+    const { data, error } = await supabase
+      .from("subscription_plans")
+      .select("*")
+      .order("price", { ascending: true });
+    if (error) throw error;
+    return data || [];
   };
 
-  const handleOpenDialog = (providerId: string) => {
-    setSelectedProvider(providerId);
-    const existing = adminSettings.find(s => s.provider === providerId);
-    if (existing) {
-      setApiKey(existing.api_key);
-    } else {
-      setApiKey("");
-    }
-    setDialogOpen(true);
+  const loadPackages = async () => {
+    const { data, error } = await supabase
+      .from("credit_packages")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw error;
+    return data || [];
   };
 
   const handleSaveApiKey = async (e: FormEvent) => {
     e.preventDefault();
-    if (!apiKey.trim()) return;
+    if (!apiKey.trim() || !selectedProvider) return;
 
     setLoading(true);
     try {
-      const existing = adminSettings.find(s => s.provider === selectedProvider);
-      
-      if (existing) {
-        await adminService.updateAdminSetting(selectedProvider, {
-          api_key: apiKey,
-        });
-      } else {
-        await adminService.createAdminSetting({
-          provider: selectedProvider,
-          api_key: apiKey,
-        });
-      }
-
-      await loadAdminSettings();
+      await adminService.createOrUpdateSetting({
+        provider: selectedProvider,
+        api_key: apiKey,
+      });
+      await loadData();
       setDialogOpen(false);
       setApiKey("");
     } catch (error) {
-      console.error("Error saving setting:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddCredits = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!selectedUserId || !creditsToAdd) return;
-
-    const amount = parseInt(creditsToAdd);
-    if (isNaN(amount) || amount <= 0) {
-      alert("Zadejte platné číslo kreditů");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await creditsService.addCredits(selectedUserId, amount);
-      await loadUsers();
-      setCreditsDialogOpen(false);
-      setSelectedUserId("");
-      setCreditsToAdd("");
-    } catch (error) {
-      console.error("Error adding credits:", error);
-      alert("Chyba při přidávání kreditů");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleToggleProvider = async (providerId: string) => {
-    setLoading(true);
-    try {
-      const setting = adminSettings.find(s => s.provider === providerId);
-      const isActive = setting ? setting.is_active : false;
-      await adminService.toggleAdminSetting(providerId, !isActive);
-      await loadAdminSettings();
-    } catch (error) {
-      console.error("Error toggling provider:", error);
+      console.error("Error saving API key:", error);
     } finally {
       setLoading(false);
     }
@@ -171,13 +143,12 @@ export default function Admin() {
                 <div className="p-2 bg-primary/10 rounded-xl">
                   <Shield className="h-5 w-5 text-primary" />
                 </div>
-                <h1 className="text-lg font-heading font-bold">Admin Dashboard</h1>
+                <h1 className="text-lg font-heading font-bold">Admin Panel</h1>
               </div>
               <div className="flex items-center gap-2">
                 <ThemeSwitch />
-                <Button variant="ghost" onClick={() => router.push("/")}>
-                  <Home className="h-5 w-5 mr-2" />
-                  Zpět
+                <Button variant="ghost" onClick={() => router.push("/dashboard")}>
+                  Dashboard
                 </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}>
                   <LogOut className="h-5 w-5" />
@@ -189,9 +160,12 @@ export default function Admin() {
 
         <main className="container mx-auto px-6 py-8">
           <Tabs defaultValue="api-keys" className="space-y-6">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+            <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-5">
               <TabsTrigger value="api-keys">API klíče</TabsTrigger>
-              <TabsTrigger value="credits">Kredity uživatelů</TabsTrigger>
+              <TabsTrigger value="subscriptions">Předplatná</TabsTrigger>
+              <TabsTrigger value="packages">Balíčky</TabsTrigger>
+              <TabsTrigger value="payments">Platby</TabsTrigger>
+              <TabsTrigger value="users">Uživatelé</TabsTrigger>
             </TabsList>
 
             <TabsContent value="api-keys" className="space-y-6">
@@ -199,200 +173,286 @@ export default function Admin() {
                 <CardHeader>
                   <CardTitle className="font-heading flex items-center gap-2">
                     <Key className="h-5 w-5 text-primary" />
-                    Centrální API klíče
+                    Globální AI API klíče
                   </CardTitle>
                   <CardDescription>
-                    Spravujte API klíče pro všechny AI poskytovatele. Tyto klíče používají všichni uživatelé platformy.
+                    Správa API klíčů pro všechny uživatele (fallback když nemají vlastní)
                   </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {AI_PROVIDERS.map((provider) => {
+                      const hasSetting = settings.some(s => s.provider === provider.id);
+                      return (
+                        <Card key={provider.id}>
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="text-3xl mb-2">{provider.icon}</div>
+                              {hasSetting ? (
+                                <Badge variant="default" className="bg-accent">Nastaveno</Badge>
+                              ) : (
+                                <Badge variant="secondary">Chybí</Badge>
+                              )}
+                            </div>
+                            <CardTitle className="text-base">{provider.name}</CardTitle>
+                            <CardDescription className="text-xs">{provider.description}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Dialog 
+                              open={dialogOpen && selectedProvider === provider.id} 
+                              onOpenChange={(open) => {
+                                setDialogOpen(open);
+                                if (open) setSelectedProvider(provider.id);
+                              }}
+                            >
+                              <DialogTrigger asChild>
+                                <Button variant="outline" className="w-full">
+                                  <Key className="h-4 w-4 mr-2" />
+                                  {hasSetting ? "Změnit" : "Přidat"}
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle className="font-heading">
+                                    {provider.name} API klíč
+                                  </DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={handleSaveApiKey} className="space-y-4 py-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="apiKey">API klíč</Label>
+                                    <Input
+                                      id="apiKey"
+                                      type="password"
+                                      placeholder="sk-..."
+                                      value={apiKey}
+                                      onChange={(e) => setApiKey(e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                  <Button type="submit" className="w-full" disabled={loading}>
+                                    {loading ? "Ukládání..." : "Uložit"}
+                                  </Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="subscriptions" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="font-heading flex items-center gap-2">
+                        <Crown className="h-5 w-5 text-primary" />
+                        Správa předplatných
+                      </CardTitle>
+                      <CardDescription>
+                        Nastavení plánů, cen a dostupných modulů
+                      </CardDescription>
+                    </div>
+                    <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nový plán
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Vytvořit předplatný plán</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <p className="text-sm text-muted-foreground">
+                            Funkce připravena - implementace formuláře pro vytváření plánů
+                          </p>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Poskytovatel</TableHead>
-                        <TableHead>Stav</TableHead>
-                        <TableHead>Poslední aktualizace</TableHead>
+                        <TableHead>Plán</TableHead>
+                        <TableHead>Cena</TableHead>
+                        <TableHead>Kredity</TableHead>
+                        <TableHead>Moduly</TableHead>
                         <TableHead className="text-right">Akce</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {AI_PROVIDERS.map((provider) => {
-                        const setting = adminSettings.find(s => s.provider === provider.id);
-                        return (
-                          <TableRow key={provider.id}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <span className="text-2xl">{provider.icon}</span>
-                                <div>
-                                  <div className="font-semibold">{provider.name}</div>
-                                  <div className="text-xs text-muted-foreground">{provider.description}</div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {setting?.is_active ? (
-                                <Badge variant="default" className="bg-accent">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Aktivní
+                      {plans.map((plan) => (
+                        <TableRow key={plan.id}>
+                          <TableCell className="font-medium">{plan.name}</TableCell>
+                          <TableCell>{plan.price} Kč/{plan.billing_period === "monthly" ? "měs" : "rok"}</TableCell>
+                          <TableCell>{plan.credits_included === 999999 ? "∞" : plan.credits_included}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {(plan.modules as string[])?.slice(0, 3).map((m: string) => (
+                                <Badge key={m} variant="secondary" className="text-xs">
+                                  {m}
                                 </Badge>
-                              ) : (
-                                <Badge variant="secondary">
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Neaktivní
+                              ))}
+                              {(plan.modules as string[])?.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{(plan.modules as string[]).length - 3}
                                 </Badge>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              {setting?.updated_at 
-                                ? new Date(setting.updated_at).toLocaleDateString("cs-CZ")
-                                : "—"
-                              }
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-2 justify-end">
-                                <Dialog 
-                                  open={dialogOpen && selectedProvider === provider.id} 
-                                  onOpenChange={(open) => {
-                                    setDialogOpen(open);
-                                    if (open) setSelectedProvider(provider.id);
-                                  }}
-                                >
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      {setting ? "Upravit" : "Přidat"} klíč
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle className="font-heading">
-                                        {provider.name} API klíč
-                                      </DialogTitle>
-                                      <DialogDescription>
-                                        Nastavte centrální API klíč pro {provider.name}
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={handleSaveApiKey} className="space-y-4 py-4">
-                                      <div className="space-y-2">
-                                        <Label htmlFor="apiKey">API klíč</Label>
-                                        <Input
-                                          id="apiKey"
-                                          type="password"
-                                          placeholder="sk-..."
-                                          value={apiKey}
-                                          onChange={(e) => setApiKey(e.target.value)}
-                                          required
-                                        />
-                                      </div>
-                                      <Button type="submit" className="w-full" disabled={loading}>
-                                        {loading ? "Ukládání..." : "Uložit klíč"}
-                                      </Button>
-                                    </form>
-                                  </DialogContent>
-                                </Dialog>
-                                {setting?.is_active && (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleToggleProvider(provider.id)}
-                                    disabled={loading}
-                                  >
-                                    Deaktivovat
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="credits" className="space-y-6">
+            <TabsContent value="packages" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-heading flex items-center gap-2">
-                    <Coins className="h-5 w-5 text-accent" />
-                    Správa kreditů uživatelů
-                  </CardTitle>
-                  <CardDescription>
-                    Přidávejte kredity uživatelům pro generování AI obsahu
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="font-heading flex items-center gap-2">
+                        <Coins className="h-5 w-5 text-accent" />
+                        Balíčky kreditů
+                      </CardTitle>
+                      <CardDescription>
+                        Správa nabídky balíčků pro dobíjení
+                      </CardDescription>
+                    </div>
+                    <Dialog open={packageDialogOpen} onOpenChange={setPackageDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nový balíček
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Vytvořit balíček kreditů</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <p className="text-sm text-muted-foreground">
+                            Funkce připravena - implementace formuláře pro vytváření balíčků
+                          </p>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Uživatel</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead className="text-right">Kredity</TableHead>
+                        <TableHead>Název</TableHead>
+                        <TableHead>Kredity</TableHead>
+                        <TableHead>Bonus</TableHead>
+                        <TableHead>Cena</TableHead>
                         <TableHead className="text-right">Akce</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">
-                            {user.full_name || "—"}
+                      {packages.map((pkg) => (
+                        <TableRow key={pkg.id}>
+                          <TableCell className="font-medium">{pkg.name}</TableCell>
+                          <TableCell>{pkg.credits}</TableCell>
+                          <TableCell>
+                            {pkg.bonus_credits > 0 && (
+                              <Badge variant="secondary" className="bg-accent/10">
+                                +{pkg.bonus_credits}
+                              </Badge>
+                            )}
                           </TableCell>
-                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{pkg.price} Kč</TableCell>
                           <TableCell className="text-right">
-                            <Badge variant={user.credits < 10 ? "destructive" : "default"}>
-                              {user.credits} kreditů
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Dialog 
-                              open={creditsDialogOpen && selectedUserId === user.id} 
-                              onOpenChange={(open) => {
-                                setCreditsDialogOpen(open);
-                                if (open) setSelectedUserId(user.id);
-                              }}
-                            >
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Přidat kredity
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle className="font-heading">
-                                    Přidat kredity
-                                  </DialogTitle>
-                                  <DialogDescription>
-                                    Přidejte kredity uživateli {user.email}
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleAddCredits} className="space-y-4 py-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="credits">Počet kreditů</Label>
-                                    <Input
-                                      id="credits"
-                                      type="number"
-                                      min="1"
-                                      placeholder="např. 50"
-                                      value={creditsToAdd}
-                                      onChange={(e) => setCreditsToAdd(e.target.value)}
-                                      required
-                                    />
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    Aktuální zůstatek: <strong>{user.credits} kreditů</strong>
-                                  </div>
-                                  <Button type="submit" className="w-full" disabled={loading}>
-                                    {loading ? "Přidávání..." : "Přidat kredity"}
-                                  </Button>
-                                </form>
-                              </DialogContent>
-                            </Dialog>
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="payments" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    Nastavení plateb
+                  </CardTitle>
+                  <CardDescription>
+                    Konfigurace platebních metod a bran
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="paypal-client">PayPal Client ID</Label>
+                      <Input
+                        id="paypal-client"
+                        placeholder="AXX..."
+                        defaultValue=""
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="paypal-secret">PayPal Secret</Label>
+                      <Input
+                        id="paypal-secret"
+                        type="password"
+                        placeholder="EXX..."
+                        defaultValue=""
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account">Číslo účtu pro QR kódy</Label>
+                      <Input
+                        id="bank-account"
+                        placeholder="123456789/0100"
+                        defaultValue="123456789/0100"
+                      />
+                    </div>
+                    <Button className="w-full">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Uložit nastavení plateb
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="users" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Správa uživatelů
+                  </CardTitle>
+                  <CardDescription>
+                    Přehled uživatelů a jejich předplatných
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center text-muted-foreground py-8">
+                    Funkce připravena - zobrazení seznamu uživatelů s filtry
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>

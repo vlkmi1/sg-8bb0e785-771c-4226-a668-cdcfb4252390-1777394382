@@ -157,6 +157,42 @@ export type Database = {
           },
         ]
       }
+      credit_packages: {
+        Row: {
+          bonus_credits: number
+          created_at: string | null
+          credits: number
+          currency: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+        }
+        Insert: {
+          bonus_credits?: number
+          created_at?: string | null
+          credits: number
+          currency?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+        }
+        Update: {
+          bonus_credits?: number
+          created_at?: string | null
+          credits?: number
+          currency?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
       generated_images: {
         Row: {
           created_at: string | null
@@ -354,6 +390,48 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          id: string
+          metadata: Json | null
+          method: string
+          payment_type: string
+          reference_id: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          method: string
+          payment_type: string
+          reference_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          method?: string
+          payment_type?: string
+          reference_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -471,6 +549,98 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          billing_period: string
+          created_at: string | null
+          credits_included: number
+          currency: string
+          features: Json
+          id: string
+          is_active: boolean
+          modules: Json
+          name: string
+          price: number
+          tier: string
+          updated_at: string | null
+        }
+        Insert: {
+          billing_period: string
+          created_at?: string | null
+          credits_included?: number
+          currency?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          modules?: Json
+          name: string
+          price?: number
+          tier: string
+          updated_at?: string | null
+        }
+        Update: {
+          billing_period?: string
+          created_at?: string | null
+          credits_included?: number
+          currency?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          modules?: Json
+          name?: string
+          price?: number
+          tier?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          auto_renew: boolean
+          cancelled_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          plan_id: string
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_renew?: boolean
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_renew?: boolean
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
