@@ -68,7 +68,7 @@ export default function SocialPosts() {
       
       // Vygenerujeme příspěvek pro každou vybranou platformu zvlášť
       await Promise.all(selectedPlatforms.map(async (plat) => {
-        newContents[plat] = await socialPostsService.generateContent(plat, topic);
+        newContents[plat] = await socialPostsService.generateContent(topic, plat);
       }));
 
       setContents(newContents);
