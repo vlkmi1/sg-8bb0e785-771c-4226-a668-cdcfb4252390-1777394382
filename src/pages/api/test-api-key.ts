@@ -1,4 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
+const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 async function testOpenAI(apiKey: string) {
   try {
@@ -130,10 +137,26 @@ async function testMidjourney(apiKey: string) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   
-  const { provider, apiKey } = req.body;
-  if (!provider || !apiKey) return res.status(400).json({ success: false, message: "Provider and API key are required" });
+  const { provider } = req.body;
+  if (!provider) return res.status(400).json({ success: false, message: "Provider is required" });
 
   try {
+    // Fetch API key from database
+    const { data: setting, error: dbError } = await supabase
+      .from("admin_settings")
+      .select("api_key")
+      .eq("provider", provider)
+      .single();
+
+    if (dbError || !setting?.api_key) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `API klíč pro ${provider} není nastaven v databázi` 
+      });
+    }
+
+    const apiKey = setting.api_key;
+
     let result;
     switch (provider) {
       case "openai": result = await testOpenAI(apiKey); break;
@@ -147,7 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       default: 
         result = { 
           success: true, 
-          message: `${provider} API klíč byl přijat. (Specifický test endpoint zatím není implementován)` 
+          message: `${provider} API klíč je uložen. (Specifický test endpoint zatím není implementován)` 
         };
     }
     return res.status(200).json(result);
