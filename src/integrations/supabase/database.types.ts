@@ -268,6 +268,50 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_conversations: {
+        Row: {
+          audio_url: string | null
+          created_at: string | null
+          duration: number | null
+          id: string
+          provider: string
+          response_audio_url: string | null
+          response_text: string | null
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          provider: string
+          response_audio_url?: string | null
+          response_text?: string | null
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          provider?: string
+          response_audio_url?: string | null
+          response_text?: string | null
+          transcript?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
