@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  MessageSquare, ImageIcon, Video, Mic, TrendingUp, 
-  Sparkles, LogOut, Shield, Coins, Home, Clock, Settings, Share2
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User 
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -391,6 +390,31 @@ export default function Dashboard() {
                 <Button className="w-full">
                   <Share2 className="h-4 w-4 mr-2" />
                   Vytvořit příspěvek
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5"
+              onClick={() => router.push("/ai-influencer")}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-primary/10 rounded-xl">
+                    <User className="h-8 w-8 text-primary" />
+                  </div>
+                  <Badge variant="secondary" className="bg-accent">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Nové
+                  </Badge>
+                </div>
+                <CardTitle className="font-heading">AI Influencer</CardTitle>
+                <CardDescription>Videa s virtuální postavou</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  <User className="h-4 w-4 mr-2" />
+                  Vytvořit influencera
                 </Button>
               </CardContent>
             </Card>

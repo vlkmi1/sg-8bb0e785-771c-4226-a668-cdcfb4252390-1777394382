@@ -45,6 +45,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_influencers: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          language: string
+          name: string
+          personality: string
+          user_id: string
+          voice_type: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          language?: string
+          name: string
+          personality?: string
+          user_id: string
+          voice_type?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          language?: string
+          name?: string
+          personality?: string
+          user_id?: string
+          voice_type?: string
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           created_at: string | null
@@ -199,6 +235,47 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      influencer_videos: {
+        Row: {
+          created_at: string | null
+          duration: number | null
+          id: string
+          influencer_id: string
+          script: string
+          status: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          influencer_id: string
+          script: string
+          status?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          influencer_id?: string
+          script?: string
+          status?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "influencer_videos_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "ai_influencers"
             referencedColumns: ["id"]
           },
         ]

@@ -29,6 +29,10 @@ const AI_PROVIDERS = [
   { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation" },
   { id: "pika", name: "Pika Labs", icon: "🎥", description: "Text-to-Video, 3D Animations" },
   { id: "stability-video", name: "Stability Video", icon: "📹", description: "Stable Video Diffusion" },
+  { id: "heygen", name: "HeyGen", icon: "👤", description: "AI Video Avatars & Influencers" },
+  { id: "d-id", name: "D-ID", icon: "🎭", description: "Digital People & Talking Heads" },
+  { id: "synthesia", name: "Synthesia", icon: "🎬", description: "AI Video Platform with Avatars" },
+  { id: "runway-gen2", name: "Runway Gen-2", icon: "🚀", description: "Advanced Video AI Models" },
 ];
 
 export default function Admin() {
