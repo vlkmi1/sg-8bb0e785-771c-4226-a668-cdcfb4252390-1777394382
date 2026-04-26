@@ -22,7 +22,9 @@ import {
   TrendingUp,
   Users,
   Crown,
-  ChevronRight
+  ChevronRight,
+  Bot,
+  Coins
 } from "lucide-react";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { supabase } from "@/integrations/supabase/client";

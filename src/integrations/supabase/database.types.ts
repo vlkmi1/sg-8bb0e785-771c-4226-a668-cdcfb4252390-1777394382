@@ -119,6 +119,83 @@ export type Database = {
           },
         ]
       }
+      assistant_conversations: {
+        Row: {
+          assistant_id: string
+          created_at: string | null
+          id: string
+          messages: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assistant_id: string
+          created_at?: string | null
+          id?: string
+          messages?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assistant_id?: string
+          created_at?: string | null
+          id?: string
+          messages?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_conversations_assistant_id_fkey"
+            columns: ["assistant_id"]
+            isOneToOne: false
+            referencedRelation: "assistants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistants: {
+        Row: {
+          avatar_emoji: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          instructions: string
+          is_public: boolean | null
+          model: string
+          name: string
+          personality: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_emoji?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          instructions: string
+          is_public?: boolean | null
+          model?: string
+          name: string
+          personality?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_emoji?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          instructions?: string
+          is_public?: boolean | null
+          model?: string
+          name?: string
+          personality?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string | null

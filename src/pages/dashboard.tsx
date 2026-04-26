@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap 
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot 
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -466,6 +466,31 @@ export default function Dashboard() {
                 <Button className="w-full">
                   <Zap className="h-4 w-4 mr-2" />
                   Vytvořit viral
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5"
+              onClick={() => router.push("/assistants")}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-primary/10 rounded-xl">
+                    <Bot className="h-8 w-8 text-primary" />
+                  </div>
+                  <Badge variant="secondary" className="bg-primary">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Nové
+                  </Badge>
+                </div>
+                <CardTitle className="font-heading">AI Asistenti</CardTitle>
+                <CardDescription>Vlastní specializovaní AI</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  <Bot className="h-4 w-4 mr-2" />
+                  Vytvořit asistenta
                 </Button>
               </CardContent>
             </Card>
