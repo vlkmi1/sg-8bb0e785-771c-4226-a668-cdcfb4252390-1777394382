@@ -26,6 +26,7 @@ const AI_PROVIDERS = [
   { id: "nano-bannana-pro", name: "Nano Bannana PRO", icon: "🍌✨", description: "Advanced Nano Bannana Model" },
   { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion, Image Generation" },
   { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation" },
+  { id: "fal", name: "Fal AI", icon: "🎯", description: "Fast Image & Video Generation" },
   { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation" },
   { id: "pika", name: "Pika Labs", icon: "🎥", description: "Text-to-Video, 3D Animations" },
   { id: "stability-video", name: "Stability Video", icon: "📹", description: "Stable Video Diffusion" },
