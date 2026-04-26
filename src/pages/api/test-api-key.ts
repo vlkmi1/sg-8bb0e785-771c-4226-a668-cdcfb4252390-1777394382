@@ -111,23 +111,26 @@ async function testAnthropic(apiKey: string): Promise<{ success: boolean; messag
 
 async function testGoogle(apiKey: string): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    // Nejdřív zkusíme získat seznam modelů
+    const modelsResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Hello" }] }]
-        })
+        headers: { "Content-Type": "application/json" }
       }
     );
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `HTTP ${response.status}`);
+    if (!modelsResponse.ok) {
+      const error = await modelsResponse.json();
+      throw new Error(error.error?.message || `HTTP ${modelsResponse.status}`);
     }
 
-    return { success: true, message: "Google API klíč je platný a funguje" };
+    const modelsData = await modelsResponse.json();
+    const modelCount = modelsData.models?.length || 0;
+    
+    return { 
+      success: true, 
+      message: `Google API klíč je platný! Dostupné modely: ${modelCount}` 
+    };
   } catch (error: any) {
     return { success: false, message: error.message };
   }
