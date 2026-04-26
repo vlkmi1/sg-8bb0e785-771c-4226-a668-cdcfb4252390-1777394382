@@ -7,51 +7,64 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles } from "lucide-react";
+import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles, Shield } from "lucide-react";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
+import { adminService } from "@/services/adminService";
 import { AuthGuard } from "@/components/AuthGuard";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
   { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku" },
-  { id: "google", name: "Google AI", icon: "🔍", description: "Gemini Pro, Gemini Ultra" },
-  { id: "mistral", name: "Mistral AI", icon: "🌊", description: "Mistral Large, Medium" },
-  { id: "cohere", name: "Cohere", icon: "💬", description: "Command R+, Command" },
+  { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra" },
+  { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small" },
+  { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed" },
 ];
 
-export default function Dashboard() {
+export default function Home() {
   const router = useRouter();
   const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
-  const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<AIProvider>("openai");
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    loadApiKeys();
+    checkAdminStatus();
+    loadConnectedProviders();
   }, []);
 
-  const loadApiKeys = async () => {
+  const checkAdminStatus = async () => {
+    const status = await adminService.isAdmin();
+    setIsAdmin(status);
+  };
+
+  const loadConnectedProviders = async () => {
     try {
-      const keys = await apiKeysService.getApiKeys();
-      setConnectedProviders(new Set(keys.map(k => k.provider)));
+      const adminSettings = await adminService.getAdminSettings();
+      const connected = new Set(
+        adminSettings
+          .filter(s => s.is_active)
+          .map(s => s.provider)
+      );
+      setConnectedProviders(connected);
     } catch (error) {
-      console.error("Error loading API keys:", error);
+      console.error("Error loading admin settings:", error);
     }
   };
 
   const handleSaveApiKey = async () => {
-    if (!selectedProvider || !apiKey) return;
-    
+    if (!apiKey.trim()) return;
+
     setLoading(true);
     try {
-      await apiKeysService.createOrUpdateApiKey({
+      await apiKeysService.createApiKey({
         provider: selectedProvider,
         encrypted_key: apiKey,
       });
-      await loadApiKeys();
-      setApiKey("");
+      await loadConnectedProviders();
       setDialogOpen(false);
+      setApiKey("");
     } catch (error) {
       console.error("Error saving API key:", error);
     } finally {
@@ -67,18 +80,30 @@ export default function Dashboard() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="container flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-xl">
-                <Brain className="h-6 w-6 text-primary" />
+        <header className="border-b bg-card sticky top-0 z-10">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-xl">
+                  <Brain className="h-5 w-5 text-primary" />
+                </div>
+                <h1 className="text-lg font-heading font-bold">kAIkus</h1>
               </div>
-              <h1 className="text-xl font-heading font-bold">kAIkus</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                <LogOut className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Button variant="ghost" onClick={() => router.push("/admin")}>
+                    <Shield className="h-5 w-5 mr-2" />
+                    Admin
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => router.push("/chat")}>
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  Chat
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
           </div>
         </header>
