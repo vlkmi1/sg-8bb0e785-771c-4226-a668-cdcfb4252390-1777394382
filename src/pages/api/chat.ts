@@ -2,16 +2,10 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
-// Create admin client with service role key for reading admin_settings
-const supabaseAdmin = createClient<Database>(
+// Create regular client with anon key (admin_settings table now allows public SELECT)
+const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export default async function handler(
@@ -59,7 +53,7 @@ export default async function handler(
     console.log("Chat request:", { model, provider, messageLength: message.length });
 
     // Get API key from admin_settings
-    const { data: setting, error: settingError } = await supabaseAdmin
+    const { data: setting, error: settingError } = await supabase
       .from("admin_settings")
       .select("api_key")
       .eq("provider", provider)
