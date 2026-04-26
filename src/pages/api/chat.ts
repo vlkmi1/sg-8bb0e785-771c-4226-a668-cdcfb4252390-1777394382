@@ -1,35 +1,44 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  // Set JSON content type immediately
+  res.setHeader('Content-Type', 'application/json');
 
   try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
     const { message, model, conversationId } = req.body;
 
     if (!message || !model) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({ error: "Chybí povinná pole (message nebo model)" });
+    }
+
+    // Check environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing environment variables:", { 
+        hasUrl: !!supabaseUrl, 
+        hasServiceKey: !!supabaseServiceKey 
+      });
+      return res.status(500).json({ 
+        error: "Server není správně nakonfigurován. Chybí environment variables." 
+      });
     }
 
     // Create admin client with service role key
-    if (!supabaseServiceKey) {
-      console.error("SUPABASE_SERVICE_ROLE_KEY is not set");
-      return res.status(500).json({ error: "Server configuration error" });
-    }
-
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Determine provider from model name
     const provider = getProviderFromModel(model);
-    console.log("Model:", model, "Provider:", provider);
+    console.log("Chat request:", { model, provider, messageLength: message.length });
 
     // Get API key from admin_settings
     const { data: setting, error: settingError } = await supabaseAdmin
@@ -38,10 +47,17 @@ export default async function handler(
       .eq("provider", provider)
       .single();
 
-    if (settingError || !setting?.api_key) {
-      console.error("API key not found for provider:", provider, settingError);
+    if (settingError) {
+      console.error("Error fetching API key:", settingError);
       return res.status(400).json({ 
-        error: `API klíč pro ${provider} není nastaven. Přidejte ho v admin panelu.` 
+        error: `Nepodařilo se načíst API klíč pro ${provider}. Zkontrolujte nastavení v admin panelu.` 
+      });
+    }
+
+    if (!setting?.api_key) {
+      console.error("API key not found for provider:", provider);
+      return res.status(400).json({ 
+        error: `API klíč pro ${provider} není nastaven. Přidejte ho v admin panelu (Nastavení → API klíče).` 
       });
     }
 
@@ -68,20 +84,32 @@ export default async function handler(
           response = await callXAI(message, model, apiKey);
           break;
         default:
-          return res.status(400).json({ error: "Nepodporovaný AI model" });
+          return res.status(400).json({ error: `Nepodporovaný AI model: ${model}` });
       }
 
+      console.log("AI response received, length:", response.length);
       return res.status(200).json({ response });
+      
     } catch (apiError: any) {
-      console.error("AI API Error:", apiError);
+      console.error("AI API Error:", {
+        provider,
+        model,
+        error: apiError.message,
+        stack: apiError.stack
+      });
       return res.status(500).json({ 
-        error: apiError.message || "Chyba při komunikaci s AI modelem" 
+        error: `Chyba při komunikaci s ${provider}: ${apiError.message}` 
       });
     }
+    
   } catch (error: any) {
-    console.error("Chat API Error:", error);
+    console.error("Unhandled Chat API Error:", {
+      message: error.message,
+      stack: error.stack,
+      error: error
+    });
     return res.status(500).json({ 
-      error: error.message || "Nepodařilo se zpracovat požadavek" 
+      error: "Neočekávaná chyba serveru. Zkontrolujte logy." 
     });
   }
 }
@@ -96,115 +124,170 @@ function getProviderFromModel(model: string): string {
 }
 
 async function callOpenAI(message: string, model: string, apiKey: string): Promise<string> {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [{ role: "user", content: message }],
-      temperature: 0.7,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || "OpenAI API error");
-  }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
-}
-
-async function callAnthropic(message: string, model: string, apiKey: string): Promise<string> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: model,
-      max_tokens: 1024,
-      messages: [{ role: "user", content: message }],
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || "Anthropic API error");
-  }
-
-  const data = await response.json();
-  return data.content[0]?.text || "Nepodařilo se získat odpověď.";
-}
-
-async function callGoogle(message: string, model: string, apiKey: string): Promise<string> {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: message }] }],
+        model: model,
+        messages: [{ role: "user", content: message }],
+        temperature: 0.7,
       }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.error?.message || errorText;
+      } catch {
+        errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
     }
-  );
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || "Google AI API error");
+    const data = await response.json();
+    return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
+  } catch (error: any) {
+    throw new Error(`OpenAI API error: ${error.message}`);
   }
+}
 
-  const data = await response.json();
-  return data.candidates[0]?.content?.parts[0]?.text || "Nepodařilo se získat odpověď.";
+async function callAnthropic(message: string, model: string, apiKey: string): Promise<string> {
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: model,
+        max_tokens: 1024,
+        messages: [{ role: "user", content: message }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.error?.message || errorText;
+      } catch {
+        errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.content[0]?.text || "Nepodařilo se získat odpověď.";
+  } catch (error: any) {
+    throw new Error(`Anthropic API error: ${error.message}`);
+  }
+}
+
+async function callGoogle(message: string, model: string, apiKey: string): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: message }] }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.error?.message || errorText;
+      } catch {
+        errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.candidates[0]?.content?.parts[0]?.text || "Nepodařilo se získat odpověď.";
+  } catch (error: any) {
+    throw new Error(`Google AI API error: ${error.message}`);
+  }
 }
 
 async function callMistral(message: string, model: string, apiKey: string): Promise<string> {
-  const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [{ role: "user", content: message }],
-    }),
-  });
+  try {
+    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: "user", content: message }],
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Mistral API error");
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.message || errorText;
+      } catch {
+        errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
+  } catch (error: any) {
+    throw new Error(`Mistral API error: ${error.message}`);
   }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
 }
 
 async function callXAI(message: string, model: string, apiKey: string): Promise<string> {
-  const response = await fetch("https://api.x.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [{ role: "user", content: message }],
-    }),
-  });
+  try {
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: "user", content: message }],
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || "X AI API error");
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.error?.message || errorText;
+      } catch {
+        errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
+  } catch (error: any) {
+    throw new Error(`X AI API error: ${error.message}`);
   }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || "Nepodařilo se získat odpověď.";
 }
