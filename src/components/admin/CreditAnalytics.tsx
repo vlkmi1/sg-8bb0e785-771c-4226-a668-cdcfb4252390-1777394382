@@ -232,7 +232,7 @@ export function CreditAnalytics() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ description, percent }) => `${description} (${(percent * 100).toFixed(0)}%)`}
+                  label={(props: any) => `${props.description} (${(props.percent * 100).toFixed(0)}%)`}
                   outerRadius={80}
                   fill="#8B5CF6"
                   dataKey="total_credits"

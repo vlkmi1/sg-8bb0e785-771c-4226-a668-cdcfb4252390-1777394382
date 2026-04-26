@@ -297,6 +297,41 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_images: {
         Row: {
           created_at: string | null
@@ -1068,17 +1103,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_credit_analytics: {
+        Row: {
+          credits_added: number | null
+          credits_used: number | null
+          date: string | null
+          net_credits: number | null
+          transaction_count: number | null
+        }
+        Relationships: []
+      }
+      admin_usage_by_feature: {
+        Row: {
+          date: string | null
+          description: string | null
+          total_credits: number | null
+          usage_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      add_credits: {
-        Args: { amount: number; target_user_id: string }
-        Returns: number
-      }
-      deduct_credits: {
-        Args: { amount: number; user_id: string }
-        Returns: number
-      }
+      add_credits:
+        | { Args: { amount: number; target_user_id: string }; Returns: number }
+        | {
+            Args: {
+              amount: number
+              description?: string
+              target_user_id: string
+            }
+            Returns: number
+          }
+      deduct_credits:
+        | { Args: { amount: number; user_id: string }; Returns: number }
+        | {
+            Args: { amount: number; description?: string; user_id: string }
+            Returns: number
+          }
       generate_referral_code: { Args: never; Returns: string }
       increment_referral_click: {
         Args: { code_val: string }
