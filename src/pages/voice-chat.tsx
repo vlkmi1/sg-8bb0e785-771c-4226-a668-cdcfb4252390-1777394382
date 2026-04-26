@@ -1,35 +1,113 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, Play, Pause, Trash2, LogOut, Coins, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mic, MicOff, LogOut, Volume2, VolumeX, Loader2, Radio, MessageSquare, Settings, Coins, Play, Pause, StopCircle } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { voiceService, type VoiceProvider, type VoiceConversation } from "@/services/voiceService";
+import { voiceService, type VoiceMessage } from "@/services/voiceService";
 import { creditsService } from "@/services/creditsService";
-import { supabase } from "@/integrations/supabase/client";
+
+type VoiceProvider = "openai" | "elevenlabs" | "google";
+
+const VOICE_PROVIDERS = [
+  { id: "openai", name: "OpenAI", icon: "🤖", description: "Whisper & TTS" },
+  { id: "elevenlabs", name: "ElevenLabs", icon: "🎙️", description: "Ultra-realistic voices" },
+  { id: "google", name: "Google Cloud", icon: "🔊", description: "Cloud TTS & STT" },
+];
+
+const VOICE_TYPES = [
+  { id: "alloy", name: "Alloy", gender: "neutral" },
+  { id: "echo", name: "Echo", gender: "male" },
+  { id: "fable", name: "Fable", gender: "neutral" },
+  { id: "onyx", name: "Onyx", gender: "male" },
+  { id: "nova", name: "Nova", gender: "female" },
+  { id: "shimmer", name: "Shimmer", gender: "female" },
+];
 
 export default function VoiceChat() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState("live");
+  const [messages, setMessages] = useState<VoiceMessage[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [playing, setPlaying] = useState<string | null>(null);
   const [provider, setProvider] = useState<VoiceProvider>("openai");
-  const [isRecording, setIsRecording] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [conversations, setConversations] = useState<VoiceConversation[]>([]);
+  const [voiceType, setVoiceType] = useState("alloy");
   const [credits, setCredits] = useState(0);
-  const [activeTab, setActiveTab] = useState("record");
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Live chat states
+  const [isLiveActive, setIsLiveActive] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [conversation, setConversation] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
+  
+  const recognitionRef = useRef<any>(null);
+  const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    loadConversations();
+    loadMessages();
     loadCredits();
+    setupSpeechRecognition();
+    
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      if (synthesisRef.current) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, []);
+
+  const setupSpeechRecognition = () => {
+    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = "cs-CZ";
+
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = "";
+        let finalTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        setLiveTranscript(interimTranscript || finalTranscript);
+
+        if (finalTranscript) {
+          handleLiveMessage(finalTranscript);
+        }
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        if (isLiveActive) {
+          recognitionRef.current?.start();
+        }
+      };
+    }
+  };
 
   const loadCredits = async () => {
     try {
@@ -40,86 +118,124 @@ export default function VoiceChat() {
     }
   };
 
-  const loadConversations = async () => {
+  const loadMessages = async () => {
     try {
-      const data = await voiceService.getVoiceConversations();
-      setConversations(data);
+      const data = await voiceService.getMessages();
+      setMessages(data);
     } catch (error) {
-      console.error("Error loading conversations:", error);
+      console.error("Error loading messages:", error);
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        await handleAudioSubmit(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Error starting recording:", error);
-      alert("Nelze získat přístup k mikrofonu");
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const handleAudioSubmit = async (audioBlob: Blob) => {
+  const toggleLiveChat = async () => {
     if (credits < 3) {
-      alert("Nemáte dostatek kreditů. Hlasová konverzace stojí 3 kredity. Kontaktujte administrátora.");
+      alert("Nemáte dostatek kreditů. Potřebujete alespoň 3 kredity.");
+      return;
+    }
+
+    if (!isLiveActive) {
+      setIsLiveActive(true);
+      setIsListening(true);
+      setConversation([]);
+      recognitionRef.current?.start();
+    } else {
+      setIsLiveActive(false);
+      setIsListening(false);
+      recognitionRef.current?.stop();
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  const handleLiveMessage = async (transcript: string) => {
+    if (!transcript.trim() || isSpeaking) return;
+
+    setIsListening(false);
+    recognitionRef.current?.stop();
+    setLiveTranscript("");
+
+    const userMessage = { role: "user" as const, content: transcript };
+    setConversation(prev => [...prev, userMessage]);
+
+    try {
+      // Odečíst kredity
+      const newCredits = await creditsService.deductCredits(3);
+      setCredits(newCredits);
+
+      // Simulace AI odpovědi
+      const aiResponse = `Rozumím. Řekl jste: ${transcript}. Toto je ukázková odpověď AI asistenta v živém režimu.`;
+      
+      const assistantMessage = { role: "assistant" as const, content: aiResponse };
+      setConversation(prev => [...prev, assistantMessage]);
+
+      // Text-to-Speech
+      await speakText(aiResponse);
+
+      // Pokračovat v poslechu
+      setTimeout(() => {
+        if (isLiveActive) {
+          setIsListening(true);
+          recognitionRef.current?.start();
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error("Error in live chat:", error);
+      setIsListening(true);
+      recognitionRef.current?.start();
+    }
+  };
+
+  const speakText = async (text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      setIsSpeaking(true);
+      
+      synthesisRef.current = new SpeechSynthesisUtterance(text);
+      synthesisRef.current.lang = "cs-CZ";
+      synthesisRef.current.rate = 1.0;
+      synthesisRef.current.pitch = 1.0;
+
+      synthesisRef.current.onend = () => {
+        setIsSpeaking(false);
+        resolve();
+      };
+
+      synthesisRef.current.onerror = () => {
+        setIsSpeaking(false);
+        resolve();
+      };
+
+      window.speechSynthesis.speak(synthesisRef.current);
+    });
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    if (credits < 3) {
+      alert("Nemáte dostatek kreditů. Potřebujete 3 kredity.");
       return;
     }
 
     setLoading(true);
     try {
-      const audioFile = new File([audioBlob], `voice_${Date.now()}.webm`, { type: "audio/webm" });
-      const audioUrl = await voiceService.uploadAudio(audioFile);
-
-      await voiceService.createVoiceConversation({
-        provider,
-        audio_url: audioUrl,
-        transcript: "[Simulovaný přepis hlasové zprávy]",
-        duration: Math.floor(audioBlob.size / 1000),
+      const transcription = await voiceService.transcribeAudio(file, provider);
+      
+      await voiceService.createMessage({
+        transcript: transcription,
+        audio_url: null,
+        provider: provider,
+        voice_type: voiceType,
       });
 
       const newCredits = await creditsService.deductCredits(3);
       setCredits(newCredits);
 
-      await loadConversations();
+      await loadMessages();
       setActiveTab("history");
     } catch (error) {
-      console.error("Error submitting audio:", error);
-      if (error instanceof Error && error.message.includes("Insufficient credits")) {
-        alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
-      }
+      console.error("Error uploading audio:", error);
+      alert("Chyba při zpracování zvuku.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await voiceService.deleteVoiceConversation(id);
-      await loadConversations();
-    } catch (error) {
-      console.error("Error deleting conversation:", error);
     }
   };
 
@@ -131,7 +247,7 @@ export default function VoiceChat() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
+        <header className="border-b bg-card sticky top-0 z-10">
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -161,72 +277,179 @@ export default function VoiceChat() {
         <main className="container mx-auto px-6 py-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-              <TabsTrigger value="record">Nahrát</TabsTrigger>
-              <TabsTrigger value="history">Historie</TabsTrigger>
+              <TabsTrigger value="live">
+                <Radio className="h-4 w-4 mr-2" />
+                Živý chat
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Historie
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="record" className="space-y-6">
-              <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                  <CardTitle className="font-heading">Hlasová konverzace</CardTitle>
-                  <CardDescription>
-                    Nahrajte svůj hlas a AI vám odpoví. Stojí 3 kredity.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>AI Model</Label>
-                    <Select value={provider} onValueChange={(v) => setProvider(v as VoiceProvider)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="openai">OpenAI Whisper + TTS</SelectItem>
-                        <SelectItem value="elevenlabs">ElevenLabs Voice AI</SelectItem>
-                        <SelectItem value="google">Google Cloud Speech</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <TabsContent value="live" className="space-y-6">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-heading flex items-center gap-2">
+                      <Radio className="h-5 w-5 text-primary" />
+                      Živý hlasový chat
+                    </CardTitle>
+                    <CardDescription>
+                      Konverzujte s AI v reálném čase. Mluvte a AI vám okamžitě odpoví hlasem. (3 kredity za zprávu)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex flex-col items-center justify-center py-8 space-y-6">
+                        {/* Status indikátor */}
+                        <div className="relative">
+                          <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
+                            isLiveActive 
+                              ? isListening 
+                                ? "bg-accent/20 animate-pulse" 
+                                : isSpeaking 
+                                  ? "bg-primary/20 animate-pulse" 
+                                  : "bg-muted"
+                              : "bg-muted"
+                          }`}>
+                            {isListening && (
+                              <Mic className="h-16 w-16 text-accent" />
+                            )}
+                            {isSpeaking && (
+                              <Volume2 className="h-16 w-16 text-primary animate-pulse" />
+                            )}
+                            {!isLiveActive && (
+                              <MicOff className="h-16 w-16 text-muted-foreground" />
+                            )}
+                          </div>
+                          {isLiveActive && (
+                            <div className="absolute -bottom-2 -right-2">
+                              <Badge variant="default" className="bg-accent">
+                                <Radio className="h-3 w-3 mr-1 animate-pulse" />
+                                LIVE
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
 
-                  <div className="flex flex-col items-center gap-6 py-8">
-                    <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
-                      isRecording 
-                        ? "bg-destructive/20 animate-pulse" 
-                        : "bg-primary/10 hover:bg-primary/20"
-                    }`}>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="w-24 h-24 rounded-full"
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <Loader2 className="h-12 w-12 animate-spin" />
-                        ) : isRecording ? (
-                          <MicOff className="h-12 w-12 text-destructive" />
-                        ) : (
-                          <Mic className="h-12 w-12 text-primary" />
-                        )}
-                      </Button>
+                        {/* Status text */}
+                        <div className="text-center space-y-2">
+                          <p className="text-lg font-semibold">
+                            {!isLiveActive && "Vypnuto"}
+                            {isListening && "Poslouchám..."}
+                            {isSpeaking && "AI mluví..."}
+                            {isLiveActive && !isListening && !isSpeaking && "Připraveno"}
+                          </p>
+                          {liveTranscript && (
+                            <p className="text-sm text-muted-foreground italic">
+                              "{liveTranscript}"
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Control button */}
+                        <Button
+                          size="lg"
+                          onClick={toggleLiveChat}
+                          className={isLiveActive ? "bg-destructive hover:bg-destructive/90" : ""}
+                        >
+                          {isLiveActive ? (
+                            <>
+                              <StopCircle className="h-5 w-5 mr-2" />
+                              Ukončit chat
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-5 w-5 mr-2" />
+                              Zahájit živý chat
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Nastavení */}
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="space-y-2">
+                          <Label>AI Provider</Label>
+                          <Select value={provider} onValueChange={(v) => setProvider(v as VoiceProvider)} disabled={isLiveActive}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VOICE_PROVIDERS.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.icon} {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Typ hlasu</Label>
+                          <Select value={voiceType} onValueChange={setVoiceType} disabled={isLiveActive}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VOICE_TYPES.map((v) => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  {v.name} ({v.gender})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium">
-                        {loading ? "Zpracovávám..." : isRecording ? "Nahrávám... (klikněte pro zastavení)" : "Klikněte pro zahájení nahrávání"}
-                      </p>
-                      {isRecording && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Mluvte jasně a zřetelně
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-heading">Konverzace</CardTitle>
+                    <CardDescription>
+                      Živý přepis vaší konverzace s AI
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                      {conversation.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                          Zatím žádná konverzace. Zahajte živý chat a začněte mluvit.
                         </p>
+                      ) : (
+                        conversation.map((msg, idx) => (
+                          <div 
+                            key={idx} 
+                            className={`p-3 rounded-lg ${
+                              msg.role === "user" 
+                                ? "bg-primary/10 ml-8" 
+                                : "bg-secondary/10 mr-8"
+                            }`}
+                          >
+                            <p className="text-xs font-semibold mb-1">
+                              {msg.role === "user" ? "Vy" : "AI Asistent"}
+                            </p>
+                            <p className="text-sm">{msg.content}</p>
+                          </div>
+                        ))
                       )}
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Tip:</strong> Pro nejlepší výsledky mluvte v tichém prostředí a držte mikrofon blízko úst.
-                    </p>
-                  </div>
+              <Card className="bg-muted/50">
+                <CardHeader>
+                  <CardTitle className="text-sm">💡 Tipy pro živý chat</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground space-y-2">
+                  <p>• Mluvte zřetelně a s pauzami mezi větami</p>
+                  <p>• Čekejte až AI dokončí svou odpověď než mluvíte znovu</p>
+                  <p>• Používejte v tichém prostředí pro nejlepší výsledky</p>
+                  <p>• Každá zpráva stojí 3 kredity (vaše otázka + AI odpověď)</p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -234,79 +457,47 @@ export default function VoiceChat() {
             <TabsContent value="history" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-heading">Historie hlasových konverzací</CardTitle>
+                  <CardTitle className="font-heading">Historie nahrávek</CardTitle>
                   <CardDescription>
-                    Vaše předchozí hlasové konverzace
+                    Všechny vaše hlasové zprávy a přepisy
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[600px]">
-                    {conversations.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        Zatím nemáte žádné hlasové konverzace
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {conversations.map((conv) => (
-                          <Card key={conv.id} className="overflow-hidden">
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline">{conv.provider}</Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(conv.created_at).toLocaleString("cs-CZ")}
-                                    </span>
-                                  </div>
-                                  {conv.transcript && (
-                                    <p className="text-sm text-muted-foreground">
-                                      {conv.transcript}
-                                    </p>
-                                  )}
-                                  {conv.duration && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Délka: {conv.duration}s
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex gap-2">
-                                  {conv.audio_url && (
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={() => {
-                                        if (playingId === conv.id) {
-                                          setPlayingId(null);
-                                        } else {
-                                          setPlayingId(conv.id);
-                                          const audio = new Audio(conv.audio_url!);
-                                          audio.play();
-                                          audio.onended = () => setPlayingId(null);
-                                        }
-                                      }}
-                                    >
-                                      {playingId === conv.id ? (
-                                        <Pause className="h-4 w-4" />
-                                      ) : (
-                                        <Play className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                  )}
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => handleDelete(conv.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                  {messages.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Zatím nemáte žádné nahrávky
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((message) => (
+                        <Card key={message.id}>
+                          <CardContent className="pt-4">
+                            <div className="flex items-start gap-4">
+                              <div className="p-3 bg-primary/10 rounded-lg">
+                                <Mic className="h-5 w-5 text-primary" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium mb-2">
+                                  {new Date(message.created_at).toLocaleString("cs-CZ")}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {message.transcript}
+                                </p>
+                                <div className="flex gap-2 mt-3">
+                                  <Badge variant="secondary">
+                                    {VOICE_PROVIDERS.find(p => p.id === message.provider)?.name}
+                                  </Badge>
+                                  <Badge variant="secondary">
+                                    {message.voice_type}
+                                  </Badge>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
