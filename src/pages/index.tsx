@@ -58,7 +58,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      await apiKeysService.createApiKey({
+      await apiKeysService.createOrUpdateApiKey({
         provider: selectedProvider,
         encrypted_key: apiKey,
       });
