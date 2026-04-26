@@ -29,9 +29,13 @@ export const viralVideoService = {
   },
 
   async createVideo(params: CreateViralVideoParams): Promise<ViralVideo> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data, error } = await supabase
       .from("viral_videos")
       .insert({
+        user_id: user.id,
         prompt: params.prompt,
         trend: params.trend,
         style: params.style,
