@@ -11,10 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, MicOff, LogOut, Volume2, VolumeX, Loader2, Radio, MessageSquare, Settings, Coins, Play, Pause, StopCircle } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { voiceService, type VoiceMessage } from "@/services/voiceService";
+import { voiceService, type VoiceConversation, type VoiceProvider } from "@/services/voiceService";
 import { creditsService } from "@/services/creditsService";
-
-type VoiceProvider = "openai" | "elevenlabs" | "google";
 
 const VOICE_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "Whisper & TTS" },
@@ -34,7 +32,7 @@ const VOICE_TYPES = [
 export default function VoiceChat() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("live");
-  const [messages, setMessages] = useState<VoiceMessage[]>([]);
+  const [messages, setMessages] = useState<VoiceConversation[]>([]);
   const [recording, setRecording] = useState(false);
   const [playing, setPlaying] = useState<string | null>(null);
   const [provider, setProvider] = useState<VoiceProvider>("openai");
@@ -120,7 +118,7 @@ export default function VoiceChat() {
 
   const loadMessages = async () => {
     try {
-      const data = await voiceService.getMessages();
+      const data = await voiceService.getVoiceConversations();
       setMessages(data);
     } catch (error) {
       console.error("Error loading messages:", error);
@@ -217,13 +215,12 @@ export default function VoiceChat() {
 
     setLoading(true);
     try {
-      const transcription = await voiceService.transcribeAudio(file, provider);
+      const audioUrl = await voiceService.uploadAudio(file);
       
-      await voiceService.createMessage({
-        transcript: transcription,
-        audio_url: null,
+      await voiceService.createVoiceConversation({
         provider: provider,
-        voice_type: voiceType,
+        audio_url: audioUrl,
+        transcript: "Transcription placeholder (v reálné aplikaci by zde bylo volání API pro převod řeči na text)",
       });
 
       const newCredits = await creditsService.deductCredits(3);
@@ -488,7 +485,7 @@ export default function VoiceChat() {
                                     {VOICE_PROVIDERS.find(p => p.id === message.provider)?.name}
                                   </Badge>
                                   <Badge variant="secondary">
-                                    {message.voice_type}
+                                    Hlasová konverzace
                                   </Badge>
                                 </div>
                               </div>
