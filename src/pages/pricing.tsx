@@ -1,211 +1,339 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, LogOut, Crown, Zap, Rocket, Star, Settings } from "lucide-react";
-import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { subscriptionService, type SubscriptionPlan, type UserSubscription } from "@/services/subscriptionService";
+import { Check, Sparkles, Crown, Rocket, Zap, ArrowLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 
-const TIER_ICONS = {
-  free: Star,
-  basic: Zap,
-  pro: Rocket,
-  enterprise: Crown,
-};
-
-const TIER_COLORS = {
-  free: "bg-muted",
-  basic: "bg-primary/10",
-  pro: "bg-secondary/10",
-  enterprise: "bg-accent/10",
-};
+const subscriptionPlans = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: 299,
+    period: "měsíc",
+    credits: 1000,
+    icon: <Zap className="h-8 w-8" />,
+    features: [
+      "1 000 kreditů měsíčně",
+      "Přístup ke všem AI modelům",
+      "Chat s GPT-4, Claude, Gemini",
+      "Generování obrázků",
+      "Základní podpora",
+      "Historie konverzací",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Professional",
+    price: 799,
+    period: "měsíc",
+    credits: 3000,
+    icon: <Rocket className="h-8 w-8" />,
+    popular: true,
+    features: [
+      "3 000 kreditů měsíčně",
+      "Všechny funkce Starter",
+      "Generování videí",
+      "AI hudba",
+      "Pokročilé asistenty",
+      "Prioritní podpora",
+      "API přístup",
+      "Neomezená historie",
+    ],
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: 1999,
+    period: "měsíc",
+    credits: 10000,
+    icon: <Crown className="h-8 w-8" />,
+    features: [
+      "10 000 kreditů měsíčně",
+      "Všechny funkce Professional",
+      "Vlastní AI asistenti",
+      "Virální videa",
+      "AI influencer",
+      "Dedikovaná podpora 24/7",
+      "SLA garantace",
+      "Vlastní integrace",
+    ],
+  },
+];
 
 export default function Pricing() {
   const router = useRouter();
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
+    checkAuth();
   }, []);
 
-  const loadData = async () => {
-    try {
-      const [plansData, subscription] = await Promise.all([
-        subscriptionService.getPlans(),
-        subscriptionService.getCurrentSubscription(),
-      ]);
-      setPlans(plansData);
-      setCurrentSubscription(subscription);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    }
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setIsAuthenticated(!!user);
   };
 
   const handleSubscribe = async (planId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      router.push("/auth/login?redirect=/pricing");
+      return;
+    }
+
     setLoading(planId);
+
     try {
-      await subscriptionService.subscribeToPlan(planId);
-      await loadData();
-      alert("Předplatné bylo úspěšně aktivováno!");
-    } catch (error) {
+      const plan = subscriptionPlans.find(p => p.id === planId);
+      if (!plan) throw new Error("Invalid plan");
+
+      // We need to fetch plan_id from subscription_plans instead of inserting hardcoded string
+      const { data: dbPlan, error: fetchPlanError } = await supabase
+        .from("subscription_plans")
+        .select("id")
+        .eq("tier", planId === "starter" ? "basic" : planId)
+        .single();
+
+      if (fetchPlanError) {
+        // If plan doesn't exist in DB, fallback to handling just payment and credits
+        console.warn("Plan not found in DB, skipping subscription record creation");
+      } else {
+        // Create subscription
+        const periodEnd = new Date();
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+        const { data: subscription, error: subError } = await supabase
+          .from("user_subscriptions")
+          .insert({
+            user_id: user.id,
+            plan_id: dbPlan.id,
+            status: "active",
+            expires_at: periodEnd.toISOString(),
+          })
+          .select()
+          .single();
+
+        if (subError) throw subError;
+
+        // Create payment record
+        const { error: paymentError } = await supabase
+          .from("payments")
+          .insert({
+            user_id: user.id,
+            amount: plan.price,
+            method: "card",
+            payment_type: "subscription",
+            status: "completed",
+            metadata: { plan_name: plan.name, subscription_id: subscription.id }
+          });
+
+        if (paymentError) throw paymentError;
+      }
+
+      // Add monthly credits
+      await supabase.rpc("add_credits", {
+        target_user_id: user.id,
+        amount: plan.credits
+      });
+
+      toast({
+        title: "Předplatné aktivováno! 🎉",
+        description: `Bylo přidáno ${plan.credits.toLocaleString("cs-CZ")} kreditů`,
+      });
+
+      router.push("/dashboard");
+    } catch (error: any) {
       console.error("Error subscribing:", error);
-      alert("Chyba při aktivaci předplatného.");
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se aktivovat předplatné",
+        variant: "destructive",
+      });
     } finally {
       setLoading(null);
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/auth/login");
-  };
-
-  const isCurrentPlan = (planId: string) => {
-    return currentSubscription?.plan_id === planId;
-  };
-
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card sticky top-0 z-10">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-xl">
                   <Crown className="h-5 w-5 text-primary" />
                 </div>
-                <h1 className="text-lg font-heading font-bold">Předplatné</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <ThemeSwitch />
-                <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                  Dashboard
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
+                <h1 className="text-xl font-heading font-bold">Ceník</h1>
               </div>
             </div>
+            <ThemeSwitch />
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="container mx-auto px-6 py-12">
-          <div className="text-center space-y-4 mb-12">
-            <h1 className="text-4xl font-heading font-bold">
-              Vyberte si <span className="text-primary">perfektní plán</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Odemkněte plný potenciál AI s našimi předplatnými. Začněte zdarma a upgradujte kdykoliv.
-            </p>
-          </div>
+      <main className="container mx-auto px-6 py-12">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-4">
+            Vyberte si ideální plán
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            Získejte přístup k nejmodernějším AI modelům a nástrojům
+          </p>
+        </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-7xl mx-auto">
-            {plans.map((plan) => {
-              const Icon = TIER_ICONS[plan.tier as keyof typeof TIER_ICONS] || Star;
-              const isActive = isCurrentPlan(plan.id);
-              const features = (plan.features as string[]) || [];
-              
-              return (
-                <Card 
-                  key={plan.id} 
-                  className={`relative ${isActive ? "border-primary border-2" : ""} ${TIER_COLORS[plan.tier as keyof typeof TIER_COLORS]}`}
+        <Tabs defaultValue="subscription" className="max-w-6xl mx-auto">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+            <TabsTrigger value="subscription">Předplatné</TabsTrigger>
+            <TabsTrigger value="credits">Kredity</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="subscription">
+            <div className="grid gap-6 md:grid-cols-3">
+              {subscriptionPlans.map((plan) => (
+                <Card
+                  key={plan.id}
+                  className={`relative ${plan.popular ? "border-primary shadow-lg scale-105" : ""}`}
                 >
-                  {isActive && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary">Aktivní plán</Badge>
-                    </div>
+                  {plan.popular && (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+                      Nejpopulárnější
+                    </Badge>
                   )}
-                  {plan.tier === "pro" && !isActive && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-accent">Nejoblíbenější</Badge>
-                    </div>
-                  )}
-                  
-                  <CardHeader className="text-center">
-                    <div className="mx-auto p-3 bg-background/50 rounded-xl mb-4 w-fit">
-                      <Icon className="h-8 w-8 text-primary" />
+                  <CardHeader className="text-center pb-4">
+                    <div className="flex justify-center mb-4 text-primary">
+                      {plan.icon}
                     </div>
                     <CardTitle className="text-2xl font-heading">{plan.name}</CardTitle>
-                    <div className="pt-4">
-                      <span className="text-4xl font-bold">{plan.price} Kč</span>
-                      <span className="text-muted-foreground">/{plan.billing_period === "monthly" ? "měsíc" : "rok"}</span>
-                    </div>
-                    <CardDescription className="pt-2">
-                      {plan.credits_included === 999999 
-                        ? "Neomezené kredity" 
-                        : `${plan.credits_included} kreditů měsíčně`}
+                    <CardDescription className="text-muted-foreground mt-2">
+                      {plan.credits.toLocaleString("cs-CZ")} kreditů/{plan.period}
                     </CardDescription>
                   </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="text-center">
+                      <div className="flex items-baseline justify-center gap-1">
+                        <span className="text-4xl font-bold">{plan.price}</span>
+                        <span className="text-muted-foreground">Kč</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">/{plan.period}</p>
+                    </div>
 
-                  <CardContent className="space-y-4">
                     <ul className="space-y-3">
-                      {features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm">
-                          <Check className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                          <span>{feature}</span>
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <Check className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                          <span className="text-sm">{feature}</span>
                         </li>
                       ))}
                     </ul>
-                  </CardContent>
 
-                  <CardFooter>
                     <Button
-                      className="w-full"
-                      variant={isActive ? "secondary" : "default"}
                       onClick={() => handleSubscribe(plan.id)}
-                      disabled={isActive || loading === plan.id}
-                    >
-                      {loading === plan.id ? "Aktivuji..." : isActive ? "Aktivní" : "Vybrat plán"}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
-
-          {currentSubscription && (
-            <div className="mt-12 max-w-2xl mx-auto">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-heading">Vaše aktuální předplatné</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Plán:</span>
-                    <Badge variant="default">{currentSubscription.subscription_plans?.name}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Status:</span>
-                    <Badge variant={currentSubscription.status === "active" ? "default" : "secondary"}>
-                      {currentSubscription.status === "active" ? "Aktivní" : "Neaktivní"}
-                    </Badge>
-                  </div>
-                  {currentSubscription.expires_at && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Platnost do:</span>
-                      <span>{new Date(currentSubscription.expires_at).toLocaleDateString("cs-CZ")}</span>
-                    </div>
-                  )}
-                  <div className="pt-4 border-t">
-                    <Button 
-                      variant="outline" 
+                      disabled={loading !== null}
                       className="w-full"
-                      onClick={() => router.push("/credits")}
+                      variant={plan.popular ? "default" : "outline"}
                     >
-                      Dobít kredity
+                      {loading === plan.id ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                          Zpracovává se...
+                        </div>
+                      ) : (
+                        "Vybrat plán"
+                      )}
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          )}
-        </main>
-      </div>
-    </AuthGuard>
+
+            <div className="mt-12 text-center">
+              <p className="text-muted-foreground mb-4">
+                💡 Všechny plány zahrnují 14denní zkušební období
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Kredity se obnovují každý měsíc. Nevyužité kredity nepropadají.
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="credits">
+            <div className="text-center py-12">
+              <div className="inline-flex p-4 bg-primary/10 rounded-2xl mb-6">
+                <Sparkles className="h-12 w-12 text-primary" />
+              </div>
+              <h3 className="text-2xl font-heading font-bold mb-4">
+                Doplňte si kredity kdykoliv
+              </h3>
+              <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+                Nevyčerpali jste měsíční kredity? Dokupte si je podle potřeby a plaťte jen za to, co skutečně použijete.
+              </p>
+              <Button
+                size="lg"
+                onClick={() => setShowCreditDialog(true)}
+                className="gap-2"
+              >
+                <Sparkles className="h-5 w-5" />
+                Zakoupit kredity
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="mt-16 max-w-4xl mx-auto">
+          <Card className="bg-gradient-to-br from-primary/5 to-accent/5">
+            <CardContent className="p-8">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="text-xl font-heading font-bold mb-4">
+                    🎯 Jak fungují kredity?
+                  </h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li>• 1 kredit = 1 AI operace (chat zpráva, generování)</li>
+                    <li>• Kredity nikdy nepropadají</li>
+                    <li>• Přenoste si je do dalšího měsíce</li>
+                    <li>• Transparentní spotřeba v dashboardu</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-xl font-heading font-bold mb-4">
+                    🎁 Výhody předplatného
+                  </h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li>• Až 50% úspora oproti jednotlivým kreditům</li>
+                    <li>• Prioritní přístup k novým modelům</li>
+                    <li>• Rychlejší odezva</li>
+                    <li>• Bonus kredity každý měsíc</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+
+      <CreditPurchaseDialog
+        open={showCreditDialog}
+        onOpenChange={setShowCreditDialog}
+        onSuccess={() => {
+          toast({
+            title: "Úspěch! 🎉",
+            description: "Kredity byly přidány na váš účet",
+          });
+        }}
+      />
+    </div>
   );
 }

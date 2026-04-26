@@ -16,10 +16,13 @@ import { voiceService } from "@/services/voiceService";
 import { adminService } from "@/services/adminService";
 import { supabase } from "@/integrations/supabase/client";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
+import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [credits, setCredits] = useState(0);
+  const [credits, setCredits] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState({
     conversations: 0,
@@ -32,6 +35,15 @@ export default function Dashboard() {
     title: string;
     time: string;
   }>>([]);
+
+  const loadCredits = async () => {
+    try {
+      const userCredits = await creditsService.getCredits();
+      setCredits(userCredits);
+    } catch (error) {
+      console.error("Error loading credits:", error);
+    }
+  };
 
   useEffect(() => {
     loadDashboardData();
@@ -141,24 +153,22 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-xl">
-                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <h1 className="text-lg font-heading font-bold">Dashboard</h1>
+                <h1 className="text-xl font-heading font-bold">Dashboard</h1>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
-                  <Coins className="h-4 w-4 text-accent" />
-                  <span className="text-sm font-medium">{credits}</span>
-                  <span className="text-xs text-muted-foreground">kreditů</span>
-                </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreditDialog(true)}
+                  className="gap-2 hover:bg-primary/10 transition-colors cursor-pointer"
+                >
+                  <Coins className="h-4 w-4 text-primary" />
+                  <span className="font-semibold">{credits.toLocaleString("cs-CZ")}</span>
+                  <span className="text-muted-foreground text-xs">kreditů</span>
+                </Button>
                 <ThemeSwitch />
-                <Button variant="ghost" onClick={() => router.push("/settings")}>
-                  <Settings className="h-5 w-5 mr-2" />
-                  Nastavení
-                </Button>
-                <Button variant="ghost" onClick={() => router.push("/")}>
-                  Zpět
-                </Button>
                 <Button variant="ghost" size="icon" onClick={handleSignOut}>
                   <LogOut className="h-5 w-5" />
                 </Button>
@@ -521,6 +531,12 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
+
+      <CreditPurchaseDialog
+        open={showCreditDialog}
+        onOpenChange={setShowCreditDialog}
+        onSuccess={loadCredits}
+      />
     </AuthGuard>
   );
 }
