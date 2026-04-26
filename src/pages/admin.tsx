@@ -15,8 +15,6 @@ import { adminService, type AdminSetting } from "@/services/adminService";
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 
-type AdminSetting = Tables<"admin_settings">;
-
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
   { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku" },
