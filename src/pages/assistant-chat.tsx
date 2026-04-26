@@ -62,7 +62,7 @@ export default function AssistantChat() {
       }
 
       setConversation(conv);
-      setMessages((conv.messages as Message[]) || []);
+      setMessages((conv.messages as unknown as Message[]) || []);
     } catch (error) {
       console.error("Error loading conversation:", error);
     }

@@ -200,12 +200,12 @@ export const assistantService = {
 
     if (fetchError) throw fetchError;
 
-    const messages = [...(conversation.messages as Message[] || []), message];
+    const messages = [...(conversation.messages as unknown as Message[] || []), message];
 
     const { error: updateError } = await supabase
       .from("assistant_conversations")
       .update({
-        messages: messages,
+        messages: messages as any,
         updated_at: new Date().toISOString(),
       })
       .eq("id", conversationId);
