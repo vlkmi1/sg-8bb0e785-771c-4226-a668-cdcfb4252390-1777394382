@@ -199,10 +199,8 @@ export default function Chat() {
 
         <div className="flex-1 flex">
           <ConversationSidebar
-            conversations={conversations}
-            currentConversation={currentConversation}
+            selectedId={currentConversation?.id}
             onSelectConversation={handleSelectConversation}
-            onDeleteConversation={handleDeleteConversation}
             onNewConversation={() => setDialogOpen(true)}
           />
 

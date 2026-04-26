@@ -130,7 +130,9 @@ export default function Admin() {
   const handleToggleProvider = async (providerId: string) => {
     setLoading(true);
     try {
-      await adminService.toggleAdminSetting(providerId);
+      const setting = adminSettings.find(s => s.provider === providerId);
+      const isActive = setting ? setting.is_active : false;
+      await adminService.toggleAdminSetting(providerId, !isActive);
       await loadAdminSettings();
     } catch (error) {
       console.error("Error toggling provider:", error);
