@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 
 export const creditsService = {
   async getCredits(): Promise<number> {
@@ -7,9 +6,9 @@ export const creditsService = {
     if (!user) return 0;
 
     const { data, error } = await supabase
-      .from("user_credits")
+      .from("profiles")
       .select("credits")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .single();
 
     if (error) {
