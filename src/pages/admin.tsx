@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink } from "lucide-react";
+import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink, TestTube2, CheckCircle2, XCircle } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { useToast } from "@/hooks/use-toast";
@@ -28,32 +28,32 @@ import {
 import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 
 const AI_PROVIDERS = [
-  { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
-  { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku" },
-  { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra" },
-  { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small" },
-  { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed" },
-  { id: "xai", name: "X AI", icon: "𝕏", description: "Grok, Grok-2" },
-  { id: "nano-bannana", name: "Nano Bannana", icon: "🍌", description: "Fast AI Model for Quick Tasks" },
-  { id: "nano-bannana-pro", name: "Nano Bannana PRO", icon: "🍌✨", description: "Advanced Nano Bannana Model" },
-  { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion, Image Generation" },
-  { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation" },
-  { id: "fal", name: "Fal AI", icon: "🎯", description: "Fast Image & Video Generation" },
-  { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation" },
-  { id: "pika", name: "Pika Labs", icon: "🎥", description: "Text-to-Video, 3D Animations" },
-  { id: "stability-video", name: "Stability Video", icon: "📹", description: "Stable Video Diffusion" },
-  { id: "heygen", name: "HeyGen", icon: "👤", description: "AI Video Avatars & Influencers" },
-  { id: "d-id", name: "D-ID", icon: "🎭", description: "Digital People & Talking Heads" },
-  { id: "synthesia", name: "Synthesia", icon: "🎬", description: "AI Video Platform with Avatars" },
-  { id: "runway-gen2", name: "Runway Gen-2", icon: "🚀", description: "Advanced Video AI Models" },
-  { id: "suno", name: "Suno AI", icon: "🎵", description: "AI Music with Vocals" },
-  { id: "musicgen", name: "MusicGen", icon: "🎹", description: "Meta AI Music Model" },
-  { id: "mubert", name: "Mubert", icon: "🎧", description: "Real-time AI Music" },
-  { id: "aiva", name: "AIVA", icon: "🎼", description: "AI Orchestral Composer" },
-  { id: "soundraw", name: "Soundraw", icon: "🎶", description: "Royalty-Free AI Music" },
-  { id: "viral-runway", name: "Runway Viral", icon: "📲", description: "Viral Video Generation" },
-  { id: "viral-pika", name: "Pika Viral", icon: "🔥", description: "Social Media Optimized Videos" },
-  { id: "capcut", name: "CapCut AI", icon: "✂️", description: "TikTok Video Editor AI" },
+  { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo", url: "https://platform.openai.com/api-keys" },
+  { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku", url: "https://console.anthropic.com/settings/keys" },
+  { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra", url: "https://makersuite.google.com/app/apikey" },
+  { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small", url: "https://console.mistral.ai/api-keys" },
+  { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed", url: "https://dashboard.cohere.com/api-keys" },
+  { id: "xai", name: "X AI", icon: "𝕏", description: "Grok, Grok-2", url: "https://console.x.ai" },
+  { id: "nano-bannana", name: "Nano Bannana", icon: "🍌", description: "Fast AI Model for Quick Tasks", url: "https://nanobannana.ai" },
+  { id: "nano-bannana-pro", name: "Nano Bannana PRO", icon: "🍌✨", description: "Advanced Nano Bannana Model", url: "https://nanobannana.ai/pro" },
+  { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion, Image Generation", url: "https://platform.stability.ai/account/keys" },
+  { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation", url: "https://www.midjourney.com/account" },
+  { id: "fal", name: "Fal AI", icon: "🎯", description: "Fast Image & Video Generation", url: "https://fal.ai/dashboard/keys" },
+  { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation", url: "https://app.runwayml.com/settings" },
+  { id: "pika", name: "Pika Labs", icon: "🎥", description: "Text-to-Video, 3D Animations", url: "https://pika.art/settings" },
+  { id: "stability-video", name: "Stability Video", icon: "📹", description: "Stable Video Diffusion", url: "https://platform.stability.ai/account/keys" },
+  { id: "heygen", name: "HeyGen", icon: "👤", description: "AI Video Avatars & Influencers", url: "https://app.heygen.com/settings/api" },
+  { id: "d-id", name: "D-ID", icon: "🎭", description: "Digital People & Talking Heads", url: "https://studio.d-id.com/account-settings" },
+  { id: "synthesia", name: "Synthesia", icon: "🎬", description: "AI Video Platform with Avatars", url: "https://app.synthesia.io/settings/integrations" },
+  { id: "runway-gen2", name: "Runway Gen-2", icon: "🚀", description: "Advanced Video AI Models", url: "https://app.runwayml.com/settings" },
+  { id: "suno", name: "Suno AI", icon: "🎵", description: "AI Music with Vocals", url: "https://suno.ai/settings" },
+  { id: "musicgen", name: "MusicGen", icon: "🎹", description: "Meta AI Music Model", url: "https://huggingface.co/settings/tokens" },
+  { id: "mubert", name: "Mubert", icon: "🎧", description: "Real-time AI Music", url: "https://mubert.com/render/api" },
+  { id: "aiva", name: "AIVA", icon: "🎼", description: "AI Orchestral Composer", url: "https://www.aiva.ai/profile" },
+  { id: "soundraw", name: "Soundraw", icon: "🎶", description: "Royalty-Free AI Music", url: "https://soundraw.io/account" },
+  { id: "viral-runway", name: "Runway Viral", icon: "📲", description: "Viral Video Generation", url: "https://app.runwayml.com/settings" },
+  { id: "viral-pika", name: "Pika Viral", icon: "🔥", description: "Social Media Optimized Videos", url: "https://pika.art/settings" },
+  { id: "capcut", name: "CapCut AI", icon: "✂️", description: "TikTok Video Editor AI", url: "https://www.capcut.com/tools/api" },
 ];
 
 // Provider to modules mapping
@@ -150,6 +150,8 @@ export default function Admin() {
   const [selectedProvider, setSelectedProvider] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({});
   const { toast } = useToast();
   const [showModuleSuggestions, setShowModuleSuggestions] = useState(false);
   const [currentProvider, setCurrentProvider] = useState<string | null>(null);
@@ -235,6 +237,7 @@ export default function Admin() {
       
       setSelectedProvider("");
       setApiKey("");
+      setDialogOpen(false);
       loadData();
     } catch (error) {
       console.error("Error saving API key:", error);
@@ -245,6 +248,58 @@ export default function Admin() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTestApiKey = async (providerId: string) => {
+    const setting = settings.find(s => s.provider === providerId);
+    if (!setting?.api_key) {
+      toast({
+        title: "Chyba",
+        description: "API klíč není nastaven",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTestingProvider(providerId);
+    try {
+      const response = await fetch("/api/test-api-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: providerId, apiKey: setting.api_key }),
+      });
+
+      const result = await response.json();
+      
+      setTestResults(prev => ({
+        ...prev,
+        [providerId]: {
+          success: result.success,
+          message: result.message || (result.success ? "API klíč funguje správně" : "Test selhal"),
+        },
+      }));
+
+      toast({
+        title: result.success ? "Test úspěšný" : "Test selhal",
+        description: result.message,
+        variant: result.success ? "default" : "destructive",
+      });
+    } catch (error) {
+      setTestResults(prev => ({
+        ...prev,
+        [providerId]: {
+          success: false,
+          message: "Chyba při testování API klíče",
+        },
+      }));
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se testovat API klíč",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingProvider(null);
     }
   };
 
@@ -309,21 +364,44 @@ export default function Admin() {
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {AI_PROVIDERS.map((provider) => {
                       const hasSetting = settings.some(s => s.provider === provider.id);
+                      const testResult = testResults[provider.id];
+                      
                       return (
                         <Card key={provider.id}>
                           <CardHeader>
                             <div className="flex items-start justify-between">
                               <div className="text-3xl mb-2">{provider.icon}</div>
-                              {hasSetting ? (
-                                <Badge variant="default" className="bg-accent">Nastaveno</Badge>
-                              ) : (
-                                <Badge variant="secondary">Chybí</Badge>
-                              )}
+                              <div className="flex flex-col gap-1 items-end">
+                                {hasSetting ? (
+                                  <Badge variant="default" className="bg-accent">Nastaveno</Badge>
+                                ) : (
+                                  <Badge variant="secondary">Chybí</Badge>
+                                )}
+                                {testResult && (
+                                  <Badge variant={testResult.success ? "default" : "destructive"} className="text-xs">
+                                    {testResult.success ? (
+                                      <><CheckCircle2 className="h-3 w-3 mr-1" />Test OK</>
+                                    ) : (
+                                      <><XCircle className="h-3 w-3 mr-1" />Test failed</>
+                                    )}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                             <CardTitle className="text-base">{provider.name}</CardTitle>
                             <CardDescription className="text-xs">{provider.description}</CardDescription>
                           </CardHeader>
-                          <CardContent>
+                          <CardContent className="space-y-2">
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              size="sm"
+                              onClick={() => window.open(provider.url, "_blank")}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Získat API klíč
+                            </Button>
+                            
                             <Dialog 
                               open={dialogOpen && selectedProvider === provider.id} 
                               onOpenChange={(open) => {
@@ -332,7 +410,7 @@ export default function Admin() {
                               }}
                             >
                               <DialogTrigger asChild>
-                                <Button variant="outline" className="w-full">
+                                <Button variant="outline" className="w-full" size="sm">
                                   <Key className="h-4 w-4 mr-2" />
                                   {hasSetting ? "Změnit" : "Přidat"}
                                 </Button>
@@ -342,8 +420,11 @@ export default function Admin() {
                                   <DialogTitle className="font-heading">
                                     {provider.name} API klíč
                                   </DialogTitle>
+                                  <DialogDescription>
+                                    Zadejte API klíč od poskytovatele {provider.name}
+                                  </DialogDescription>
                                 </DialogHeader>
-                                <form onSubmit={handleSaveApiKey} className="space-y-4 py-4">
+                                <div className="space-y-4 py-4">
                                   <div className="space-y-2">
                                     <Label htmlFor="apiKey">API klíč</Label>
                                     <Input
@@ -352,15 +433,31 @@ export default function Admin() {
                                       placeholder="sk-..."
                                       value={apiKey}
                                       onChange={(e) => setApiKey(e.target.value)}
-                                      required
                                     />
                                   </div>
-                                  <Button type="submit" className="w-full" disabled={loading}>
+                                  <Button 
+                                    onClick={handleSaveApiKey} 
+                                    className="w-full" 
+                                    disabled={loading}
+                                  >
                                     {loading ? "Ukládání..." : "Uložit"}
                                   </Button>
-                                </form>
+                                </div>
                               </DialogContent>
                             </Dialog>
+
+                            {hasSetting && (
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                size="sm"
+                                onClick={() => handleTestApiKey(provider.id)}
+                                disabled={testingProvider === provider.id}
+                              >
+                                <TestTube2 className="h-4 w-4 mr-2" />
+                                {testingProvider === provider.id ? "Testování..." : "Test API"}
+                              </Button>
+                            )}
                           </CardContent>
                         </Card>
                       );
