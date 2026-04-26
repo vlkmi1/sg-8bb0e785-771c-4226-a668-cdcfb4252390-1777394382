@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,9 +35,11 @@ export function CreditPurchaseDialog({ open, onOpenChange, onSuccess }: CreditPu
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useState(() => {
-    loadPackages();
-  });
+  useEffect(() => {
+    if (open) {
+      loadPackages();
+    }
+  }, [open]);
 
   const loadPackages = async () => {
     try {
