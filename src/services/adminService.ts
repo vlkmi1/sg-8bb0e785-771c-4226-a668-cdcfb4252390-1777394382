@@ -65,6 +65,15 @@ export const adminService = {
     return data;
   },
 
+  async saveAdminSetting(provider: string, apiKey: string): Promise<AdminSetting> {
+    const existing = await this.getAdminSetting(provider);
+    if (existing) {
+      return this.updateAdminSetting(provider, { api_key: apiKey });
+    } else {
+      return this.createAdminSetting({ provider, api_key: apiKey });
+    }
+  },
+
   async createAdminSetting(params: CreateAdminSettingParams): Promise<AdminSetting> {
     const { data, error } = await supabase
       .from("admin_settings")
