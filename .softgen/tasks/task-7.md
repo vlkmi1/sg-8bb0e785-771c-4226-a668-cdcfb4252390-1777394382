@@ -1,6 +1,6 @@
 ---
 title: Modul pro generování videí
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [frontend, video-generation, storage, admin]
@@ -13,15 +13,15 @@ position: 6
 Přidání modulu pro generování videí pomocí AI (RunwayML, Pika Labs, Stability AI Video). Uživatelé zadají textový prompt a AI vygeneruje video. Admin dashboard rozšířen o nastavení API klíčů pro video poskytovatele.
 
 ## Checklist
-- [ ] Vytvořit tabulku generated_videos s prompt, video_url, provider, duration, user_id
-- [ ] Nastavit Supabase Storage bucket pro videa
-- [ ] Vytvořit stránku /video-generate s formulářem pro prompt
-- [ ] Přidat výběr poskytovatele pro generování (RunwayML, Pika, Stability Video)
-- [ ] Galerie vygenerovaných videí s možností stažení
-- [ ] Service pro ukládání a načítání videí
-- [ ] Přidat video poskytovatele do admin dashboardu
-- [ ] Integrace s kartou "Video Generation" na dashboardu
-- [ ] Odečítání kreditů (5 kreditů za video)
+- [x] Vytvořit tabulku generated_videos s prompt, video_url, provider, duration, user_id
+- [x] Nastavit Supabase Storage bucket pro videa
+- [x] Vytvořit stránku /video-generate s formulářem pro prompt
+- [x] Přidat výběr poskytovatele pro generování (RunwayML, Pika, Stability Video)
+- [x] Galerie vygenerovaných videí s možností stažení
+- [x] Service pro ukládání a načítání videí
+- [x] Přidat video poskytovatele do admin dashboardu
+- [x] Integrace s kartou "Video Generation" na dashboardu
+- [x] Odečítání kreditů (5 kreditů za video)
 
 ## Acceptance
 - Uživatel může zadat prompt a vybrat AI model pro generování videa
