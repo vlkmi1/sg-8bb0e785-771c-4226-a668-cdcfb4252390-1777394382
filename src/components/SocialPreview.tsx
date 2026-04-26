@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
-import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Heart, Send, Bookmark, Play } from "lucide-react";
+import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Heart, Send, Bookmark, Play, ImageIcon } from "lucide-react";
 import type { SocialPlatform } from "@/services/socialPostsService";
 
 interface SocialPreviewProps {

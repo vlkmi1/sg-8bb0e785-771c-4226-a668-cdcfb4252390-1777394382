@@ -335,8 +335,8 @@ export default function SocialPosts() {
                           <TableRow key={post.id}>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <span className="text-lg">{PLATFORM_INFO[post.platform as SocialPlatform].icon}</span>
-                                <span className="text-sm">{PLATFORM_INFO[post.platform as SocialPlatform].name}</span>
+                                <span className="text-lg">{PLATFORMS.find(p => p.id === post.platform)?.icon}</span>
+                                <span className="text-sm">{PLATFORMS.find(p => p.id === post.platform)?.name}</span>
                               </div>
                             </TableCell>
                             <TableCell className="max-w-xs truncate">
@@ -389,7 +389,7 @@ export default function SocialPosts() {
               <DialogHeader>
                 <DialogTitle>Náhled příspěvku</DialogTitle>
                 <DialogDescription>
-                  Jak bude příspěvek vypadat na {previewPost && PLATFORM_INFO[previewPost.platform as SocialPlatform].name}
+                  Jak bude příspěvek vypadat na {previewPost && PLATFORMS.find(p => p.id === previewPost.platform)?.name}
                 </DialogDescription>
               </DialogHeader>
               {previewPost && (
