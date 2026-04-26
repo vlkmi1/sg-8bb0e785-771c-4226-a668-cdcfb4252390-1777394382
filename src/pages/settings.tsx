@@ -54,7 +54,8 @@ export default function Settings() {
   const loadConnectedProviders = async () => {
     try {
       const keys = await apiKeysService.getApiKeys();
-      const connected = new Set(keys.map(k => k.provider));
+      // Type casting to ensure TypeScript knows the structure
+      const connected = new Set(keys.map((k: any) => k.provider));
       setConnectedProviders(connected);
     } catch (error) {
       console.error("Error loading API keys:", error);

@@ -12,7 +12,7 @@ export type AIProvider =
   | "stability"
   | "midjourney";
 
-export type ApiKey = Tables<"user_api_keys">;
+export type ApiKey = Tables<"api_keys">;
 
 export interface CreateApiKeyData {
   provider: AIProvider;
