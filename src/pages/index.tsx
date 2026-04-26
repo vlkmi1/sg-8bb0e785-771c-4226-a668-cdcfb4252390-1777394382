@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles, Shield, Coins } from "lucide-react";
+import { Brain, MessageSquare, Settings, LogOut, Key, CheckCircle2, XCircle, ImageIcon, Sparkles, Shield, Coins, Play } from "lucide-react";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { adminService } from "@/services/adminService";
 import { creditsService } from "@/services/creditsService";
@@ -237,6 +237,31 @@ export default function Home() {
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Vygenerovat obrázek
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="relative overflow-hidden group hover:shadow-lg transition-shadow border-secondary/20 bg-gradient-to-br from-secondary/5 to-primary/5">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="p-3 bg-secondary/10 rounded-xl mb-2">
+                      <Play className="h-8 w-8 text-secondary" />
+                    </div>
+                    <Badge variant="default" className="bg-accent">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Nové
+                    </Badge>
+                  </div>
+                  <CardTitle className="font-heading">Video Generation</CardTitle>
+                  <CardDescription>RunwayML, Pika Labs, Stability AI</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button 
+                    className="w-full"
+                    onClick={() => router.push("/video-generate")}
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Vygenerovat video
                   </Button>
                 </CardContent>
               </Card>

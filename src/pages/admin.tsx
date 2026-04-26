@@ -19,13 +19,16 @@ import type { Tables } from "@/integrations/supabase/types";
 type AdminSetting = Tables<"admin_settings">;
 
 const AI_PROVIDERS = [
-  { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5, DALL-E" },
+  { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
   { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku" },
   { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra" },
   { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small" },
   { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed" },
-  { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion XL" },
-  { id: "midjourney", name: "Midjourney", icon: "✨", description: "Midjourney v6" },
+  { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion, Image Generation" },
+  { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation" },
+  { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation" },
+  { id: "pika", name: "Pika Labs", icon: "🎥", description: "Text-to-Video, 3D Animations" },
+  { id: "stability-video", name: "Stability Video", icon: "📹", description: "Stable Video Diffusion" },
 ];
 
 export default function Admin() {
