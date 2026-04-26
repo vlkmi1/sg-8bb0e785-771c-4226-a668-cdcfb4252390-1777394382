@@ -96,7 +96,7 @@ export default function Chat() {
     try {
       const keys = await apiKeysService.getApiKeys();
       // Type casting to ensure TypeScript knows the structure
-      const connected = new Set(keys.map((k: any) => k.provider));
+      const connected = Array.from(new Set(keys.map((k: any) => k.provider))) as AIProvider[];
       setConnectedProviders(connected);
     } catch (error) {
       console.error("Error loading API keys:", error);

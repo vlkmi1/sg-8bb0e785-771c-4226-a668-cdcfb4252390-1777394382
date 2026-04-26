@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Share2, Sparkles, LogOut, Loader2, Coins, Calendar, Trash2, Eye, Settings, ImageIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Share2, Sparkles, LogOut, Trash2, Edit, Calendar, Clock, Loader2, ImageIcon } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { SocialPreview } from "@/components/SocialPreview";
@@ -29,86 +30,103 @@ const PLATFORMS = [
 
 export default function SocialPosts() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState("create");
   const [topic, setTopic] = useState("");
-  const [platform, setPlatform] = useState<SocialPlatform>("facebook");
-  const [content, setContent] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [scheduledTime, setScheduledTime] = useState("");
+  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(["facebook"]);
+  const [contents, setContents] = useState<Partial<Record<SocialPlatform, string>>>({});
+  const [previewContents, setPreviewContents] = useState<Partial<Record<SocialPlatform, string>>>({});
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [credits, setCredits] = useState(0);
+  const [scheduledTime, setScheduledTime] = useState<Date | undefined>(undefined);
   const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [accounts, setAccounts] = useState<SocialAccount[]>([]);
+  const [credits, setCredits] = useState(0);
   const [previewPost, setPreviewPost] = useState<SocialPost | null>(null);
 
   useEffect(() => {
-    loadCredits();
-    loadPosts();
+    loadData();
   }, []);
 
-  const loadCredits = async () => {
+  const loadData = async () => {
     try {
       const userCredits = await creditsService.getCredits();
       setCredits(userCredits);
-    } catch (error) {
-      console.error("Error loading credits:", error);
-    }
-  };
-
-  const loadPosts = async () => {
-    try {
       const data = await socialPostsService.getPosts();
       setPosts(data);
     } catch (error) {
-      console.error("Error loading posts:", error);
+      console.error("Error loading data:", error);
     }
   };
 
-  const handleGenerateContent = async () => {
-    if (!topic.trim()) return;
-
-    if (credits < 1) {
-      alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
-      return;
-    }
-
-    setGenerating(true);
-    try {
-      const generatedContent = await socialPostsService.generateContent(topic, platform);
-      setContent(generatedContent);
-
-      const newCredits = await creditsService.deductCredits(1);
-      setCredits(newCredits);
-    } catch (error) {
-      console.error("Error generating content:", error);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleCreatePost = async (e: FormEvent) => {
+  const handleGenerate = async (e: FormEvent) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    if (!topic.trim() || selectedPlatforms.length === 0) return;
 
     setLoading(true);
     try {
-      await socialPostsService.createPost({
-        platform,
-        content: content.trim(),
-        image_url: imageUrl || undefined,
-        scheduled_time: scheduledTime || undefined,
-      });
+      const newContents: Partial<Record<SocialPlatform, string>> = {};
+      
+      // Vygenerujeme příspěvek pro každou vybranou platformu zvlášť
+      await Promise.all(selectedPlatforms.map(async (plat) => {
+        newContents[plat] = await socialPostsService.generatePostContent(plat, topic);
+      }));
 
-      await loadPosts();
-      setContent("");
-      setImageUrl("");
-      setScheduledTime("");
-      setTopic("");
+      setContents(newContents);
+      setPreviewContents(newContents);
+      
+      const newCredits = await creditsService.deductCredits(selectedPlatforms.length);
+      setCredits(newCredits);
+      setActiveTab("preview");
     } catch (error) {
-      console.error("Error creating post:", error);
+      console.error("Error generating post:", error);
+      alert("Chyba při generování příspěvku. Zkontrolujte připojení a kredity.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSchedule = async (e: FormEvent) => {
+    e.preventDefault();
+    if (selectedPlatforms.length === 0) return;
+
+    const platformsWithContent = selectedPlatforms.filter(p => contents[p]?.trim());
+    if (platformsWithContent.length === 0) return;
+
+    setLoading(true);
+    try {
+      await Promise.all(platformsWithContent.map(plat => 
+        socialPostsService.createPost({
+          platform: plat,
+          content: contents[plat] || "",
+          scheduled_time: scheduledTime ? scheduledTime.toISOString() : undefined,
+          status: scheduledTime ? "scheduled" : "draft",
+        })
+      ));
+
+      await loadData();
+      setActiveTab("scheduled");
+      setTopic("");
+      setContents({});
+      setPreviewContents({});
+      setScheduledTime(undefined);
+    } catch (error) {
+      console.error("Error scheduling posts:", error);
+      alert("Chyba při plánování příspěvků.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContentChange = (platform: SocialPlatform, value: string) => {
+    setContents(prev => ({ ...prev, [platform]: value }));
+    setPreviewContents(prev => ({ ...prev, [platform]: value }));
+  };
+
+  const togglePlatform = (platformId: SocialPlatform) => {
+    setSelectedPlatforms(prev => 
+      prev.includes(platformId) 
+        ? prev.filter(p => p !== platformId)
+        : [...prev, platformId]
+    );
   };
 
   const handleDeletePost = async (id: string) => {
@@ -116,7 +134,7 @@ export default function SocialPosts() {
 
     try {
       await socialPostsService.deletePost(id);
-      await loadPosts();
+      await loadData();
     } catch (error) {
       console.error("Error deleting post:", error);
     }
@@ -189,117 +207,90 @@ export default function SocialPosts() {
                   <CardHeader>
                     <CardTitle className="font-heading">Nový příspěvek</CardTitle>
                     <CardDescription>
-                      Vygenerujte obsah pomocí AI nebo napište vlastní text
+                      AI vám pomůže napsat poutavý obsah na míru pro každou vybranou platformu. (1 kredit za platformu)
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form onSubmit={handleCreatePost} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="platform">Sociální síť</Label>
-                        <Select value={platform} onValueChange={(v) => setPlatform(v as SocialPlatform)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
+                    <form onSubmit={handleGenerate} className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Platformy (vyberte jednu nebo více)</Label>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                             {PLATFORMS.map((info) => (
-                              <SelectItem key={info.id} value={info.id}>
-                                <span className="flex items-center gap-2">
-                                  <span>{info.icon}</span>
-                                  {info.name}
-                                </span>
-                              </SelectItem>
+                              <div 
+                                key={info.id} 
+                                className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  selectedPlatforms.includes(info.id as SocialPlatform) 
+                                    ? "bg-primary/10 border-primary" 
+                                    : "hover:bg-muted"
+                                }`}
+                                onClick={() => togglePlatform(info.id as SocialPlatform)}
+                              >
+                                <Checkbox 
+                                  checked={selectedPlatforms.includes(info.id as SocialPlatform)}
+                                  onCheckedChange={() => togglePlatform(info.id as SocialPlatform)}
+                                  id={`platform-${info.id}`}
+                                />
+                                <div className="grid gap-1.5 leading-none">
+                                  <label
+                                    htmlFor={`platform-${info.id}`}
+                                    className="text-sm font-medium leading-none cursor-pointer flex items-center gap-2"
+                                  >
+                                    {info.icon} {info.name}
+                                  </label>
+                                  <p className="text-xs text-muted-foreground">
+                                    {info.description}
+                                  </p>
+                                </div>
+                              </div>
                             ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          </div>
+                        </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="topic">Téma pro AI generování (volitelné)</Label>
-                        <div className="flex gap-2">
-                          <Input
+                        <div className="space-y-2">
+                          <Label htmlFor="topic">Téma příspěvku</Label>
+                          <Textarea
                             id="topic"
-                            placeholder="např. Nový produkt, Tip dne..."
+                            placeholder="Např. Oznámení nové funkce pro generování videí v naší aplikaci..."
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
+                            className="h-24"
+                            required
                           />
-                          <Button
-                            type="button"
-                            onClick={handleGenerateContent}
-                            disabled={generating || !topic.trim()}
-                          >
-                            {generating ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Generovat
-                              </>
-                            )}
-                          </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">1 kredit za generování</p>
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="content">Obsah příspěvku</Label>
-                        <Textarea
-                          id="content"
-                          placeholder="Text příspěvku..."
-                          value={content}
-                          onChange={(e) => setContent(e.target.value)}
-                          rows={6}
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          {content.length} znaků
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="imageUrl">URL obrázku (volitelné)</Label>
-                        <Input
-                          id="imageUrl"
-                          type="url"
-                          placeholder="https://..."
-                          value={imageUrl}
-                          onChange={(e) => setImageUrl(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="scheduledTime">Naplánovat na (volitelné)</Label>
-                        <Input
-                          id="scheduledTime"
-                          type="datetime-local"
-                          value={scheduledTime}
-                          onChange={(e) => setScheduledTime(e.target.value)}
-                        />
-                      </div>
-
-                      <Button type="submit" className="w-full" disabled={loading || !content.trim()}>
-                        {loading ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Calendar className="h-4 w-4 mr-2" />
-                        )}
-                        {scheduledTime ? "Naplánovat příspěvek" : "Uložit jako koncept"}
-                      </Button>
                     </form>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="font-heading">Náhled</CardTitle>
+                    <CardTitle className="font-heading">Náhledy</CardTitle>
                     <CardDescription>
-                      Jak bude příspěvek vypadat na {PLATFORMS.find(p => p.id === platform)?.name || platform}
+                      Jak budou příspěvky vypadat na vybraných sítích
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex justify-center">
-                    <SocialPreview
-                      platform={platform}
-                      content={content || "Text příspěvku se zobrazí zde..."}
-                    />
+                  <CardContent className="space-y-12 bg-muted/30 py-8">
+                    {selectedPlatforms.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        Zatím nemáte vybrané žádné platformy pro náhled.
+                      </div>
+                    ) : (
+                      selectedPlatforms.map(platform => (
+                        <div key={platform} className="space-y-4">
+                          <div className="flex items-center justify-center gap-2 font-semibold">
+                            <span className="text-2xl">{PLATFORMS.find(p => p.id === platform)?.icon}</span>
+                            {PLATFORMS.find(p => p.id === platform)?.name}
+                          </div>
+                          <div className="flex justify-center">
+                            <SocialPreview 
+                              platform={platform} 
+                              content={previewContents[platform] || "Text příspěvku se zobrazí zde..."} 
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </CardContent>
                 </Card>
               </div>
