@@ -24,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Conversation = Tables<"conversations">;
 type Message = {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
   model?: string;
 };
@@ -79,7 +79,7 @@ export default function Chat() {
   const createAutoConversation = async () => {
     try {
       const title = `Chat ${new Date().toLocaleDateString("cs-CZ")}`;
-      const conversation = await conversationsService.createConversation(title, selectedModel);
+      const conversation = await conversationsService.createConversation({ title, model_provider: selectedModel });
       setConversations([conversation]);
       setCurrentConversation(conversation);
       setMessages([]);
@@ -93,15 +93,17 @@ export default function Chat() {
     }
   };
 
-  const handleConversationSelect = async (conversation: Conversation) => {
+  const handleConversationSelect = async (id: string) => {
+    const conversation = conversations.find(c => c.id === id);
+    if (!conversation) return;
+    
     setCurrentConversation(conversation);
     
     try {
       const msgs = await conversationsService.getMessages(conversation.id);
       setMessages(msgs.map(m => ({
-        role: m.role as "user" | "assistant",
+        role: m.role as "user" | "assistant" | "system",
         content: m.content,
-        model: m.model || undefined,
       })));
     } catch (error) {
       console.error("Error loading messages:", error);
@@ -111,7 +113,7 @@ export default function Chat() {
   const handleNewConversation = async () => {
     const title = `Chat ${new Date().toLocaleDateString("cs-CZ")} ${new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}`;
     try {
-      const conversation = await conversationsService.createConversation(title, selectedModel);
+      const conversation = await conversationsService.createConversation({ title, model_provider: selectedModel });
       setConversations([conversation, ...conversations]);
       setCurrentConversation(conversation);
       setMessages([]);
@@ -152,7 +154,7 @@ export default function Chat() {
     let conversation = currentConversation;
     if (!conversation) {
       const title = input.slice(0, 50) + (input.length > 50 ? "..." : "");
-      conversation = await conversationsService.createConversation(title, selectedModel);
+      conversation = await conversationsService.createConversation({ title, model_provider: selectedModel });
       setConversations([conversation, ...conversations]);
       setCurrentConversation(conversation);
     }
@@ -163,13 +165,13 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      await conversationsService.createMessage(conversation.id, "user", input, selectedModel);
+      await conversationsService.createMessage({ conversation_id: conversation.id, role: "user", content: input });
 
       const assistantResponse = `Odpověď od ${models.find(m => m.id === selectedModel)?.name}: ${input}`;
       const assistantMessage: Message = { role: "assistant", content: assistantResponse, model: selectedModel };
       setMessages(prev => [...prev, assistantMessage]);
 
-      await conversationsService.createMessage(conversation.id, "assistant", assistantResponse, selectedModel);
+      await conversationsService.createMessage({ conversation_id: conversation.id, role: "assistant", content: assistantResponse });
 
       // Auto-rename conversation with first message if title is generic
       if (conversation.title.startsWith("Chat ") && messages.length === 0) {
@@ -201,10 +203,9 @@ export default function Chat() {
     <AuthGuard>
       <div className="flex h-screen bg-background">
         <ConversationSidebar
-          conversations={conversations}
-          currentConversation={currentConversation}
-          onSelect={handleConversationSelect}
-          onNew={handleNewConversation}
+          selectedId={currentConversation?.id}
+          onSelectConversation={handleConversationSelect}
+          onNewConversation={handleNewConversation}
         />
 
         <div className="flex-1 flex flex-col">
@@ -317,7 +318,7 @@ export default function Chat() {
             ) : (
               <div className="container mx-auto max-w-4xl p-6 space-y-6">
                 {messages.map((message, index) => (
-                  <ChatMessage key={index} message={message} />
+                  <ChatMessage key={index} role={message.role} content={message.content} />
                 ))}
                 {loading && (
                   <div className="flex items-center gap-2 text-muted-foreground">
