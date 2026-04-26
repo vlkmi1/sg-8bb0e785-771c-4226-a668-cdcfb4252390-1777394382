@@ -151,10 +151,12 @@ export default function Admin() {
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({});
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string } | null>>({});
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [showModelsDialog, setShowModelsDialog] = useState(false);
+  const [currentProvider, setCurrentProvider] = useState("");
   const { toast } = useToast();
   const [showModuleSuggestions, setShowModuleSuggestions] = useState(false);
-  const [currentProvider, setCurrentProvider] = useState<string | null>(null);
 
   // Plan form states
   const [planForm, setPlanForm] = useState({
@@ -306,6 +308,59 @@ export default function Admin() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
+  };
+
+  const handleAddApiKey = async (provider: string) => {
+    if (!newApiKey.trim()) {
+      toast({
+        title: "Chyba",
+        description: "Zadejte API klíč",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingKey(true);
+    try {
+      const result = await apiKeysService.addApiKey(provider, newApiKey.trim());
+      
+      if (result) {
+        toast({
+          title: "Úspěch",
+          description: `${provider} API klíč byl přidán`,
+        });
+        
+        setNewApiKey("");
+        setActiveProvider(null);
+        loadApiKeys();
+
+        // Načíst dostupné modely
+        try {
+          const modelsResponse = await fetch("/api/fetch-models", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider, apiKey: newApiKey.trim() }),
+          });
+
+          if (modelsResponse.ok) {
+            const { models } = await modelsResponse.json();
+            setAvailableModels(models);
+            setCurrentProvider(provider);
+            setShowModelsDialog(true);
+          }
+        } catch (error) {
+          console.error("Failed to fetch models:", error);
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se přidat API klíč",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingKey(false);
+    }
   };
 
   return (
@@ -823,6 +878,49 @@ export default function Admin() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog pro zobrazení dostupných modelů */}
+      <Dialog open={showModelsDialog} onOpenChange={setShowModelsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Dostupné modely pro {currentProvider}</DialogTitle>
+            <DialogDescription>
+              Tyto modely jsou dostupné s vašim API klíčem. Použijte je při vytváření konverzací.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-2">
+            {availableModels.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2">
+                {availableModels.map((model, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50"
+                  >
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {model}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">
+                Žádné modely nenalezeny
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowModelsDialog(false)}>
+              Zavřít
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog for Deleting User */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
       </AlertDialog>
     </AdminGuard>
   );
