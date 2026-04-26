@@ -312,6 +312,48 @@ export type Database = {
           },
         ]
       }
+      music_generations: {
+        Row: {
+          audio_url: string | null
+          created_at: string | null
+          duration: number
+          genre: string | null
+          id: string
+          mood: string | null
+          prompt: string
+          provider: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration?: number
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          prompt: string
+          provider: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string | null
+          duration?: number
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          prompt?: string
+          provider?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

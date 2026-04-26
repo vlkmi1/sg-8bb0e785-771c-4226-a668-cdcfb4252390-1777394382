@@ -35,6 +35,11 @@ const AI_PROVIDERS = [
   { id: "d-id", name: "D-ID", icon: "🎭", description: "Digital People & Talking Heads" },
   { id: "synthesia", name: "Synthesia", icon: "🎬", description: "AI Video Platform with Avatars" },
   { id: "runway-gen2", name: "Runway Gen-2", icon: "🚀", description: "Advanced Video AI Models" },
+  { id: "suno", name: "Suno AI", icon: "🎵", description: "AI Music with Vocals" },
+  { id: "musicgen", name: "MusicGen", icon: "🎹", description: "Meta AI Music Model" },
+  { id: "mubert", name: "Mubert", icon: "🎧", description: "Real-time AI Music" },
+  { id: "aiva", name: "AIVA", icon: "🎼", description: "AI Orchestral Composer" },
+  { id: "soundraw", name: "Soundraw", icon: "🎶", description: "Royalty-Free AI Music" },
 ];
 
 export default function Admin() {
