@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot 
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot, DollarSign 
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -491,6 +491,30 @@ export default function Dashboard() {
                 <Button className="w-full">
                   <Bot className="h-4 w-4 mr-2" />
                   Vytvořit asistenta
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-accent/20 bg-gradient-to-br from-accent/5 to-primary/5"
+              onClick={() => router.push("/affiliate")}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-accent/10 rounded-xl">
+                    <DollarSign className="h-8 w-8 text-accent" />
+                  </div>
+                  <Badge variant="secondary" className="bg-accent">
+                    20%
+                  </Badge>
+                </div>
+                <CardTitle className="font-heading">Affiliate Program</CardTitle>
+                <CardDescription>Vydělávejte provize</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Získat link
                 </Button>
               </CardContent>
             </Card>

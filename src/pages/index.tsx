@@ -24,7 +24,8 @@ import {
   Crown,
   ChevronRight,
   Bot,
-  Coins
+  Coins,
+  DollarSign
 } from "lucide-react";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { supabase } from "@/integrations/supabase/client";
@@ -411,10 +412,66 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-secondary to-accent opacity-10 -z-10" />
-        
+      {/* Affiliate Program Section */}
+      <section className="py-20 px-6 bg-gradient-to-br from-accent/10 to-primary/10">
+        <div className="container mx-auto max-w-4xl text-center space-y-6">
+          <Badge className="bg-accent text-lg px-4 py-2">
+            <DollarSign className="h-5 w-5 mr-2" />
+            Vydělávejte s námi
+          </Badge>
+          <h2 className="text-4xl md:text-5xl font-heading font-bold">
+            Affiliate Program
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Sdílejte kAIkus a získejte provizi z každé platby vašich referrálů
+          </p>
+          
+          <div className="grid gap-6 md:grid-cols-2 mt-12 text-left">
+            <Card className="border-2 border-accent/50">
+              <CardHeader>
+                <div className="text-4xl mb-2">💰</div>
+                <CardTitle className="font-heading">20% z předplatného</CardTitle>
+                <CardDescription>
+                  Získejte 20% provizi z každé platby předplatného vašich referovaných uživatelů
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 border-primary/50">
+              <CardHeader>
+                <div className="text-4xl mb-2">💎</div>
+                <CardTitle className="font-heading">15% z kreditů</CardTitle>
+                <CardDescription>
+                  15% provize z každého nákupu kreditů vašich referrálů
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
+            <Button size="lg" className="bg-accent hover:bg-accent/90" asChild>
+              <Link href="/auth/register">
+                <Share2 className="h-5 w-5 mr-2" />
+                Začít vydělávat
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/affiliate">
+                Zjistit více
+              </Link>
+            </Button>
+          </div>
+
+          <div className="mt-8 p-6 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              ✓ Bez minimálního počtu referrálů • ✓ Výběr od 500 Kč • ✓ Transparentní tracking • ✓ Platba do 7 dnů
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 px-6 bg-gradient-to-r from-primary via-secondary to-primary">
         <div className="container mx-auto px-6">
           <Card className="max-w-4xl mx-auto border-2 border-primary/20 shadow-2xl">
             <CardContent className="p-12 text-center space-y-6">

@@ -15,6 +15,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_commission_settings: {
+        Row: {
+          commission_rate: number
+          created_at: string | null
+          id: string
+          min_payout_amount: number | null
+          payment_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          commission_rate: number
+          created_at?: string | null
+          id?: string
+          min_payout_amount?: number | null
+          payment_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string | null
+          id?: string
+          min_payout_amount?: number | null
+          payment_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       admin_settings: {
         Row: {
           api_key: string
@@ -542,6 +569,225 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_codes: {
+        Row: {
+          clicks: number | null
+          code: string
+          conversions: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          total_earned: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          clicks?: number | null
+          code: string
+          conversions?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          total_earned?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          clicks?: number | null
+          code?: string
+          conversions?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          total_earned?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_earnings: {
+        Row: {
+          amount: number
+          commission_amount: number
+          commission_rate: number
+          created_at: string | null
+          id: string
+          payment_id: string | null
+          payment_type: string
+          referred_user_id: string
+          referrer_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          commission_amount: number
+          commission_rate: number
+          created_at?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_type: string
+          referred_user_id: string
+          referrer_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string | null
+          id?: string
+          payment_id?: string | null
+          payment_type?: string
+          referred_user_id?: string
+          referrer_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_earnings_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_earnings_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_earnings_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_payouts: {
+        Row: {
+          amount: number
+          bank_account: string | null
+          created_at: string | null
+          id: string
+          method: string
+          notes: string | null
+          paypal_email: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_account?: string | null
+          created_at?: string | null
+          id?: string
+          method: string
+          notes?: string | null
+          paypal_email?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank_account?: string | null
+          created_at?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paypal_email?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_payouts_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_payouts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          commission_earned: number | null
+          created_at: string | null
+          id: string
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          status: string | null
+          total_spent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          commission_earned?: number | null
+          created_at?: string | null
+          id?: string
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          status?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          commission_earned?: number | null
+          created_at?: string | null
+          id?: string
+          referral_code?: string
+          referred_user_id?: string
+          referrer_id?: string
+          status?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_accounts: {
         Row: {
           access_token: string | null
@@ -833,6 +1079,7 @@ export type Database = {
         Args: { amount: number; user_id: string }
         Returns: number
       }
+      generate_referral_code: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never

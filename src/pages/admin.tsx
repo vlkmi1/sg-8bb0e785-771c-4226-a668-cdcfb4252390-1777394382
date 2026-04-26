@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings } from "lucide-react";
+import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { adminService, type AdminSetting } from "@/services/adminService";
@@ -166,11 +166,12 @@ export default function Admin() {
 
         <main className="container mx-auto px-6 py-8">
           <Tabs defaultValue="api-keys" className="space-y-6">
-            <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-5">
+            <TabsList className="grid w-full max-w-4xl mx-auto grid-cols-6">
               <TabsTrigger value="api-keys">API klíče</TabsTrigger>
               <TabsTrigger value="subscriptions">Předplatná</TabsTrigger>
               <TabsTrigger value="packages">Balíčky</TabsTrigger>
               <TabsTrigger value="payments">Platby</TabsTrigger>
+              <TabsTrigger value="affiliate">Affiliate</TabsTrigger>
               <TabsTrigger value="users">Uživatelé</TabsTrigger>
             </TabsList>
 
@@ -440,6 +441,94 @@ export default function Admin() {
                       Uložit nastavení plateb
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="affiliate" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Nastavení provizního systému
+                  </CardTitle>
+                  <CardDescription>
+                    Sazby provizí a minimální částka pro výplatu
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <Card className="bg-muted/50">
+                      <CardHeader>
+                        <CardTitle className="text-base">Provize z předplatného</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="subscription-rate">Provizní sazba (%)</Label>
+                          <Input
+                            id="subscription-rate"
+                            type="number"
+                            step="0.01"
+                            defaultValue="20.00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="subscription-min">Min. částka výběru (Kč)</Label>
+                          <Input
+                            id="subscription-min"
+                            type="number"
+                            step="0.01"
+                            defaultValue="500.00"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-muted/50">
+                      <CardHeader>
+                        <CardTitle className="text-base">Provize z kreditů</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="credits-rate">Provizní sazba (%)</Label>
+                          <Input
+                            id="credits-rate"
+                            type="number"
+                            step="0.01"
+                            defaultValue="15.00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="credits-min">Min. částka výběru (Kč)</Label>
+                          <Input
+                            id="credits-min"
+                            type="number"
+                            step="0.01"
+                            defaultValue="500.00"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Button className="w-full">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Uložit nastavení provizí
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading">Žádosti o výplatu</CardTitle>
+                  <CardDescription>
+                    Správa výplat provizí affiliate partnerům
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center text-muted-foreground py-8">
+                    Funkce připravena - zobrazení žádostí o výplatu se schvalováním
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
