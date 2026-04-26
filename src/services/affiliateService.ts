@@ -68,10 +68,8 @@ export const affiliateService = {
   // Track click on referral link
   async trackClick(code: string): Promise<void> {
     const { error } = await supabase
-      .rpc("increment", {
-        row_id: code,
-        table_name: "referral_codes",
-        column_name: "clicks",
+      .rpc("increment_referral_click", {
+        code_val: code,
       });
 
     if (error) console.error("Error tracking click:", error);

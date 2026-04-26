@@ -1080,6 +1080,14 @@ export type Database = {
         Returns: number
       }
       generate_referral_code: { Args: never; Returns: string }
+      increment_referral_click: {
+        Args: { code_val: string }
+        Returns: undefined
+      }
+      process_referral: {
+        Args: { new_user_id: string; ref_code: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
