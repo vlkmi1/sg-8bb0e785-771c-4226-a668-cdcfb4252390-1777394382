@@ -54,7 +54,7 @@ export default function Chat() {
   const loadConnectedProviders = async () => {
     try {
       const keys = await apiKeysService.getApiKeys();
-      setConnectedProviders(keys.map(k => k.provider));
+      setConnectedProviders(keys.map(k => k.provider as AIProvider));
     } catch (error) {
       console.error("Error loading API keys:", error);
     }
@@ -194,7 +194,7 @@ export default function Chat() {
                     messages.map((message) => (
                       <ChatMessage
                         key={message.id}
-                        role={message.role}
+                        role={message.role as "user" | "assistant" | "system"}
                         content={message.content}
                       />
                     ))
