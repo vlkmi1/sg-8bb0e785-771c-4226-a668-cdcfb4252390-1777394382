@@ -37,6 +37,9 @@ const AI_PROVIDERS = [
   { id: "mubert", name: "Mubert", icon: "🎧", description: "Real-time AI Music" },
   { id: "aiva", name: "AIVA", icon: "🎼", description: "AI Orchestral Composer" },
   { id: "soundraw", name: "Soundraw", icon: "🎶", description: "Royalty-Free AI Music" },
+  { id: "viral-runway", name: "Runway Viral", icon: "📲", description: "Viral Video Generation" },
+  { id: "viral-pika", name: "Pika Viral", icon: "🔥", description: "Social Media Optimized Videos" },
+  { id: "capcut", name: "CapCut AI", icon: "✂️", description: "TikTok Video Editor AI" },
 ];
 
 export default function Admin() {

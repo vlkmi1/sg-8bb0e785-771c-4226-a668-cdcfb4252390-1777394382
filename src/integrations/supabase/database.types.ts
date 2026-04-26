@@ -645,6 +645,60 @@ export type Database = {
           },
         ]
       }
+      viral_videos: {
+        Row: {
+          created_at: string | null
+          duration: number
+          effects: string[] | null
+          id: string
+          likes: number | null
+          platform: string
+          prompt: string
+          provider: string
+          status: string | null
+          style: string | null
+          thumbnail_url: string | null
+          trend: string | null
+          user_id: string
+          video_url: string | null
+          views: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration: number
+          effects?: string[] | null
+          id?: string
+          likes?: number | null
+          platform: string
+          prompt: string
+          provider: string
+          status?: string | null
+          style?: string | null
+          thumbnail_url?: string | null
+          trend?: string | null
+          user_id: string
+          video_url?: string | null
+          views?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          duration?: number
+          effects?: string[] | null
+          id?: string
+          likes?: number | null
+          platform?: string
+          prompt?: string
+          provider?: string
+          status?: string | null
+          style?: string | null
+          thumbnail_url?: string | null
+          trend?: string | null
+          user_id?: string
+          video_url?: string | null
+          views?: number | null
+        }
+        Relationships: []
+      }
       voice_conversations: {
         Row: {
           audio_url: string | null

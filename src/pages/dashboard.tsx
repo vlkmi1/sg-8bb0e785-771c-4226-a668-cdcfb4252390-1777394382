@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music 
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap 
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -441,6 +441,31 @@ export default function Dashboard() {
                 <Button className="w-full">
                   <Music className="h-4 w-4 mr-2" />
                   Vytvořit skladbu
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-destructive/20 bg-gradient-to-br from-destructive/5 to-primary/5"
+              onClick={() => router.push("/viral-videos")}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-destructive/10 rounded-xl">
+                    <Zap className="h-8 w-8 text-destructive" />
+                  </div>
+                  <Badge variant="secondary" className="bg-destructive text-destructive-foreground">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    HOT
+                  </Badge>
+                </div>
+                <CardTitle className="font-heading">Viral Videos</CardTitle>
+                <CardDescription>Videa pro sociální sítě</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Vytvořit viral
                 </Button>
               </CardContent>
             </Card>
