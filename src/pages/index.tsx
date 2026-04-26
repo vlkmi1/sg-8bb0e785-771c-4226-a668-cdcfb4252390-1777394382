@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -462,8 +463,8 @@ export default function Home() {
               <h4 className="font-semibold mb-4">Produkt</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="#features" className="hover:text-primary transition-colors">Funkce</a></li>
-                <li><a href="/pricing" className="hover:text-primary transition-colors">Ceny</a></li>
-                <li><a href="/auth/register" className="hover:text-primary transition-colors">Začít zdarma</a></li>
+                <li><Link href="/pricing" className="hover:text-primary transition-colors">Ceny</Link></li>
+                <li><Link href="/auth/register" className="hover:text-primary transition-colors">Začít zdarma</Link></li>
               </ul>
             </div>
 
