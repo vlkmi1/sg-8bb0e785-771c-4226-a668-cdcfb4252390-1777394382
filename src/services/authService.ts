@@ -89,7 +89,7 @@ export const authService = {
   },
 
   async resetPassword(email: string): Promise<{ error: AuthError | null }> {
-    const redirectUrl = `${getRedirectUrl()}/auth/reset-password`;
+    const redirectUrl = `${getRedirectUrl()}/auth/update-password`;
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
@@ -141,3 +141,18 @@ export const authService = {
     });
   },
 };
+
+// Export individual functions for backwards compatibility
+export const { 
+  signUp, 
+  signIn, 
+  signInWithOAuth, 
+  signOut, 
+  getCurrentUser, 
+  getSession,
+  resetPassword,
+  updatePassword,
+  updateProfile,
+  getProfile,
+  onAuthStateChange
+} = authService;

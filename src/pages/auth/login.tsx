@@ -90,6 +90,14 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                <div className="flex justify-end">
+                  <Link
+                    href="/auth/reset-password"
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Zapomenuté heslo?
+                  </Link>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
