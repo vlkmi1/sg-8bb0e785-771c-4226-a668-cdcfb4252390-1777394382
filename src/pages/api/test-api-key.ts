@@ -215,27 +215,3 @@ async function testStability(apiKey: string): Promise<{ success: boolean; messag
     return { success: false, message: error.message };
   }
 }
-
-async function testGoogleKey(apiKey: string) {
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Hello" }] }]
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `HTTP ${response.status}`);
-    }
-
-    return { success: true, message: "Google API klíč je platný a funguje" };
-  } catch (error: any) {
-    return { success: false, message: error.message };
-  }
-}
