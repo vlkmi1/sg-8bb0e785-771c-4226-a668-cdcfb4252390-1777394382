@@ -13,7 +13,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { imageGenerationService, type ImageProvider, type GeneratedImage } from "@/services/imageGenerationService";
 import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const IMAGE_PROVIDERS = [
   { id: "openai", name: "DALL-E (OpenAI)", models: ["dall-e-3", "dall-e-2"] },
@@ -36,6 +36,7 @@ export default function Generate() {
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [activeTab, setActiveTab] = useState("generate");
   const [credits, setCredits] = useState(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadImages();
