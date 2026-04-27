@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -15,6 +15,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_generations: {
+        Row: {
+          ad_format: string | null
+          created_at: string | null
+          cta: string | null
+          description: string
+          hashtags: string | null
+          headline: string
+          id: string
+          image_suggestions: string | null
+          model_used: string
+          platform: string | null
+          product_description: string
+          target_audience: string | null
+          user_id: string
+        }
+        Insert: {
+          ad_format?: string | null
+          created_at?: string | null
+          cta?: string | null
+          description: string
+          hashtags?: string | null
+          headline: string
+          id?: string
+          image_suggestions?: string | null
+          model_used: string
+          platform?: string | null
+          product_description: string
+          target_audience?: string | null
+          user_id: string
+        }
+        Update: {
+          ad_format?: string | null
+          created_at?: string | null
+          cta?: string | null
+          description?: string
+          hashtags?: string | null
+          headline?: string
+          id?: string
+          image_suggestions?: string | null
+          model_used?: string
+          platform?: string | null
+          product_description?: string
+          target_audience?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_commission_settings: {
         Row: {
           commission_rate: number
@@ -331,6 +379,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      document_summaries: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          id: string
+          model_used: string
+          original_text: string
+          summary_level: string | null
+          summary_text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          id?: string
+          model_used: string
+          original_text: string
+          summary_level?: string | null
+          summary_text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          id?: string
+          model_used?: string
+          original_text?: string
+          summary_level?: string | null
+          summary_text?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       generated_images: {
         Row: {
