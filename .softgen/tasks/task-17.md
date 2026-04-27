@@ -1,6 +1,6 @@
 ---
 title: Document Summary Module
-status: todo
+status: in_progress
 priority: high
 type: feature
 tags: [ai, summary, documents]
@@ -22,13 +22,13 @@ Modul pro shrnutí obsahu - uživatel vloží text nebo nahraje dokument (PDF, D
 - Cena: 2 kredity/shrnutí
 
 ## Checklist
-- [ ] Vytvořit tabulku `document_summaries` (id, user_id, original_text, summary_text, summary_level, model_used, created_at)
-- [ ] RLS policies pro `document_summaries` (T1 - private user data)
-- [ ] Service `documentSummaryService.ts` s metodami: create, getAll, delete
-- [ ] API endpoint `/api/summarize` pro volání AI modelů
-- [ ] Stránka `/document-summary` s file upload a textarea
-- [ ] Select pro výběr AI modelu a úrovně shrnutí
-- [ ] Zobrazení historie shrnutí
+- [x] Vytvořit tabulku `document_summaries` (id, user_id, original_text, summary_text, summary_level, model_used, created_at)
+- [x] RLS policies pro `document_summaries` (T1 - private user data)
+- [x] Service `documentSummaryService.ts` s metodami: create, getAll, delete
+- [x] API endpoint `/api/summarize` pro volání AI modelů
+- [x] Stránka `/document-summary` s file upload a textarea
+- [x] Select pro výběr AI modelu a úrovně shrnutí
+- [x] Zobrazení historie shrnutí
 - [ ] Aktualizovat dashboard - přidat kartu "Shrnutí dokumentů"
 
 ## Acceptance
