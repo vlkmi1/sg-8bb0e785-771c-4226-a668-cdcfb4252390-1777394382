@@ -143,11 +143,11 @@ export default async function handler(
       // Stability returns base64 image - need to upload to Supabase storage
       const base64Image = data.artifacts[0].base64;
       
-      // Upload to Supabase storage
+      // Upload to Supabase storage using admin client (bypasses RLS)
       const fileName = `${user.id}/${Date.now()}.png`;
       const imageBuffer = Buffer.from(base64Image, "base64");
       
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabaseAdmin.storage
         .from("generated-images")
         .upload(fileName, imageBuffer, {
           contentType: "image/png",
@@ -158,7 +158,7 @@ export default async function handler(
         throw uploadError;
       }
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = supabaseAdmin.storage
         .from("generated-images")
         .getPublicUrl(fileName);
 
