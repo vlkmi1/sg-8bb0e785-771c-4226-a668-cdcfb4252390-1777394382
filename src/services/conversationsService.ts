@@ -1,34 +1,50 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
-export type Conversation = Tables<"conversations">;
-export type Message = Tables<"messages">;
-
-export interface CreateConversationData {
-  title: string;
-  model_provider: string;
-  model_name?: string;
-}
-
-export interface CreateMessageData {
-  conversation_id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-}
+type Conversation = Tables<"conversations">;
+type Message = Tables<"messages">;
 
 export const conversationsService = {
   async getConversations(): Promise<Conversation[]> {
-    const { data, error } = await supabase
-      .from("conversations")
-      .select("*")
-      .order("updated_at", { ascending: false });
+    console.log("conversationsService.getConversations: Fetching conversations...");
+    
+    try {
+      // First check if we have a session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("conversationsService: Session check", {
+        hasSession: !!session,
+        userId: session?.user?.id
+      });
 
-    if (error) {
-      console.error("Error fetching conversations:", error);
+      if (!session) {
+        console.error("conversationsService: No session found!");
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .order("updated_at", { ascending: false });
+
+      if (error) {
+        console.error("conversationsService: Error fetching conversations:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+
+      console.log("conversationsService: Conversations fetched successfully", {
+        count: data?.length || 0
+      });
+
+      return data || [];
+    } catch (error) {
+      console.error("conversationsService: Unexpected error:", error);
       throw error;
     }
-
-    return data || [];
   },
 
   async getConversationById(id: string): Promise<Conversation | null> {

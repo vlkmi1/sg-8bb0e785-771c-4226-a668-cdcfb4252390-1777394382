@@ -10,28 +10,36 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       console.log("AuthGuard: Checking authentication...");
       
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      console.log("AuthGuard Session Check:", {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        email: session?.user?.email,
-        error: error?.message,
-        currentPath: router.pathname
-      });
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        console.log("AuthGuard Session Check:", {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          email: session?.user?.email,
+          error: error?.message,
+          currentPath: router.pathname,
+          timestamp: new Date().toISOString()
+        });
 
-      if (error) {
-        console.error("AuthGuard: Session error:", error);
-      }
+        if (error) {
+          console.error("AuthGuard: Session error:", error);
+          router.push("/auth/login");
+          return;
+        }
 
-      if (!session) {
-        console.log("AuthGuard: No session, redirecting to login");
+        if (!session) {
+          console.log("AuthGuard: No session found, redirecting to login");
+          router.push("/auth/login");
+          return;
+        }
+
+        console.log("AuthGuard: Session valid, user authenticated");
+        setLoading(false);
+      } catch (err) {
+        console.error("AuthGuard: Unexpected error:", err);
         router.push("/auth/login");
-        return;
       }
-
-      console.log("AuthGuard: Session valid, user authenticated");
-      setLoading(false);
     };
 
     checkAuth();
@@ -41,12 +49,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         console.log("AuthGuard: Auth state changed:", {
           event,
           hasSession: !!session,
-          userId: session?.user?.id
+          userId: session?.user?.id,
+          timestamp: new Date().toISOString()
         });
 
         if (event === "SIGNED_OUT" || !session) {
-          console.log("AuthGuard: User signed out, redirecting to login");
+          console.log("AuthGuard: User signed out or no session, redirecting to login");
           router.push("/auth/login");
+        } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          console.log("AuthGuard: User signed in or token refreshed, allowing access");
+          setLoading(false);
         }
       }
     );
