@@ -3,34 +3,31 @@ import type { Tables } from "@/integrations/supabase/types";
 import { authState } from "./authStateService";
 
 export type GeneratedVideo = Tables<"generated_videos">;
-export type VideoProvider = "runway" | "pika" | "sora" | "kling";
+export type VideoProvider = "runway" | "runwayml" | "pika" | "sora" | "kling" | "stability-video";
 
 export const videoGenerationService = {
   async generateVideo(params: {
     prompt: string;
-    videoUrl: string;
-    thumbnailUrl?: string;
-    provider: string;
-    modelName: string;
+    provider: VideoProvider | string;
     duration?: number;
-    creditsUsed: number;
   }): Promise<GeneratedVideo | null> {
     const user = await authState.getUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
 
+    // Simulace generování - v reálné aplikaci by zde bylo volání API
+    const mockVideoUrl = `https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4`;
+
     const { data, error } = await supabase
       .from("generated_videos")
       .insert({
         user_id: user.id,
         prompt: params.prompt,
-        video_url: params.videoUrl,
-        thumbnail_url: params.thumbnailUrl,
+        video_url: mockVideoUrl,
         provider: params.provider,
-        model_name: params.modelName,
+        model_name: params.provider,
         duration: params.duration || 5,
-        credits_used: params.creditsUsed,
       })
       .select()
       .single();
