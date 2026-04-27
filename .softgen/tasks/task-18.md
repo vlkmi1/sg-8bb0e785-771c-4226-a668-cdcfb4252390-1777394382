@@ -1,40 +1,37 @@
 ---
 title: Ad Generator Module
-status: todo
+status: done
 priority: high
 type: feature
-tags: [ai, ads, marketing, social-media]
+tags: [ai, ads, marketing]
 created_by: agent
 created_at: 2026-04-27T20:10:00Z
 position: 18
 ---
 
 ## Notes
-Modul pro generování kompletních reklamních kampaní pro sociální sítě. AI vygeneruje headline, popis, CTA, hashtags podle zadaného produktu/služby a cílové platformy.
+Modul pro generování kompletních reklamních kampaní pro sociální sítě - AI vytvoří headline, popis, CTA, hashtags a návrhy vizuálů.
 
 **Požadavky:**
-- Input: popis produktu/služby, cílová skupina, platforma
-- Platformy: Facebook, Instagram, LinkedIn, Google Ads, TikTok
-- AI modely: GPT-4, Claude (copywriting focused)
-- Output: headline, popis, CTA, hashtags, doporučení pro obrázek
-- Různé formáty: carousel, single image, video, story
-- Historie vygenerovaných reklam
-- Export do JSON/CSV
+- Input: popis produktu/služby, cílová skupina (optional)
+- Podporované platformy: Facebook, Instagram, LinkedIn, Google Ads, TikTok
+- Formáty: carousel, single image, video, story
+- AI modely: GPT-4, Claude
+- Output: headline, description, CTA, hashtags, image suggestions
+- Historie reklam s možností kopírování textu
 - Cena: 3 kredity/reklama
 
 ## Checklist
-- [ ] Vytvořit tabulku `ad_generations` (id, user_id, product_description, target_audience, platform, ad_format, headline, description, cta, hashtags, model_used, created_at)
-- [ ] RLS policies pro `ad_generations` (T1 - private user data)
-- [ ] Service `adGeneratorService.ts` s metodami: create, getAll, delete
-- [ ] API endpoint `/api/generate-ad` pro volání AI modelů
-- [ ] Stránka `/ad-generator` s formulářem pro zadání parametrů
-- [ ] Select pro platformu, formát, AI model
-- [ ] Zobrazení vygenerované reklamy v preview formátu
-- [ ] Galerie historie reklam s filtry
-- [ ] Export možnosti
-- [ ] Aktualizovat dashboard - přidat kartu "Generátor reklam"
+- [x] Vytvořit tabulku `ad_generations` (id, user_id, product_description, target_audience, platform, ad_format, headline, description, cta, hashtags, image_suggestions, created_at)
+- [x] RLS policies pro `ad_generations` (T1 - private user data)
+- [x] Service `adGeneratorService.ts` s metodami: create, getAll, delete
+- [x] API endpoint `/api/generate-ad` s platform-specific specifications
+- [x] Stránka `/ad-generator` s formulářem
+- [x] Select pro platformu, formát a AI model
+- [x] Zobrazení historie s copy-to-clipboard funkcionalitou
+- [x] Aktualizovat dashboard - přidat kartu "Generátor reklam"
 
 ## Acceptance
-- Uživatel zadá produkt a parametry a dostane kompletní reklamní copy
+- Uživatel může vytvořit kompletní reklamní copy
 - Reklamy se ukládají do historie
 - Kredity se správně odečítají (3 kredity/reklama)

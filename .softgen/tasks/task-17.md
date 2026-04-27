@@ -1,6 +1,6 @@
 ---
 title: Document Summary Module
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [ai, summary, documents]
@@ -29,7 +29,7 @@ Modul pro shrnutí obsahu - uživatel vloží text nebo nahraje dokument (PDF, D
 - [x] Stránka `/document-summary` s file upload a textarea
 - [x] Select pro výběr AI modelu a úrovně shrnutí
 - [x] Zobrazení historie shrnutí
-- [ ] Aktualizovat dashboard - přidat kartu "Shrnutí dokumentů"
+- [x] Aktualizovat dashboard - přidat kartu "Shrnutí dokumentů"
 
 ## Acceptance
 - Uživatel může vložit text nebo nahrát dokument a získat AI shrnutí
