@@ -26,6 +26,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Set JSON content type immediately
+  res.setHeader("Content-Type", "application/json");
+  
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -188,25 +191,36 @@ export default async function handler(
     if (saveError) {
       console.error(`[Image Gen] DB save error:`, saveError);
       console.error(`[Image Gen] Full error details:`, JSON.stringify(saveError, null, 2));
-      throw saveError;
+      // Return specific error message instead of throwing
+      return res.status(500).json({ 
+        error: `Database save failed: ${saveError.message || JSON.stringify(saveError)}` 
+      });
     }
 
     console.log(`[Image Gen] Deducting credits...`);
 
     // Deduct credits using admin client
-    await supabaseAdmin.rpc("deduct_credits", {
+    const { error: creditError } = await supabaseAdmin.rpc("deduct_credits", {
       user_id: user.id,
       amount: 2,
       description: `Image generation: ${provider}`,
     });
+
+    if (creditError) {
+      console.error(`[Image Gen] Credit deduction error:`, creditError);
+      // Don't fail the whole request if credit deduction fails
+      // The image was already generated and saved
+    }
 
     console.log(`[Image Gen] Success! Image ID: ${savedImage.id}`);
 
     return res.status(200).json(savedImage);
   } catch (error) {
     console.error("[Image Gen] Fatal error:", error);
+    // Always return JSON, never let Next.js return HTML error page
     return res.status(500).json({ 
-      error: error instanceof Error ? error.message : "Internal server error" 
+      error: error instanceof Error ? error.message : "Internal server error",
+      details: error instanceof Error ? error.stack : String(error)
     });
   }
 }
