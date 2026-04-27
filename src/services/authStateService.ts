@@ -12,17 +12,7 @@ class AuthStateService {
   private cacheTimestamp: number = 0;
   private readonly CACHE_DURATION = 5000; // 5 seconds
 
-  private constructor() {
-    // Subscribe to auth state changes to invalidate cache
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        this.clearCache();
-      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        // Invalidate cache to force fresh fetch
-        this.cacheTimestamp = 0;
-      }
-    });
-  }
+  private constructor() {}
 
   public static getInstance(): AuthStateService {
     if (!AuthStateService.instance) {

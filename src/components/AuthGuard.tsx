@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -6,87 +6,22 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
-  const checkingAuth = useRef(false);
 
   useEffect(() => {
-    // Prevent duplicate auth checks
-    if (checkingAuth.current) return;
-    checkingAuth.current = true;
-
     const checkAuth = async () => {
-      console.log("AuthGuard: Checking authentication...");
+      const { data: { session } } = await supabase.auth.getSession();
       
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        console.log("AuthGuard Session Check:", {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          email: session?.user?.email,
-          error: error?.message,
-          currentPath: router.pathname,
-          timestamp: new Date().toISOString()
-        });
-
-        if (error) {
-          console.error("AuthGuard: Session error:", error);
-          setAuthenticated(false);
-          setLoading(false);
-          router.push("/auth/login");
-          return;
-        }
-
-        if (!session) {
-          console.log("AuthGuard: No session found, redirecting to login");
-          setAuthenticated(false);
-          setLoading(false);
-          router.push("/auth/login");
-          return;
-        }
-
-        console.log("AuthGuard: Session valid, user authenticated");
-        setAuthenticated(true);
-        setLoading(false);
-      } catch (err) {
-        console.error("AuthGuard: Unexpected error:", err);
-        setAuthenticated(false);
-        setLoading(false);
+      if (!session) {
         router.push("/auth/login");
-      } finally {
-        checkingAuth.current = false;
+        setAuthenticated(false);
+      } else {
+        setAuthenticated(true);
       }
+      setLoading(false);
     };
 
     checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("AuthGuard: Auth state changed:", {
-          event,
-          hasSession: !!session,
-          userId: session?.user?.id,
-          timestamp: new Date().toISOString()
-        });
-
-        // Only handle actual sign in/out events, not token refreshes
-        if (event === "SIGNED_OUT") {
-          console.log("AuthGuard: User signed out, redirecting to login");
-          setAuthenticated(false);
-          router.push("/auth/login");
-        } else if (event === "SIGNED_IN") {
-          console.log("AuthGuard: User signed in, allowing access");
-          setAuthenticated(true);
-          setLoading(false);
-        }
-        // TOKEN_REFRESHED is normal and doesn't need any action
-        // It happens automatically in the background
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []); // Empty dependency array - only run once on mount
+  }, [router]);
 
   if (loading) {
     return (
@@ -100,7 +35,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!authenticated) {
-    return null; // Will redirect to login
+    return null;
   }
 
   return <>{children}</>;
