@@ -1,8 +1,21 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
 
-type Conversation = Tables<"conversations">;
-type Message = Tables<"messages">;
+export type Conversation = Tables<"conversations">;
+export type Message = Tables<"messages">;
+
+export interface CreateConversationData {
+  title: string;
+  model_provider: string;
+  model_name: string;
+}
+
+export interface CreateMessageData {
+  conversation_id: string;
+  role: string;
+  content: string;
+  tokens_used?: number;
+}
 
 export const conversationsService = {
   async getConversations(): Promise<Conversation[]> {

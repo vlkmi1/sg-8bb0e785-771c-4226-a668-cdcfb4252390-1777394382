@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sixHoursAgo = now - 6 * 60 * 60 * 1000;
     const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
 
-    let stats = {
+    let stats: any = {
       totalUsers: sessions?.users?.length || 0,
       auditLogsAvailable: !!auditLogs && auditLogs.length > 0,
       estimatedRateLimitInfo: {
