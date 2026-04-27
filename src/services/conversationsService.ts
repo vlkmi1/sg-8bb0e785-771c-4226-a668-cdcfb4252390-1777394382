@@ -14,7 +14,6 @@ export interface CreateMessageData {
   conversation_id: string;
   role: string;
   content: string;
-  tokens_used?: number;
 }
 
 export const conversationsService = {
