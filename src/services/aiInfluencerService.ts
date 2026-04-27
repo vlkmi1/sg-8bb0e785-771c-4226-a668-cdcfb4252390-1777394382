@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
 export type AIInfluencer = Tables<"ai_influencers">;
 export type InfluencerVideo = Tables<"influencer_videos"> & {
@@ -15,6 +16,9 @@ export type Personality = "professional" | "casual" | "humorous" | "inspirationa
 export const aiInfluencerService = {
   // AI Influencers
   async getInfluencers(): Promise<AIInfluencer[]> {
+    const user = await authState.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from("ai_influencers")
       .select("*")
@@ -36,8 +40,8 @@ export const aiInfluencerService = {
     personality: Personality;
     language?: string;
   }): Promise<AIInfluencer> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const user = await authState.getUser();
+    if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
       .from("ai_influencers")
@@ -110,8 +114,8 @@ export const aiInfluencerService = {
     influencer_id: string;
     script: string;
   }): Promise<InfluencerVideo> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const user = await authState.getUser();
+    if (!user) throw new Error("User not authenticated");
 
     // Simulate video generation (in production, this would call AI video API)
     const mockVideoUrl = `https://example.com/influencer-videos/${Date.now()}.mp4`;

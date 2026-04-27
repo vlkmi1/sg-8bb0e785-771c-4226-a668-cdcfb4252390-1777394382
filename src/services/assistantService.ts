@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
 export type Assistant = Tables<"assistants">;
 export type AssistantConversation = Tables<"assistant_conversations">;
@@ -97,6 +98,9 @@ export const assistantTemplates = [
 
 export const assistantService = {
   async getAssistants(): Promise<Assistant[]> {
+    const user = await authState.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from("assistants")
       .select("*")
@@ -118,7 +122,7 @@ export const assistantService = {
   },
 
   async createAssistant(params: CreateAssistantParams): Promise<Assistant> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -159,7 +163,7 @@ export const assistantService = {
   },
 
   async getConversation(assistantId: string): Promise<AssistantConversation | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -174,7 +178,7 @@ export const assistantService = {
   },
 
   async createConversation(assistantId: string): Promise<AssistantConversation> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase

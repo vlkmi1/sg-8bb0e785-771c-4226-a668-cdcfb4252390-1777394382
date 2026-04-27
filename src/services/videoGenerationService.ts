@@ -1,40 +1,41 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-
-export type VideoProvider = "runwayml" | "pika" | "stability-video";
-
-export interface GenerateVideoParams {
-  prompt: string;
-  provider: VideoProvider;
-  duration?: number;
-  model_name?: string;
-}
+import { authState } from "./authStateService";
 
 export type GeneratedVideo = Tables<"generated_videos">;
 
 export const videoGenerationService = {
-  async generateVideo(params: GenerateVideoParams): Promise<GeneratedVideo> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User not authenticated");
-
-    // Simulate video generation (in production, this would call actual AI API)
-    const mockVideoUrl = `https://example.com/video-${Date.now()}.mp4`;
+  async createGeneratedVideo(params: {
+    prompt: string;
+    videoUrl: string;
+    thumbnailUrl?: string;
+    provider: string;
+    modelName: string;
+    duration?: number;
+    creditsUsed: number;
+  }): Promise<GeneratedVideo | null> {
+    const user = await authState.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
 
     const { data, error } = await supabase
       .from("generated_videos")
       .insert({
         user_id: user.id,
         prompt: params.prompt,
-        video_url: mockVideoUrl,
+        video_url: params.videoUrl,
+        thumbnail_url: params.thumbnailUrl,
         provider: params.provider,
-        duration: params.duration || 5,
-        model_name: params.model_name,
+        model_name: params.modelName,
+        duration: params.duration,
+        credits_used: params.creditsUsed,
       })
       .select()
       .single();
 
     if (error) {
-      console.error("Error generating video:", error);
+      console.error("Error creating generated video:", error);
       throw error;
     }
 
@@ -42,7 +43,7 @@ export const videoGenerationService = {
   },
 
   async getGeneratedVideos(): Promise<GeneratedVideo[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -53,21 +54,29 @@ export const videoGenerationService = {
 
     if (error) {
       console.error("Error fetching generated videos:", error);
-      throw error;
+      return [];
     }
 
     return data || [];
   },
 
-  async deleteVideo(id: string): Promise<void> {
+  async deleteGeneratedVideo(id: string): Promise<boolean> {
+    const user = await authState.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     const { error } = await supabase
       .from("generated_videos")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
 
     if (error) {
-      console.error("Error deleting video:", error);
+      console.error("Error deleting generated video:", error);
       throw error;
     }
+
+    return true;
   },
 };

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
 export type MusicGeneration = Tables<"music_generations">;
 
@@ -16,7 +17,7 @@ export interface CreateMusicParams {
 
 export const musicService = {
   async createMusic(params: CreateMusicParams): Promise<MusicGeneration> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -52,6 +53,9 @@ export const musicService = {
   },
 
   async getGenerations(): Promise<MusicGeneration[]> {
+    const user = await authState.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from("music_generations")
       .select("*")
@@ -73,6 +77,11 @@ export const musicService = {
   },
 
   async deleteGeneration(id: string): Promise<void> {
+    const user = await authState.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     const { error } = await supabase
       .from("music_generations")
       .delete()

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
 export type Conversation = Tables<"conversations">;
 export type Message = Tables<"messages">;
@@ -75,15 +76,15 @@ export const conversationsService = {
   },
 
   async createConversation(conversationData: CreateConversationData): Promise<Conversation> {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session?.user) {
+    const user = await authState.getUser();
+    if (!user) {
       throw new Error("User not authenticated");
     }
 
     const { data, error } = await supabase
       .from("conversations")
       .insert({
-        user_id: session.session.user.id,
+        user_id: user.id,
         title: conversationData.title,
         model_provider: conversationData.model_provider,
         model_name: conversationData.model_name,
@@ -118,7 +119,12 @@ export const conversationsService = {
     return data;
   },
 
-  async deleteConversation(id: string): Promise<void> {
+  async deleteConversation(id: string): Promise<boolean> {
+    const user = await authState.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     const { error } = await supabase
       .from("conversations")
       .delete()
@@ -128,6 +134,8 @@ export const conversationsService = {
       console.error("Error deleting conversation:", error);
       throw error;
     }
+
+    return true;
   },
 
   async getMessages(conversationId: string): Promise<Message[]> {

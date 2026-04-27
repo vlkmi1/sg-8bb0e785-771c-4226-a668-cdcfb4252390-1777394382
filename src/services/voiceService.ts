@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
 export type VoiceProvider = "openai" | "elevenlabs" | "google";
 
@@ -14,7 +15,7 @@ export type VoiceConversation = Tables<"voice_conversations">;
 
 export const voiceService = {
   async createVoiceConversation(params: CreateVoiceConversationParams): Promise<VoiceConversation> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -38,7 +39,7 @@ export const voiceService = {
   },
 
   async getVoiceConversations(): Promise<VoiceConversation[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -68,7 +69,7 @@ export const voiceService = {
   },
 
   async uploadAudio(file: File): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const fileExt = file.name.split(".").pop();

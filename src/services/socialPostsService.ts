@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
 export type SocialPlatform = "facebook" | "instagram" | "linkedin" | "twitter" | "youtube" | "tiktok";
 export type PostStatus = "draft" | "scheduled" | "published" | "failed";
@@ -23,7 +24,7 @@ export interface CreateAccountParams {
 
 export const socialPostsService = {
   async createPost(params: CreatePostParams): Promise<SocialPost> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -44,6 +45,9 @@ export const socialPostsService = {
   },
 
   async getPosts(): Promise<SocialPost[]> {
+    const user = await authState.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from("social_posts")
       .select("*")
@@ -68,17 +72,23 @@ export const socialPostsService = {
     return data;
   },
 
-  async deletePost(id: string): Promise<void> {
+  async deletePost(id: string): Promise<boolean> {
+    const user = await authState.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     const { error } = await supabase
       .from("social_posts")
       .delete()
       .eq("id", id);
 
     if (error) throw error;
+    return true;
   },
 
   async createAccount(params: CreateAccountParams): Promise<SocialAccount> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
