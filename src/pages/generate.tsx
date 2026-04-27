@@ -173,7 +173,7 @@ export default function Generate() {
                   <span className="text-xs text-muted-foreground">kreditů</span>
                 </div>
                 <ThemeSwitch />
-                <Button variant="ghost" onClick={() => router.push("/")}>
+                <Button variant="ghost" onClick={() => router.push("/dashboard")}>
                   Dashboard
                 </Button>
                 <Button variant="ghost" onClick={() => router.push("/chat")}>
