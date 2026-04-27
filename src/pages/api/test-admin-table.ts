@@ -1,34 +1,40 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/integrations/supabase/server";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !anonKey) {
-    return res.status(500).json({ error: "Missing environment variables" });
-  }
-
-  // Try with anon client (should fail due to RLS)
-  const supabaseAnon = createClient(supabaseUrl, anonKey);
-
-  const { data: anonData, error: anonError } = await supabaseAnon
-    .from("admin_settings")
-    .select("provider, is_active")
-    .limit(1);
-
-  return res.status(200).json({
-    anonTest: {
-      hasData: !!anonData,
-      dataCount: anonData?.length || 0,
-      error: anonError ? {
-        message: anonError.message,
-        code: anonError.code,
-        hint: anonError.hint
-      } : null
+  try {
+    console.log("[Test Admin] Testing supabaseAdmin client...");
+    console.log("[Test Admin] Service role key exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log("[Test Admin] Service role key length:", process.env.SUPABASE_SERVICE_ROLE_KEY?.length);
+    
+    // Try simple select that doesn't need RLS
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, email, credits")
+      .limit(1);
+    
+    if (error) {
+      console.error("[Test Admin] Error:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        details: error,
+        keyExists: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      });
     }
-  });
+    
+    console.log("[Test Admin] Success! Retrieved data:", data);
+    return res.status(200).json({ 
+      success: true, 
+      data,
+      keyExists: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
+  } catch (error) {
+    console.error("[Test Admin] Fatal error:", error);
+    return res.status(500).json({ 
+      error: error instanceof Error ? error.message : "Unknown error" 
+    });
+  }
 }
