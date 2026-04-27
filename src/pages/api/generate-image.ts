@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseAdmin } from "@/integrations/supabase/server";
 import OpenAI from "openai";
 
 type GenerateImageRequest = {
@@ -169,8 +170,8 @@ export default async function handler(
 
     console.log(`[Image Gen] Saving to database...`);
 
-    // Save to database
-    const { data: savedImage, error: saveError } = await supabase
+    // Save to database using admin client (bypasses RLS)
+    const { data: savedImage, error: saveError } = await supabaseAdmin
       .from("generated_images")
       .insert({
         user_id: user.id,
@@ -190,8 +191,8 @@ export default async function handler(
 
     console.log(`[Image Gen] Deducting credits...`);
 
-    // Deduct credits
-    await supabase.rpc("deduct_credits", {
+    // Deduct credits using admin client
+    await supabaseAdmin.rpc("deduct_credits", {
       user_id: user.id,
       amount: 2,
       description: `Image generation: ${provider}`,
