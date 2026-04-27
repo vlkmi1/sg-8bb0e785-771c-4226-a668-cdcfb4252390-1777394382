@@ -9,6 +9,18 @@ type GenerateImageRequest = {
   model?: string;
 };
 
+// Increase timeout to 60 seconds for AI image generation
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+    responseLimit: false,
+    externalResolver: true,
+  },
+  maxDuration: 60, // 60 seconds timeout
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -20,9 +32,12 @@ export default async function handler(
   try {
     const { prompt, provider, size = "1024x1024", model } = req.body as GenerateImageRequest;
 
+    console.log(`[Image Gen] Starting generation for ${provider}...`);
+
     // Get auth token from request
     const authHeader = req.headers.authorization;
     if (!authHeader) {
+      console.error("[Image Gen] No authorization header");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -31,8 +46,11 @@ export default async function handler(
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      console.error("[Image Gen] Auth error:", authError);
       return res.status(401).json({ error: "Unauthorized" });
     }
+
+    console.log(`[Image Gen] User authenticated: ${user.email}`);
 
     // Check credits
     const { data: profile } = await supabase
@@ -42,8 +60,11 @@ export default async function handler(
       .single();
 
     if (!profile || profile.credits < 2) {
+      console.error(`[Image Gen] Insufficient credits: ${profile?.credits || 0}`);
       return res.status(402).json({ error: "Insufficient credits" });
     }
+
+    console.log(`[Image Gen] Credits OK: ${profile.credits}`);
 
     // Try to get user's personal API key first
     let { data: apiKeyData } = await supabase
@@ -55,6 +76,7 @@ export default async function handler(
 
     // Fallback to admin settings if user doesn't have personal key
     if (!apiKeyData) {
+      console.log(`[Image Gen] No personal key, checking admin settings...`);
       const { data: adminKey } = await supabase
         .from("admin_settings")
         .select("api_key")
@@ -63,12 +85,13 @@ export default async function handler(
         .single();
 
       if (!adminKey) {
+        console.error(`[Image Gen] No API key found for ${provider}`);
         return res.status(400).json({ 
           error: `No API key found for ${provider}. Please add your API key in settings or contact admin.` 
         });
       }
 
-      // Use admin key as fallback
+      console.log(`[Image Gen] Using admin key for ${provider}`);
       apiKeyData = { encrypted_key: adminKey.api_key };
     }
 
@@ -76,6 +99,7 @@ export default async function handler(
 
     // Generate image based on provider
     if (provider === "openai") {
+      console.log(`[Image Gen] Calling OpenAI DALL-E...`);
       const openai = new OpenAI({ apiKey: apiKeyData.encrypted_key });
       
       const response = await openai.images.generate({
@@ -86,8 +110,9 @@ export default async function handler(
       });
 
       imageUrl = response.data[0].url!;
+      console.log(`[Image Gen] OpenAI success: ${imageUrl.substring(0, 50)}...`);
     } else if (provider === "stability") {
-      // Stability AI implementation
+      console.log(`[Image Gen] Calling Stability AI...`);
       const response = await fetch("https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image", {
         method: "POST",
         headers: {
@@ -105,10 +130,14 @@ export default async function handler(
       });
 
       if (!response.ok) {
-        throw new Error(`Stability AI error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(`[Image Gen] Stability AI error (${response.status}): ${errorText}`);
+        throw new Error(`Stability AI error: ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log(`[Image Gen] Stability AI response received, uploading to storage...`);
+      
       // Stability returns base64 image - need to upload to Supabase storage
       const base64Image = data.artifacts[0].base64;
       
@@ -116,13 +145,14 @@ export default async function handler(
       const fileName = `${user.id}/${Date.now()}.png`;
       const imageBuffer = Buffer.from(base64Image, "base64");
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("generated-images")
         .upload(fileName, imageBuffer, {
           contentType: "image/png",
         });
 
       if (uploadError) {
+        console.error(`[Image Gen] Storage upload error:`, uploadError);
         throw uploadError;
       }
 
@@ -131,9 +161,13 @@ export default async function handler(
         .getPublicUrl(fileName);
 
       imageUrl = publicUrl;
+      console.log(`[Image Gen] Uploaded to storage: ${publicUrl}`);
     } else {
+      console.error(`[Image Gen] Unsupported provider: ${provider}`);
       return res.status(400).json({ error: "Provider not supported yet" });
     }
+
+    console.log(`[Image Gen] Saving to database...`);
 
     // Save to database
     const { data: savedImage, error: saveError } = await supabase
@@ -150,8 +184,11 @@ export default async function handler(
       .single();
 
     if (saveError) {
+      console.error(`[Image Gen] DB save error:`, saveError);
       throw saveError;
     }
+
+    console.log(`[Image Gen] Deducting credits...`);
 
     // Deduct credits
     await supabase.rpc("deduct_credits", {
@@ -160,9 +197,11 @@ export default async function handler(
       description: `Image generation: ${provider}`,
     });
 
+    console.log(`[Image Gen] Success! Image ID: ${savedImage.id}`);
+
     return res.status(200).json(savedImage);
   } catch (error) {
-    console.error("Image generation error:", error);
+    console.error("[Image Gen] Fatal error:", error);
     return res.status(500).json({ 
       error: error instanceof Error ? error.message : "Internal server error" 
     });

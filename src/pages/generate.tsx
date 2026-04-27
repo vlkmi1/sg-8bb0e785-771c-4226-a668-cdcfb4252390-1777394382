@@ -13,6 +13,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { imageGenerationService, type ImageProvider, type GeneratedImage } from "@/services/imageGenerationService";
 import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 const IMAGE_PROVIDERS = [
   { id: "openai", name: "DALL-E (OpenAI)", models: ["dall-e-3", "dall-e-2"] },
@@ -70,11 +71,20 @@ export default function Generate() {
 
     setLoading(true);
     try {
+      // Show user that generation takes time
+      const loadingToast = toast({
+        title: "Generování obrázku...",
+        description: "To může trvat 15-30 sekund. Prosím čekejte.",
+        duration: 30000, // 30 seconds
+      });
+
       await imageGenerationService.generateImage({
         prompt: prompt.trim(),
         provider,
         size,
       });
+
+      loadingToast.dismiss();
 
       const newCredits = await creditsService.getCredits();
       setCredits(newCredits);
@@ -82,20 +92,47 @@ export default function Generate() {
       await loadImages();
       setPrompt("");
       setActiveTab("gallery");
+
+      toast({
+        title: "Úspěch!",
+        description: "Obrázek byl vygenerován",
+      });
     } catch (error) {
       console.error("Error generating image:", error);
       
       // Show user-friendly error messages
       if (error instanceof Error) {
         if (error.message.includes("No API key")) {
-          alert(`Chybí API klíč pro ${provider}. Přidejte svůj API klíč v nastavení.`);
+          toast({
+            title: "Chybí API klíč",
+            description: `Není nastaven API klíč pro ${provider}. Kontaktujte administrátora.`,
+            variant: "destructive",
+          });
         } else if (error.message.includes("Insufficient credits")) {
-          alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
+          toast({
+            title: "Nedostatek kreditů",
+            description: "Nemáte dostatek kreditů. Kontaktujte administrátora.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes("Stability AI error")) {
+          toast({
+            title: "Chyba Stability AI",
+            description: "API klíč je neplatný nebo vypršel. Kontaktujte administrátora.",
+            variant: "destructive",
+          });
         } else {
-          alert(`Chyba při generování: ${error.message}`);
+          toast({
+            title: "Chyba při generování",
+            description: error.message,
+            variant: "destructive",
+          });
         }
       } else {
-        alert("Nastala chyba při generování obrázku.");
+        toast({
+          title: "Chyba",
+          description: "Nastala neočekávaná chyba při generování obrázku.",
+          variant: "destructive",
+        });
       }
     } finally {
       setLoading(false);
