@@ -34,6 +34,7 @@ export default async function handler(
     const { prompt, provider, size = "1024x1024", model } = req.body as GenerateImageRequest;
 
     console.log(`[Image Gen] Starting generation for ${provider}...`);
+    console.log(`[Image Gen] Service role key available:`, !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     // Get auth token from request
     const authHeader = req.headers.authorization;
@@ -186,6 +187,7 @@ export default async function handler(
 
     if (saveError) {
       console.error(`[Image Gen] DB save error:`, saveError);
+      console.error(`[Image Gen] Full error details:`, JSON.stringify(saveError, null, 2));
       throw saveError;
     }
 
