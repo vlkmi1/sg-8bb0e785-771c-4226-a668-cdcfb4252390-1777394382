@@ -1,0 +1,33 @@
+
+> softgen-starter@2.4.4 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.5.9 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://172.20.0.25:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · turbo
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ○ Compiling /generate ...
+[Test Admin] Testing supabaseAdmin client...
+[Test Admin] Service role key exists: true
+[Test Admin] Service role key length: 219
+ GET /api/test-admin-table 500 in 800ms
+ ✓ Compiled /generate in 22.2s
+ GET /?refresh=69ex2a4s 200 in 23896ms
+ GET /generate 200 in 23899ms
+ GET /?refresh=q9nocsiv 200 in 8909ms
+ GET /?refresh=w2xbm2me 200 in 23311ms
+ GET /?refresh=guil72sj 200 in 23ms
+ ○ Compiling /404 ...
+ ✓ Compiled /404 in 899ms
+ GET /grid.svg 404 in 972ms
+ GET /grid.svg 404 in 20ms
+ GET / 200 in 18ms
+ GET /grid.svg 404 in 16ms
+ GET /?refresh=y8nq5kgx 200 in 72ms
+ GET /?refresh=n0by5moj 200 in 80ms
+ GET /grid.svg 404 in 9ms

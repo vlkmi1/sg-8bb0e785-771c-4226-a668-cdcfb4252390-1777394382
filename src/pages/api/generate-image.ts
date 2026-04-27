@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
-import { supabaseAdmin } from "@/integrations/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
 type GenerateImageRequest = {
@@ -19,14 +18,13 @@ export const config = {
     responseLimit: false,
     externalResolver: true,
   },
-  maxDuration: 60, // 60 seconds timeout
+  maxDuration: 60,
 };
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Set JSON content type immediately
   res.setHeader("Content-Type", "application/json");
   
   if (req.method !== "POST") {
@@ -37,7 +35,6 @@ export default async function handler(
     const { prompt, provider, size = "1024x1024", model } = req.body as GenerateImageRequest;
 
     console.log(`[Image Gen] Starting generation for ${provider}...`);
-    console.log(`[Image Gen] Service role key available:`, !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     // Get auth token from request
     const authHeader = req.headers.authorization;
@@ -46,8 +43,21 @@ export default async function handler(
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Verify user session
+    // Create authenticated Supabase client with user's token
     const token = authHeader.replace("Bearer ", "");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+    // Verify user session
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
@@ -143,14 +153,11 @@ export default async function handler(
       const data = await response.json();
       console.log(`[Image Gen] Stability AI response received, uploading to storage...`);
       
-      // Stability returns base64 image - need to upload to Supabase storage
       const base64Image = data.artifacts[0].base64;
-      
-      // Upload to Supabase storage using admin client (bypasses RLS)
       const fileName = `${user.id}/${Date.now()}.png`;
       const imageBuffer = Buffer.from(base64Image, "base64");
       
-      const { error: uploadError } = await supabaseAdmin.storage
+      const { error: uploadError } = await supabase.storage
         .from("generated-images")
         .upload(fileName, imageBuffer, {
           contentType: "image/png",
@@ -161,7 +168,7 @@ export default async function handler(
         throw uploadError;
       }
 
-      const { data: { publicUrl } } = supabaseAdmin.storage
+      const { data: { publicUrl } } = supabase.storage
         .from("generated-images")
         .getPublicUrl(fileName);
 
@@ -174,8 +181,8 @@ export default async function handler(
 
     console.log(`[Image Gen] Saving to database...`);
 
-    // Save to database using admin client (bypasses RLS)
-    const { data: savedImage, error: saveError } = await supabaseAdmin
+    // Save to database using authenticated client (RLS allows this)
+    const { data: savedImage, error: saveError } = await supabase
       .from("generated_images")
       .insert({
         user_id: user.id,
@@ -190,8 +197,6 @@ export default async function handler(
 
     if (saveError) {
       console.error(`[Image Gen] DB save error:`, saveError);
-      console.error(`[Image Gen] Full error details:`, JSON.stringify(saveError, null, 2));
-      // Return specific error message instead of throwing
       return res.status(500).json({ 
         error: `Database save failed: ${saveError.message || JSON.stringify(saveError)}` 
       });
@@ -199,8 +204,8 @@ export default async function handler(
 
     console.log(`[Image Gen] Deducting credits...`);
 
-    // Deduct credits using admin client
-    const { error: creditError } = await supabaseAdmin.rpc("deduct_credits", {
+    // Deduct credits
+    const { error: creditError } = await supabase.rpc("deduct_credits", {
       user_id: user.id,
       amount: 2,
       description: `Image generation: ${provider}`,
@@ -208,8 +213,6 @@ export default async function handler(
 
     if (creditError) {
       console.error(`[Image Gen] Credit deduction error:`, creditError);
-      // Don't fail the whole request if credit deduction fails
-      // The image was already generated and saved
     }
 
     console.log(`[Image Gen] Success! Image ID: ${savedImage.id}`);
@@ -217,7 +220,6 @@ export default async function handler(
     return res.status(200).json(savedImage);
   } catch (error) {
     console.error("[Image Gen] Fatal error:", error);
-    // Always return JSON, never let Next.js return HTML error page
     return res.status(500).json({ 
       error: error instanceof Error ? error.message : "Internal server error",
       details: error instanceof Error ? error.stack : String(error)
