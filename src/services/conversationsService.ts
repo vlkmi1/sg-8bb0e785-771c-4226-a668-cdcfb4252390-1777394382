@@ -42,11 +42,11 @@ export const conversationsService = {
     return data;
   },
 
-  async createConversation(
-    title: string,
-    provider: string,
-    modelName: string
-  ): Promise<Conversation> {
+  async createConversation(params: {
+    title: string;
+    model_provider: string;
+    model_name: string;
+  }): Promise<Conversation> {
     const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
 
@@ -54,9 +54,9 @@ export const conversationsService = {
       .from("conversations")
       .insert({
         user_id: user.id,
-        title,
-        provider,
-        model_name: modelName,
+        title: params.title,
+        model_provider: params.model_provider,
+        model_name: params.model_name,
       })
       .select()
       .single();

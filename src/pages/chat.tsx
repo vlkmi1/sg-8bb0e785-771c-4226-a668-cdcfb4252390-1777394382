@@ -184,11 +184,11 @@ export default function Chat() {
 
     try {
       // Save user message
-      await conversationsService.createMessage({
-        conversation_id: conversation.id,
-        role: "user",
-        content: input
-      });
+      await conversationsService.addMessage(
+        conversation.id,
+        "user",
+        input
+      );
 
       // Call AI API
       const response = await fetch("/api/chat", {
@@ -225,11 +225,11 @@ export default function Chat() {
       setMessages(prev => [...prev, assistantMessage]);
 
       // Save assistant message
-      await conversationsService.createMessage({
-        conversation_id: conversation.id,
-        role: "assistant",
-        content: data.response
-      });
+      await conversationsService.addMessage(
+        conversation.id,
+        "assistant",
+        data.response
+      );
 
       // Auto-rename conversation with first message if title is generic
       if (conversation.title.startsWith("Chat ") && messages.length === 0) {
