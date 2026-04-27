@@ -48,7 +48,7 @@ export default async function handler(
     // Get API key for provider
     const { data: apiKeyData } = await supabase
       .from("api_keys")
-      .select("key_value")
+      .select("encrypted_key")
       .eq("user_id", user.id)
       .eq("provider", provider)
       .single();
@@ -63,7 +63,7 @@ export default async function handler(
 
     // Generate image based on provider
     if (provider === "openai") {
-      const openai = new OpenAI({ apiKey: apiKeyData.key_value });
+      const openai = new OpenAI({ apiKey: apiKeyData.encrypted_key });
       
       const response = await openai.images.generate({
         model: model || "dall-e-3",
@@ -79,7 +79,7 @@ export default async function handler(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKeyData.key_value}`,
+          "Authorization": `Bearer ${apiKeyData.encrypted_key}`,
         },
         body: JSON.stringify({
           text_prompts: [{ text: prompt }],
