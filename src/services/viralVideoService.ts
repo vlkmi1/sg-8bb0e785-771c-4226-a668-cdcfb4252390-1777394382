@@ -30,7 +30,7 @@ export const viralVideoService = {
   },
 
   async createVideo(params: CreateViralVideoParams): Promise<ViralVideo> {
-    const { data: { user } } = await authState.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -82,7 +82,7 @@ export const viralVideoService = {
   },
 
   async uploadVideo(file: File): Promise<string> {
-    const { data: { user } } = await authState.getUser();
+    const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const fileName = `${user.id}/${Date.now()}-${file.name}`;

@@ -3,9 +3,10 @@ import type { Tables } from "@/integrations/supabase/types";
 import { authState } from "./authStateService";
 
 export type GeneratedVideo = Tables<"generated_videos">;
+export type VideoProvider = "runway" | "pika" | "sora" | "kling";
 
 export const videoGenerationService = {
-  async createGeneratedVideo(params: {
+  async generateVideo(params: {
     prompt: string;
     videoUrl: string;
     thumbnailUrl?: string;
@@ -28,7 +29,7 @@ export const videoGenerationService = {
         thumbnail_url: params.thumbnailUrl,
         provider: params.provider,
         model_name: params.modelName,
-        duration: params.duration,
+        duration: params.duration || 5,
         credits_used: params.creditsUsed,
       })
       .select()
@@ -60,7 +61,7 @@ export const videoGenerationService = {
     return data || [];
   },
 
-  async deleteGeneratedVideo(id: string): Promise<boolean> {
+  async deleteVideo(id: string): Promise<boolean> {
     const user = await authState.getUser();
     if (!user) {
       throw new Error("User not authenticated");
