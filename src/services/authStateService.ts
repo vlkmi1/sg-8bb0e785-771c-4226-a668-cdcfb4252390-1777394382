@@ -1,18 +1,21 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 
 /**
- * Centralized auth state service with caching and concurrent request handling
- * Prevents "lock was released because another request stole it" errors
+ * Centralized auth state service with caching and session refresh
+ * Prevents duplicate auth requests and handles token refresh gracefully
  */
 class AuthStateService {
   private static instance: AuthStateService;
   private userCache: User | null = null;
+  private sessionCache: Session | null = null;
   private userPromise: Promise<User | null> | null = null;
   private cacheTimestamp: number = 0;
   private readonly CACHE_DURATION = 5000; // 5 seconds
 
-  private constructor() {}
+  private constructor() {
+    this.initSession();
+  }
 
   public static getInstance(): AuthStateService {
     if (!AuthStateService.instance) {
@@ -21,8 +24,22 @@ class AuthStateService {
     return AuthStateService.instance;
   }
 
+  private async initSession() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        this.sessionCache = session;
+        this.userCache = session.user;
+        this.cacheTimestamp = Date.now();
+      }
+    } catch (error) {
+      console.error('[AuthState] Init session error:', error);
+    }
+  }
+
   private clearCache(): void {
     this.userCache = null;
+    this.sessionCache = null;
     this.userPromise = null;
     this.cacheTimestamp = 0;
   }
@@ -51,19 +68,36 @@ class AuthStateService {
     // Create new promise and cache it
     this.userPromise = (async () => {
       try {
+        // First try to get from session (faster, no validation)
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          this.userCache = session.user;
+          this.sessionCache = session;
+          this.cacheTimestamp = Date.now();
+          return session.user;
+        }
+
+        // If no session, try getUser (validates and refreshes token)
         const { data: { user }, error } = await supabase.auth.getUser();
         
         if (error) {
-          console.error("Auth state error:", error);
+          // Don't log session missing errors - they're expected when logged out
+          if (error.message !== 'Auth session missing!') {
+            console.error('[AuthState] Get user error:', error);
+          }
           this.clearCache();
           return null;
         }
 
-        this.userCache = user;
-        this.cacheTimestamp = Date.now();
+        if (user) {
+          this.userCache = user;
+          this.cacheTimestamp = Date.now();
+        }
+        
         return user;
       } catch (error) {
-        console.error("Auth state exception:", error);
+        console.error('[AuthState] Get user exception:', error);
         this.clearCache();
         return null;
       } finally {
@@ -80,7 +114,19 @@ class AuthStateService {
    * Use this when you just need to check if user is logged in
    */
   public async getSession() {
+    // Return cached session if valid
+    if (this.isCacheValid() && this.sessionCache) {
+      return this.sessionCache;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      this.sessionCache = session;
+      this.userCache = session.user;
+      this.cacheTimestamp = Date.now();
+    }
+    
     return session;
   }
 
@@ -89,6 +135,14 @@ class AuthStateService {
    */
   public invalidateCache(): void {
     this.cacheTimestamp = 0;
+    this.userPromise = null;
+  }
+
+  /**
+   * Clear all cached data - use on sign out
+   */
+  public clearAll(): void {
+    this.clearCache();
   }
 }
 

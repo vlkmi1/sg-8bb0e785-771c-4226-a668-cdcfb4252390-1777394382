@@ -5,89 +5,58 @@ import { authState } from "./authStateService";
 export type Conversation = Tables<"conversations">;
 export type Message = Tables<"messages">;
 
-export interface CreateConversationData {
-  title: string;
-  model_provider: string;
-  model_name: string;
-}
-
-export interface CreateMessageData {
-  conversation_id: string;
-  role: string;
-  content: string;
-}
-
 export const conversationsService = {
   async getConversations(): Promise<Conversation[]> {
-    console.log("conversationsService.getConversations: Fetching conversations...");
-    
-    try {
-      // First check if we have a session
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("conversationsService: Session check", {
-        hasSession: !!session,
-        userId: session?.user?.id
-      });
-
-      if (!session) {
-        console.error("conversationsService: No session found!");
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from("conversations")
-        .select("*")
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        console.error("conversationsService: Error fetching conversations:", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-        throw error;
-      }
-
-      console.log("conversationsService: Conversations fetched successfully", {
-        count: data?.length || 0
-      });
-
-      return data || [];
-    } catch (error) {
-      console.error("conversationsService: Unexpected error:", error);
-      throw error;
+    const session = await authState.getSession();
+    if (!session) {
+      // Don't log this as error - it's expected when not logged in
+      return [];
     }
-  },
 
-  async getConversationById(id: string): Promise<Conversation | null> {
     const { data, error } = await supabase
       .from("conversations")
       .select("*")
-      .eq("id", id)
-      .maybeSingle();
+      .eq("user_id", session.user.id)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching conversations:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async getConversation(conversationId: string): Promise<Conversation | null> {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("id", conversationId)
+      .single();
 
     if (error) {
       console.error("Error fetching conversation:", error);
-      throw error;
+      return null;
     }
 
     return data;
   },
 
-  async createConversation(conversationData: CreateConversationData): Promise<Conversation> {
+  async createConversation(
+    title: string,
+    provider: string,
+    modelName: string
+  ): Promise<Conversation> {
     const user = await authState.getUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
+    if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
       .from("conversations")
       .insert({
         user_id: user.id,
-        title: conversationData.title,
-        model_provider: conversationData.model_provider,
-        model_name: conversationData.model_name,
+        title,
+        provider,
+        model_name: modelName,
       })
       .select()
       .single();
@@ -100,42 +69,31 @@ export const conversationsService = {
     return data;
   },
 
-  async updateConversation(id: string, updates: Partial<Conversation>): Promise<Conversation> {
-    const { data, error } = await supabase
+  async updateConversation(
+    conversationId: string,
+    updates: Partial<Conversation>
+  ): Promise<void> {
+    const { error } = await supabase
       .from("conversations")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
+      .update(updates)
+      .eq("id", conversationId);
 
     if (error) {
       console.error("Error updating conversation:", error);
       throw error;
     }
-
-    return data;
   },
 
-  async deleteConversation(id: string): Promise<boolean> {
-    const user = await authState.getUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
+  async deleteConversation(conversationId: string): Promise<void> {
     const { error } = await supabase
       .from("conversations")
       .delete()
-      .eq("id", id);
+      .eq("id", conversationId);
 
     if (error) {
       console.error("Error deleting conversation:", error);
       throw error;
     }
-
-    return true;
   },
 
   async getMessages(conversationId: string): Promise<Message[]> {
@@ -153,17 +111,30 @@ export const conversationsService = {
     return data || [];
   },
 
-  async createMessage(messageData: CreateMessageData): Promise<Message> {
+  async addMessage(
+    conversationId: string,
+    role: "user" | "assistant",
+    content: string
+  ): Promise<Message> {
     const { data, error } = await supabase
       .from("messages")
-      .insert(messageData)
+      .insert({
+        conversation_id: conversationId,
+        role,
+        content,
+      })
       .select()
       .single();
 
     if (error) {
-      console.error("Error creating message:", error);
+      console.error("Error adding message:", error);
       throw error;
     }
+
+    // Update conversation's updated_at timestamp
+    await this.updateConversation(conversationId, {
+      updated_at: new Date().toISOString(),
+    });
 
     return data;
   },
