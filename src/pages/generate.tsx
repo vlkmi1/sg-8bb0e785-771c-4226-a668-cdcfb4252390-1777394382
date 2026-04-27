@@ -76,7 +76,7 @@ export default function Generate() {
         size,
       });
 
-      const newCredits = await creditsService.deductCredits(2);
+      const newCredits = await creditsService.getCredits();
       setCredits(newCredits);
       
       await loadImages();
@@ -84,8 +84,18 @@ export default function Generate() {
       setActiveTab("gallery");
     } catch (error) {
       console.error("Error generating image:", error);
-      if (error instanceof Error && error.message.includes("Insufficient credits")) {
-        alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
+      
+      // Show user-friendly error messages
+      if (error instanceof Error) {
+        if (error.message.includes("No API key")) {
+          alert(`Chybí API klíč pro ${provider}. Přidejte svůj API klíč v nastavení.`);
+        } else if (error.message.includes("Insufficient credits")) {
+          alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
+        } else {
+          alert(`Chyba při generování: ${error.message}`);
+        }
+      } else {
+        alert("Nastala chyba při generování obrázku.");
       }
     } finally {
       setLoading(false);

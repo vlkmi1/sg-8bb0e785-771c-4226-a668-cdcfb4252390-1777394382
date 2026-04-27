@@ -18,27 +18,31 @@ export const imageGenerationService = {
     const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    // Simulace generování - v reálné aplikaci by zde bylo volání API
-    const mockImageUrl = `https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1024&h=1024&fit=crop`;
-    
-    const { data, error } = await supabase
-      .from("generated_images")
-      .insert({
-        user_id: user.id,
-        prompt: params.prompt,
-        image_url: mockImageUrl,
-        provider: params.provider,
-        model_name: params.model_name || "default",
-        size: params.size || "1024x1024",
-      })
-      .select()
-      .single();
+    // Get session token for API call
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("No session");
 
-    if (error) {
-      console.error("Error saving generated image:", error);
-      throw error;
+    // Call API endpoint to generate image
+    const response = await fetch("/api/generate-image", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        prompt: params.prompt,
+        provider: params.provider,
+        size: params.size || "1024x1024",
+        model: params.model_name,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Image generation failed");
     }
 
+    const data = await response.json();
     return data;
   },
 
