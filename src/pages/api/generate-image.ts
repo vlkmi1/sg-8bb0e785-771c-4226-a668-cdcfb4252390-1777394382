@@ -45,18 +45,31 @@ export default async function handler(
       return res.status(402).json({ error: "Insufficient credits" });
     }
 
-    // Get API key for provider
-    const { data: apiKeyData } = await supabase
+    // Try to get user's personal API key first
+    let { data: apiKeyData } = await supabase
       .from("api_keys")
       .select("encrypted_key")
       .eq("user_id", user.id)
       .eq("provider", provider)
       .single();
 
+    // Fallback to admin settings if user doesn't have personal key
     if (!apiKeyData) {
-      return res.status(400).json({ 
-        error: `No API key found for ${provider}. Please add your API key in settings.` 
-      });
+      const { data: adminKey } = await supabase
+        .from("admin_settings")
+        .select("api_key")
+        .eq("provider", provider)
+        .eq("is_active", true)
+        .single();
+
+      if (!adminKey) {
+        return res.status(400).json({ 
+          error: `No API key found for ${provider}. Please add your API key in settings or contact admin.` 
+        });
+      }
+
+      // Use admin key as fallback
+      apiKeyData = { encrypted_key: adminKey.api_key };
     }
 
     let imageUrl: string;
