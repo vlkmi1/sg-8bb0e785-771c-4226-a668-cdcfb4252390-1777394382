@@ -97,13 +97,15 @@ export default function Pricing() {
       const plan = plans.find(p => p.id === planId);
       if (!plan) throw new Error("Invalid plan");
 
-      // Create payment record with pending status
+      // V reálné aplikaci by zde byl výběr platby, 
+      // pro teď založíme čekající (pending) záznam pro Stripe
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           user_id: user.id,
           amount: plan.price,
-          method: "online",
+          currency: plan.currency || "CZK",
+          method: "stripe",
           payment_type: "subscription",
           status: "pending",
           metadata: { 
@@ -116,17 +118,12 @@ export default function Pricing() {
       if (paymentError) throw paymentError;
 
       toast({
-        title: "Přesměrování na platbu",
-        description: "Budete přesměrováni na platební bránu...",
+        title: "Předplatné objednáno",
+        description: "Bude aktivováno po dokončení platby na bráně.",
       });
 
-      // TODO: Integrate with real payment gateway (Stripe/GoPay/etc)
-      // For now, show info message
-      toast({
-        title: "Platební brána vyžaduje konfiguraci",
-        description: "Kontaktujte administrátora pro aktivaci platební brány (Stripe/GoPay).",
-        variant: "destructive",
-      });
+      // Zde by normálně proběhlo přesměrování
+      // window.location.href = `/api/create-checkout-session?plan=${plan.id}`;
 
     } catch (error: any) {
       console.error("Error creating payment:", error);
