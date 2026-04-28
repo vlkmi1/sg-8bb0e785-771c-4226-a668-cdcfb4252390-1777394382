@@ -55,6 +55,7 @@ import { adminService } from "@/services/adminService";
 import { UsersManagement } from "@/components/admin/UsersManagement";
 import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 import { SystemLogs } from "@/components/admin/SystemLogs";
+import { PaymentApprovals } from "@/components/admin/PaymentApprovals";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 
@@ -826,6 +827,8 @@ export default function Admin() {
                   </div>
                 </CardContent>
               </Card>
+
+              <PaymentApprovals />
             </TabsContent>
 
             <TabsContent value="affiliate" className="space-y-6">
