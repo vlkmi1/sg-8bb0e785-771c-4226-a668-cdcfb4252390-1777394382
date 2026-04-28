@@ -1,18 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertCircle, CheckCircle, Info, AlertTriangle, Trash2, RefreshCw, Download, Search, Filter, Calendar } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Search,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  XCircle,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { loggingService, type LogEntry, type LogLevel, type LogCategory, type LogStatistics } from "@/services/loggingService";
 
 const LOG_LEVEL_CONFIG = {
-  error: { icon: AlertCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Error" },
+  error: { icon: AlertTriangle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Error" },
   warning: { icon: AlertTriangle, color: "text-yellow-600", bgColor: "bg-yellow-50 dark:bg-yellow-950", label: "Warning" },
   info: { icon: Info, color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950", label: "Info" },
   success: { icon: CheckCircle, color: "text-green-600", bgColor: "bg-green-50 dark:bg-green-950", label: "Success" },
@@ -46,7 +63,7 @@ export function SystemLogs() {
   useEffect(() => {
     loadLogs();
     loadStatistics();
-  }, [levelFilter, categoryFilter, searchTerm, daysFilter]);
+  }, [loadLogs, loadStatistics]);
 
   const loadLogs = async () => {
     setLoading(true);
@@ -163,7 +180,7 @@ export function SystemLogs() {
                   <p className="text-xs text-muted-foreground">Chyby</p>
                   <p className="text-2xl font-bold text-destructive">{statistics.errors}</p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-destructive opacity-50" />
+                <AlertTriangle className="h-8 w-8 text-destructive opacity-50" />
               </div>
             </CardContent>
           </Card>

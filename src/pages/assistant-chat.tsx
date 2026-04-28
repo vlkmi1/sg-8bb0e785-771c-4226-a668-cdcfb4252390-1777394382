@@ -1,15 +1,14 @@
-import { useEffect, useState, useRef, FormEvent } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Trash2, Loader2, Coins, Bot } from "lucide-react";
-import { AuthGuard } from "@/components/AuthGuard";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { assistantService, type Assistant, type AssistantConversation, type Message } from "@/services/assistantService";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Send, Loader2 } from "lucide-react";
+import { SEO } from "@/components/SEO";
+import { UserMenu } from "@/components/UserMenu";
+import { authService } from "@/services/authService";
+import { assistantService } from "@/services/assistantService";
+import { toast } from "@/hooks/use-toast";
 import { creditsService } from "@/services/creditsService";
 import { ModuleHeader } from "@/components/ModuleHeader";
 
@@ -26,11 +25,8 @@ export default function AssistantChat() {
   const [credits, setCredits] = useState(0);
 
   useEffect(() => {
-    if (id && typeof id === "string") {
-      loadAssistant(id);
-      loadConversation(id);
-    }
-  }, [id]);
+    loadAssistant();
+  }, [id, loadAssistant]);
 
   useEffect(() => {
     loadCredits();

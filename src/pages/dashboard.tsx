@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [loadDashboardData]);
 
   const loadDashboardData = async () => {
     try {

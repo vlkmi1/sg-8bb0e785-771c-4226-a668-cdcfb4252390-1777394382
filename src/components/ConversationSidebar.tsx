@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Brain, Plus, MessageSquare, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { conversationsService, type Conversation } from "@/services/conversationsService";
 import { cn } from "@/lib/utils";
 

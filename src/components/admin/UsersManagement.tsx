@@ -1,16 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Search, Shield, ShieldOff, Ban, CheckCircle2, Coins, Edit, Eye, TrendingUp, TrendingDown, 
-  User, Calendar, Activity, MessageSquare, Image as ImageIcon, Video, Clock
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  UserPlus,
+  RefreshCw,
+  Shield,
+  Ban,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { adminService } from "@/services/adminService";
 import { useToast } from "@/hooks/use-toast";
@@ -49,12 +70,11 @@ export function UsersManagement() {
 
   useEffect(() => {
     loadUsers();
-    loadPlans();
-  }, []);
+  }, [loadUsers]);
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, filterStatus]);
+  }, [searchTerm, roleFilter, statusFilter, filterUsers]);
 
   const loadUsers = async () => {
     try {

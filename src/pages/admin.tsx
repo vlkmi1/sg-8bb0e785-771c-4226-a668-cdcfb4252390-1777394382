@@ -1,32 +1,34 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink, TestTube2, CheckCircle2, XCircle, Activity, DollarSign, Calendar } from "lucide-react";
-import { AdminGuard } from "@/components/AdminGuard";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { useToast } from "@/hooks/use-toast";
-import { adminService, type AdminSetting, type APIUsageStats } from "@/services/adminService";
-import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Users,
+  Key,
+  MessageSquare,
+  Image as ImageIcon,
+  DollarSign,
+  Settings,
+  Activity,
+  Database,
+  Shield,
+  RefreshCw,
+  Plus,
+  X,
+} from "lucide-react";
+import { SEO } from "@/components/SEO";
+import { toast } from "@/hooks/use-toast";
+import { authService } from "@/services/authService";
 import { UsersManagement } from "@/components/admin/UsersManagement";
+import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 import { SystemLogs } from "@/components/admin/SystemLogs";
 
 const AI_PROVIDERS = [
@@ -101,7 +103,7 @@ export default function Admin() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const loadData = async () => {
     try {

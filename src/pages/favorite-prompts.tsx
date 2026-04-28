@@ -1,16 +1,14 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Star, Plus, Search, Trash2, Edit2, Copy, LogOut, Sparkles, Tag, TrendingUp, Clock, MessageSquare, ImageIcon, Video, Mic, Megaphone, FileText, Coins
+  Star, Plus, Search, Trash2, Edit2, Copy, LogOut, Sparkles, Tag, TrendingUp, Clock, MessageSquare, ImageIcon, Video, Mic, Megaphone, FileText, Coins, BookMarked, Edit
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -19,6 +17,8 @@ import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ModuleHeader } from "@/components/ModuleHeader";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const CATEGORIES = [
   { id: "chat", name: "Chat", icon: MessageSquare },

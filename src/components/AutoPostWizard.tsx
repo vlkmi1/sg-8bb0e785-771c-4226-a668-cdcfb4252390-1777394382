@@ -21,7 +21,13 @@ import {
   Clock,
   Wand2,
   Calendar as CalendarIcon,
-  Zap
+  Zap,
+  Loader2,
+  Instagram,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Save
 } from "lucide-react";
 import { creditsService } from "@/services/creditsService";
 import { socialPostsService, type SocialPlatform } from "@/services/socialPostsService";
@@ -85,7 +91,7 @@ export function AutoPostWizard({ open, onOpenChange, onComplete }: AutoPostWizar
 
   useEffect(() => {
     calculateCost();
-  }, [selectedPlatforms, postsPerDay, dateRange]);
+  }, [selectedPlatforms, calculateCost]);
 
   const loadCredits = async () => {
     try {

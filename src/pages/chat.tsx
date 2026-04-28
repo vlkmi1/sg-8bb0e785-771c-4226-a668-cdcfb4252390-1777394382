@@ -1,407 +1,272 @@
-import { useEffect, useState, useRef, FormEvent } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AuthGuard } from "@/components/AuthGuard";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { SEO } from "@/components/SEO";
+import { Send, Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
-import { Send, LogOut, MessageSquare, Sparkles, Edit2, Check, X, Star, MessageSquarePlus, Loader2 } from "lucide-react";
-import { conversationsService } from "@/services/conversationsService";
-import { favoritePromptsService } from "@/services/favoritePromptsService";
-import { PromptSelector } from "@/components/PromptSelector";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { creditsService } from "@/services/creditsService";
-import { ModuleHeader } from "@/components/ModuleHeader";
-
-type Conversation = Tables<"conversations">;
-type Message = {
-  role: "user" | "assistant" | "system";
-  content: string;
-  model?: string;
-};
+import { conversationsService, Message } from "@/services/conversationsService";
+import { UserMenu } from "@/components/UserMenu";
+import { authService } from "@/services/authService";
 
 export default function Chat() {
   const router = useRouter();
-  const { toast } = useToast();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [selectedModel, setSelectedModel] = useState("gpt-4");
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [credits, setCredits] = useState(0);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const models = [
-    { id: "gpt-4", name: "GPT-4", provider: "OpenAI", icon: "🤖" },
-    { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: "OpenAI", icon: "⚡" },
-    { id: "claude-3-opus", name: "Claude 3 Opus", provider: "Anthropic", icon: "🧠" },
-    { id: "claude-3-sonnet", name: "Claude 3 Sonnet", provider: "Anthropic", icon: "🎵" },
-    { id: "claude-3-haiku", name: "Claude 3 Haiku", provider: "Anthropic", icon: "🌸" },
-    { id: "gemini-pro", name: "Gemini Pro", provider: "Google", icon: "🔮" },
-    { id: "mistral-large", name: "Mistral Large", provider: "Mistral", icon: "⚡" },
-    { id: "mistral-medium", name: "Mistral Medium", provider: "Mistral", icon: "🌟" },
-    { id: "grok-2", name: "Grok-2", provider: "X AI", icon: "𝕏" },
+  const availableModels = [
+    { id: "gpt-4", name: "GPT-4" },
+    { id: "gpt-3.5-turbo", name: "GPT-3.5" },
+    { id: "claude-3-opus", name: "Claude 3" },
+    { id: "gemini-pro", name: "Gemini" },
   ];
+
+  const loadConversations = useCallback(async () => {
+    const user = await authService.getCurrentUser();
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const { data, error } = await conversationsService.getConversations(user.id);
+    if (error) {
+      console.error("Error loading conversations:", error);
+      return;
+    }
+    setConversations(data || []);
+  }, [router]);
 
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [loadConversations]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const loadConversations = async () => {
-    try {
-      const data = await conversationsService.getConversations();
-      setConversations(data);
-      
-      // Auto-create first conversation if none exists
-      if (data.length === 0) {
-        await createAutoConversation();
-      }
-    } catch (error) {
-      console.error("Error loading conversations:", error);
-    }
-  };
+  const handleNewConversation = async () => {
+    const user = await authService.getCurrentUser();
+    if (!user) return;
 
-  const createAutoConversation = async () => {
-    try {
-      const title = `Chat ${new Date().toLocaleDateString("cs-CZ")}`;
-      const provider = models.find(m => m.id === selectedModel)?.provider.toLowerCase() || "openai";
-      const modelName = models.find(m => m.id === selectedModel)?.id || "gpt-4";
-      const conversation = await conversationsService.createConversation({ 
-        title, 
-        model_provider: provider,
-        model_name: modelName
-      });
-      setConversations([conversation]);
-      setCurrentConversation(conversation);
-      setMessages([]);
-    } catch (error) {
-      console.error("Error creating conversation:", error);
+    const { data, error } = await conversationsService.createConversation({
+      user_id: user.id,
+      title: "Nová konverzace",
+      model: selectedModel,
+    });
+
+    if (error) {
       toast({
         title: "Chyba",
         description: "Nepodařilo se vytvořit konverzaci",
         variant: "destructive",
       });
+      return;
     }
+
+    setSelectedConversation(data);
+    setMessages([]);
+    await loadConversations();
   };
 
-  const handleConversationSelect = async (id: string) => {
-    const conversation = conversations.find(c => c.id === id);
-    if (!conversation) return;
-    
-    setCurrentConversation(conversation);
-    
-    try {
-      const msgs = await conversationsService.getMessages(conversation.id);
-      setMessages(msgs.map(m => ({
-        role: m.role as "user" | "assistant" | "system",
-        content: m.content,
-      })));
-    } catch (error) {
-      console.error("Error loading messages:", error);
-    }
-  };
-
-  const handleNewConversation = async () => {
-    const title = `Chat ${new Date().toLocaleDateString("cs-CZ")} ${new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}`;
-    try {
-      const provider = models.find(m => m.id === selectedModel)?.provider.toLowerCase() || "openai";
-      const modelName = models.find(m => m.id === selectedModel)?.id || "gpt-4";
-      const conversation = await conversationsService.createConversation({ 
-        title, 
-        model_provider: provider,
-        model_name: modelName
-      });
-      setConversations([conversation, ...conversations]);
-      setCurrentConversation(conversation);
-      setMessages([]);
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-    }
-  };
-
-  const handleTitleEdit = async () => {
-    if (!currentConversation || !editedTitle.trim()) return;
-    
-    try {
-      await conversationsService.updateConversation(currentConversation.id, { title: editedTitle.trim() });
-      setCurrentConversation({ ...currentConversation, title: editedTitle.trim() });
-      setConversations(conversations.map(c => 
-        c.id === currentConversation.id ? { ...c, title: editedTitle.trim() } : c
-      ));
-      setIsEditingTitle(false);
-      toast({
-        title: "Název upraven",
-        description: "Název konverzace byl úspěšně změněn",
-      });
-    } catch (error) {
-      console.error("Error updating title:", error);
+  const handleDeleteConversation = async (id: string) => {
+    const { error } = await conversationsService.deleteConversation(id);
+    if (error) {
       toast({
         title: "Chyba",
-        description: "Nepodařilo se změnit název",
+        description: "Nepodařilo se smazat konverzaci",
         variant: "destructive",
       });
+      return;
     }
-  };
 
-  const handleSavePrompt = async () => {
-    if (!input.trim()) return;
-
-    try {
-      await favoritePromptsService.createPrompt({
-        title: input.slice(0, 50) + (input.length > 50 ? "..." : ""),
-        prompt_text: input,
-        category: "chat",
-      });
-      toast({
-        title: "Prompt uložen",
-        description: "Prompt byl přidán do oblíbených",
-      });
-    } catch (error) {
-      console.error("Error saving prompt:", error);
+    if (selectedConversation?.id === id) {
+      setSelectedConversation(null);
+      setMessages([]);
     }
+    await loadConversations();
   };
 
-  const handleLoadPrompt = (promptText: string) => {
-    setInput(promptText);
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
-    // Auto-create conversation if none exists
-    let conversation = currentConversation;
-    if (!conversation) {
-      const title = input.slice(0, 50) + (input.length > 50 ? "..." : "");
-      const provider = models.find(m => m.id === selectedModel)?.provider.toLowerCase() || "openai";
-      const modelName = models.find(m => m.id === selectedModel)?.id || "gpt-4";
-      conversation = await conversationsService.createConversation({ 
-        title, 
-        model_provider: provider,
-        model_name: modelName
-      });
-      setConversations([conversation, ...conversations]);
-      setCurrentConversation(conversation);
+    const user = await authService.getCurrentUser();
+    if (!user) {
+      router.push("/auth/login");
+      return;
     }
 
-    const userMessage: Message = { role: "user", content: input };
-    setMessages([...messages, userMessage]);
+    if (!selectedConversation) {
+      await handleNewConversation();
+      return;
+    }
+
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
     try {
-      // Save user message
-      await conversationsService.addMessage(
-        conversation.id,
-        "user",
-        input
-      );
-
-      // Call AI API
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: input,
+          messages: [...messages, userMessage],
           model: selectedModel,
-          conversationId: conversation.id,
+          conversationId: selectedConversation.id,
         }),
       });
 
       if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Nepodařilo se získat odpověď");
-        } else {
-          const errorText = await response.text();
-          console.error("Non-JSON error response:", errorText);
-          throw new Error("Chyba serveru. Zkontrolujte API klíče v admin panelu.");
-        }
+        throw new Error("Chyba při komunikaci s API");
       }
 
       const data = await response.json();
-      const assistantMessage: Message = { 
-        role: "assistant", 
-        content: data.response, 
-        model: selectedModel 
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: data.message,
+        timestamp: new Date().toISOString(),
       };
-      
-      setMessages(prev => [...prev, assistantMessage]);
 
-      // Save assistant message
-      await conversationsService.addMessage(
-        conversation.id,
-        "assistant",
-        data.response
-      );
-
-      // Auto-rename conversation with first message if title is generic
-      if (conversation.title.startsWith("Chat ") && messages.length === 0) {
-        const autoTitle = input.slice(0, 50) + (input.length > 50 ? "..." : "");
-        await conversationsService.updateConversation(conversation.id, { title: autoTitle });
-        setCurrentConversation({ ...conversation, title: autoTitle });
-        setConversations(conversations.map(c => 
-          c.id === conversation.id ? { ...c, title: autoTitle } : c
-        ));
-      }
+      setMessages((prev) => [...prev, assistantMessage]);
+      setCredits(data.remainingCredits || credits);
     } catch (error: any) {
-      console.error("Error sending message:", error);
       toast({
         title: "Chyba",
         description: error.message || "Nepodařilo se odeslat zprávu",
         variant: "destructive",
       });
-      
-      // Remove the user message on error
-      setMessages(prev => prev.slice(0, -1));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/auth/login");
-  };
-
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background flex flex-col">
-        <ModuleHeader credits={credits} />
+    <>
+      <SEO 
+        title="AI Chat - kAIkus"
+        description="Komunikujte s různými AI modely prostřednictvím jednotného rozhraní"
+      />
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+        <UserMenu credits={credits} />
+        
+        <div className="container mx-auto px-4 py-6 max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Sidebar s konverzacemi */}
+            <div className="lg:col-span-1">
+              <ConversationSidebar
+                conversations={conversations}
+                selectedConversation={selectedConversation}
+                onSelectConversation={setSelectedConversation}
+                onNewConversation={handleNewConversation}
+                onDeleteConversation={handleDeleteConversation}
+              />
+            </div>
 
-        <div className="flex-1 flex overflow-hidden">
-          <ConversationSidebar
-            selectedId={currentConversation?.id}
-            onSelectConversation={handleConversationSelect}
-            onNewConversation={handleNewConversation}
-          />
+            {/* Hlavní chat oblast */}
+            <div className="lg:col-span-3">
+              <Card className="h-[calc(100vh-10rem)] flex flex-col">
+                <CardHeader className="border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    {selectedConversation?.title || "Nová konverzace"}
+                  </CardTitle>
+                </CardHeader>
 
-          <div className="flex-1 flex flex-col">
-            <main className="flex-1 overflow-y-auto">
-              {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center p-6">
-                  <div className="text-center max-w-2xl space-y-6">
-                    <div className="inline-flex p-4 bg-primary/10 rounded-2xl">
-                      <Sparkles className="h-12 w-12 text-primary" />
+                {/* Oblast zpráv */}
+                <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <p>Začněte konverzaci s AI modelem</p>
                     </div>
-                    <h2 className="text-3xl font-heading font-bold">Začněte konverzaci</h2>
-                    <p className="text-muted-foreground text-lg">
-                      Vyberte AI model a začněte chatovat s nejmodernějšími jazykovými modely
-                    </p>
-
-                    <div className="pt-6">
-                      <p className="text-sm text-muted-foreground mb-4">Dostupné AI modely:</p>
-                      <Tabs value={selectedModel} onValueChange={setSelectedModel} className="w-full">
-                        <TabsList className="grid grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2">
-                          {models.map((model) => (
-                            <TabsTrigger
-                              key={model.id}
-                              value={model.id}
-                              className="flex flex-col items-center gap-2 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                            >
-                              <span className="text-2xl">{model.icon}</span>
-                              <div className="text-xs font-medium">{model.name}</div>
-                              <div className="text-xs opacity-70">{model.provider}</div>
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                      </Tabs>
-                    </div>
-
-                    <div className="grid gap-3 text-left max-w-md mx-auto pt-6">
-                      <Card className="border-primary/20">
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold mb-2">💡 Tipy pro lepší odpovědi</h3>
-                          <ul className="text-sm text-muted-foreground space-y-1">
-                            <li>• Buďte konkrétní ve svých dotazech</li>
-                            <li>• Poskytněte kontext když je to potřeba</li>
-                            <li>• Vyzkoušejte různé modely pro srovnání</li>
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="container mx-auto max-w-4xl p-6 space-y-6">
-                  {messages.map((message, index) => (
-                    <ChatMessage key={index} role={message.role} content={message.content} />
-                  ))}
+                  ) : (
+                    messages.map((msg, idx) => (
+                      <ChatMessage key={idx} message={msg} />
+                    ))
+                  )}
                   {loading && (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                      <span className="text-sm">
-                        {models.find(m => m.id === selectedModel)?.name} přemýšlí...
-                      </span>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>AI přemýšlí...</span>
                     </div>
                   )}
                   <div ref={messagesEndRef} />
-                </div>
-              )}
-            </main>
+                </CardContent>
 
-            <div className="border-t p-4 bg-card">
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <PromptSelector category="chat" onSelect={handleLoadPrompt} />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSavePrompt}
-                    disabled={!input.trim()}
-                  >
-                    <Star className="h-4 w-4 mr-1" />
-                    Uložit
-                  </Button>
-                </div>
-                <div className="flex gap-3">
-                  <Textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Napište zprávu..."
-                    rows={3}
-                    className="resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSubmit(e as any);
-                      }
-                    }}
-                  />
-                  <Button type="submit" disabled={loading || !input.trim()}>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </form>
+                {/* Input oblast */}
+                <CardContent className="border-t pt-4 pb-2">
+                  <form onSubmit={handleSend} className="space-y-3">
+                    <Textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Napište svou zprávu..."
+                      className="min-h-[100px] resize-none"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend(e);
+                        }
+                      }}
+                    />
+
+                    {/* Výběr AI modelu - KOMPAKTNÍ TLAČÍTKA */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Vyberte AI model:</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {availableModels.map((model) => (
+                          <Button
+                            key={model.id}
+                            type="button"
+                            variant={selectedModel === model.id ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSelectedModel(model.id)}
+                            className="text-xs"
+                          >
+                            {model.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">
+                        Kredity: {credits}
+                      </span>
+                      <Button type="submit" disabled={loading || !input.trim()}>
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Odesílám...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="mr-2 h-4 w-4" />
+                            Odeslat
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
       </div>
-    </AuthGuard>
+    </>
   );
 }

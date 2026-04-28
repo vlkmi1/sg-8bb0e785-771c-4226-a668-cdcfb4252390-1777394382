@@ -25,10 +25,8 @@ export function PromptSelector({ category, onSelect }: PromptSelectorProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) {
-      loadPrompts();
-    }
-  }, [open, category]);
+    loadPrompts();
+  }, [loadPrompts]);
 
   const loadPrompts = async () => {
     setLoading(true);

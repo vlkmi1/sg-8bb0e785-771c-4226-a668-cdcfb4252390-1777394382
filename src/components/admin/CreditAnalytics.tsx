@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown, Activity, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +37,7 @@ export function CreditAnalytics() {
 
   useEffect(() => {
     loadAnalytics();
-  }, [timeRange]);
+  }, [loadAnalytics]);
 
   const loadAnalytics = async () => {
     setLoading(true);
