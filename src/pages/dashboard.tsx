@@ -3,8 +3,9 @@ import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
-  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot, DollarSign, FileText, Megaphone, Edit3, Star
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot, DollarSign, FileText, Megaphone, Edit3, Star, Crown, ArrowUpCircle
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -14,16 +15,23 @@ import { imageGenerationService } from "@/services/imageGenerationService";
 import { videoGenerationService } from "@/services/videoGenerationService";
 import { voiceService } from "@/services/voiceService";
 import { adminService } from "@/services/adminService";
+import { subscriptionService, type SubscriptionWithPlan, type SubscriptionPlan } from "@/services/subscriptionService";
 import { supabase } from "@/integrations/supabase/client";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const router = useRouter();
+  const { toast } = useToast();
   const [credits, setCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
+  const [showPlanDialog, setShowPlanDialog] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionWithPlan | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
+  const [upgradingPlan, setUpgradingPlan] = useState(false);
   const [stats, setStats] = useState({
     conversations: 0,
     images: 0,
@@ -45,6 +53,19 @@ export default function Dashboard() {
     }
   };
 
+  const loadSubscription = async () => {
+    try {
+      const [currentSub, plans] = await Promise.all([
+        subscriptionService.getCurrentSubscription(),
+        subscriptionService.getAllPlans(),
+      ]);
+      setSubscription(currentSub);
+      setAvailablePlans(plans);
+    } catch (error) {
+      console.error("Error loading subscription:", error);
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -58,6 +79,8 @@ export default function Dashboard() {
       
       setCredits(userCredits);
       setIsAdmin(adminStatus);
+
+      await loadSubscription();
 
       const [conversations, images, videos, voiceChats] = await Promise.all([
         conversationsService.getConversations(),
@@ -97,10 +120,35 @@ export default function Dashboard() {
     }
   };
 
+  const handleUpgradePlan = async (planId: string) => {
+    setUpgradingPlan(true);
+    try {
+      await subscriptionService.upgradeSubscription(planId);
+      toast({
+        title: "Plán změněn",
+        description: "Váš plán byl úspěšně aktualizován",
+      });
+      await loadSubscription();
+      setShowPlanDialog(false);
+    } catch (error) {
+      console.error("Error upgrading plan:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se změnit plán",
+        variant: "destructive",
+      });
+    } finally {
+      setUpgradingPlan(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
   };
+
+  const currentPlan = subscription?.plan;
+  const currentTier = (currentPlan?.tier || "free") as string;
 
   const modules = [
     {
@@ -158,6 +206,76 @@ export default function Dashboard() {
                 <h1 className="text-xl font-heading font-bold">Dashboard</h1>
               </div>
               <div className="flex items-center gap-3">
+                <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`gap-2 cursor-pointer ${subscriptionService.getPlanBadgeColor(currentTier)}`}
+                    >
+                      <Crown className="h-4 w-4" />
+                      <span className="font-semibold">{subscriptionService.getPlanDisplayName(currentTier)}</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="font-heading text-2xl">Změnit předplatné</DialogTitle>
+                      <DialogDescription>
+                        Vyberte plán, který nejlépe vyhovuje vašim potřebám
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 py-4">
+                      {availablePlans.map((plan) => {
+                        const isCurrent = plan.id === subscription?.plan_id;
+                        const features = Array.isArray(plan.features) ? plan.features : [];
+                        
+                        return (
+                          <Card key={plan.id} className={isCurrent ? "border-primary" : ""}>
+                            <CardHeader>
+                              <div className="flex items-center justify-between mb-2">
+                                <Badge className={subscriptionService.getPlanBadgeColor(plan.tier)}>
+                                  {subscriptionService.getPlanDisplayName(plan.tier)}
+                                </Badge>
+                                {isCurrent && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Aktuální
+                                  </Badge>
+                                )}
+                              </div>
+                              <CardTitle className="text-2xl font-heading">
+                                {plan.price > 0 ? `${plan.price} ${plan.currency}` : "Zdarma"}
+                              </CardTitle>
+                              <CardDescription className="text-xs">
+                                {plan.billing_period === "monthly" ? "měsíčně" : "ročně"}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="space-y-2">
+                                <p className="text-sm font-semibold">
+                                  {plan.credits_included} kreditů/{plan.billing_period === "monthly" ? "měsíc" : "rok"}
+                                </p>
+                                <ul className="text-xs space-y-1 text-muted-foreground">
+                                  {features.map((feature: any, idx: number) => (
+                                    <li key={idx}>✓ {feature}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <Button
+                                className="w-full"
+                                variant={isCurrent ? "outline" : "default"}
+                                disabled={isCurrent || upgradingPlan}
+                                onClick={() => handleUpgradePlan(plan.id)}
+                              >
+                                {isCurrent ? "Aktuální plán" : upgradingPlan ? "Měním..." : "Vybrat plán"}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -185,6 +303,42 @@ export default function Dashboard() {
                 Prozkoumejte sílu AI napříč různými moduly platformy kAIkus
               </p>
             </div>
+
+            {/* Subscription Plan Card */}
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5"
+              onClick={() => setShowPlanDialog(true)}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary/10 rounded-xl">
+                      <Crown className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="font-heading">
+                        Váš plán: {subscriptionService.getPlanDisplayName(currentTier)}
+                      </CardTitle>
+                      <CardDescription>
+                        {currentPlan?.credits_included || 0} kreditů/{currentPlan?.billing_period === "monthly" ? "měsíc" : "rok"}
+                        {subscription?.expires_at && (
+                          <> · Vyprší {new Date(subscription.expires_at).toLocaleDateString("cs-CZ")}</>
+                        )}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge className={subscriptionService.getPlanBadgeColor(currentTier)}>
+                    {subscriptionService.getPlanDisplayName(currentTier)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full" variant="outline">
+                  <ArrowUpCircle className="h-4 w-4 mr-2" />
+                  Změnit plán
+                </Button>
+              </CardContent>
+            </Card>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {modules.map((module) => {

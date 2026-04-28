@@ -8,12 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings as SettingsIcon, Key, LogOut, User, Bell, CheckCircle2, XCircle, Share2, Trash2, Plus } from "lucide-react";
+import { Settings as SettingsIcon, Key, LogOut, User, Bell, CheckCircle2, XCircle, Share2, Trash2, Plus, Crown, ArrowUpCircle } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { socialPostsService, type SocialAccount, type SocialPlatform } from "@/services/socialPostsService";
+import { subscriptionService, type SubscriptionWithPlan, type SubscriptionPlan } from "@/services/subscriptionService";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo" },
@@ -36,25 +38,30 @@ const SOCIAL_PLATFORMS = [
 
 export default function Settings() {
   const router = useRouter();
+  const { toast } = useToast();
   const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
+  const [subscription, setSubscription] = useState<SubscriptionWithPlan | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [socialDialogOpen, setSocialDialogOpen] = useState(false);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>("openai");
   const [selectedSocialPlatform, setSelectedSocialPlatform] = useState<SocialPlatform>("facebook");
   const [apiKey, setApiKey] = useState("");
   const [accountName, setAccountName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState(false);
 
   useEffect(() => {
     loadConnectedProviders();
     loadSocialAccounts();
+    loadSubscription();
   }, []);
 
   const loadConnectedProviders = async () => {
     try {
       const keys = await apiKeysService.getApiKeys();
-      // Type casting to ensure TypeScript knows the structure
       const connected = new Set(keys.map((k: any) => k.provider));
       setConnectedProviders(connected);
     } catch (error) {
@@ -68,6 +75,19 @@ export default function Settings() {
       setSocialAccounts(accounts);
     } catch (error) {
       console.error("Error loading social accounts:", error);
+    }
+  };
+
+  const loadSubscription = async () => {
+    try {
+      const [currentSub, plans] = await Promise.all([
+        subscriptionService.getCurrentSubscription(),
+        subscriptionService.getAllPlans(),
+      ]);
+      setSubscription(currentSub);
+      setAvailablePlans(plans);
+    } catch (error) {
+      console.error("Error loading subscription:", error);
     }
   };
 
@@ -122,10 +142,35 @@ export default function Settings() {
     }
   };
 
+  const handleUpgradePlan = async (planId: string) => {
+    setUpgradingPlan(true);
+    try {
+      await subscriptionService.upgradeSubscription(planId);
+      toast({
+        title: "Plán změněn",
+        description: "Váš plán byl úspěšně aktualizován",
+      });
+      await loadSubscription();
+      setPlanDialogOpen(false);
+    } catch (error) {
+      console.error("Error upgrading plan:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se změnit plán",
+        variant: "destructive",
+      });
+    } finally {
+      setUpgradingPlan(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
   };
+
+  const currentPlan = subscription?.plan;
+  const currentTier = (currentPlan?.tier || "free") as string;
 
   return (
     <AuthGuard>
@@ -153,13 +198,119 @@ export default function Settings() {
         </header>
 
         <main className="container mx-auto px-6 py-8">
-          <Tabs defaultValue="api" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4">
+          <Tabs defaultValue="subscription" className="space-y-6">
+            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5">
+              <TabsTrigger value="subscription">Předplatné</TabsTrigger>
               <TabsTrigger value="api">API klíče</TabsTrigger>
               <TabsTrigger value="social">Sociální sítě</TabsTrigger>
               <TabsTrigger value="profile">Profil</TabsTrigger>
               <TabsTrigger value="preferences">Předvolby</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="subscription" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <Crown className="h-5 w-5 text-primary" />
+                    Váš plán
+                  </CardTitle>
+                  <CardDescription>
+                    Spravujte své předplatné a vyberte plán podle potřeb
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <Card className="bg-muted/50">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg">
+                            {subscriptionService.getPlanDisplayName(currentTier)}
+                          </CardTitle>
+                          <CardDescription>
+                            {currentPlan?.credits_included || 0} kreditů/{currentPlan?.billing_period === "monthly" ? "měsíc" : "rok"}
+                          </CardDescription>
+                        </div>
+                        <Badge className={subscriptionService.getPlanBadgeColor(currentTier)}>
+                          {subscriptionService.getPlanDisplayName(currentTier)}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {subscription?.expires_at && (
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Vyprší: {new Date(subscription.expires_at).toLocaleDateString("cs-CZ")}
+                        </p>
+                      )}
+                      <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button className="w-full">
+                            <ArrowUpCircle className="h-4 w-4 mr-2" />
+                            Změnit plán
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="font-heading text-2xl">Změnit předplatné</DialogTitle>
+                            <DialogDescription>
+                              Vyberte plán, který nejlépe vyhovuje vašim potřebám
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 py-4">
+                            {availablePlans.map((plan) => {
+                              const isCurrent = plan.id === subscription?.plan_id;
+                              const features = Array.isArray(plan.features) ? plan.features : [];
+                              
+                              return (
+                                <Card key={plan.id} className={isCurrent ? "border-primary" : ""}>
+                                  <CardHeader>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <Badge className={subscriptionService.getPlanBadgeColor(plan.tier)}>
+                                        {subscriptionService.getPlanDisplayName(plan.tier)}
+                                      </Badge>
+                                      {isCurrent && (
+                                        <Badge variant="outline" className="text-xs">
+                                          Aktuální
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <CardTitle className="text-2xl font-heading">
+                                      {plan.price > 0 ? `${plan.price} ${plan.currency}` : "Zdarma"}
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                      {plan.billing_period === "monthly" ? "měsíčně" : "ročně"}
+                                    </CardDescription>
+                                  </CardHeader>
+                                  <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                      <p className="text-sm font-semibold">
+                                        {plan.credits_included} kreditů/{plan.billing_period === "monthly" ? "měsíc" : "rok"}
+                                      </p>
+                                      <ul className="text-xs space-y-1 text-muted-foreground">
+                                        {features.map((feature: any, idx: number) => (
+                                          <li key={idx}>✓ {feature}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                    <Button
+                                      className="w-full"
+                                      variant={isCurrent ? "outline" : "default"}
+                                      disabled={isCurrent || upgradingPlan}
+                                      onClick={() => handleUpgradePlan(plan.id)}
+                                    >
+                                      {isCurrent ? "Aktuální plán" : upgradingPlan ? "Měním..." : "Vybrat plán"}
+                                    </Button>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="api" className="space-y-6">
               <Card>

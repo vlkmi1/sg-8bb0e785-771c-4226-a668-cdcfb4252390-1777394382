@@ -15,6 +15,7 @@ import {
 import { adminService } from "@/services/adminService";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import { subscriptionService, type SubscriptionPlan } from "@/services/subscriptionService";
 
 type Profile = Tables<"profiles">;
 
@@ -30,26 +31,29 @@ interface UserWithStats extends Profile {
 }
 
 export function UsersManagement() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<Profile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<Profile[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "admin" | "blocked">("all");
-  const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
-  const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [creditAmount, setCreditAmount] = useState("");
   const [creditDescription, setCreditDescription] = useState("");
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [userTransactions, setUserTransactions] = useState<any[]>([]);
+  const [userSubscription, setUserSubscription] = useState<any>(null);
+  const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
+  const [changingPlan, setChangingPlan] = useState(false);
 
   useEffect(() => {
     loadUsers();
+    loadPlans();
   }, []);
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchQuery, filterStatus]);
+  }, [users, searchTerm, filterStatus]);
 
   const loadUsers = async () => {
     try {
@@ -65,12 +69,21 @@ export function UsersManagement() {
     }
   };
 
+  const loadPlans = async () => {
+    try {
+      const plans = await subscriptionService.getAllPlans();
+      setAvailablePlans(plans);
+    } catch (error) {
+      console.error("Error loading plans:", error);
+    }
+  };
+
   const filterUsers = () => {
     let filtered = users;
 
     // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
       filtered = filtered.filter(u => 
         u.email?.toLowerCase().includes(query) ||
         u.full_name?.toLowerCase().includes(query)
@@ -106,10 +119,14 @@ export function UsersManagement() {
   const handleViewUser = async (user: Profile) => {
     setLoading(true);
     try {
-      const userWithStats = await adminService.getUserWithStats(user.id);
-      const userTransactions = await adminService.getUserTransactions(user.id);
+      const [userWithStats, transactions, subscription] = await Promise.all([
+        adminService.getUserWithStats(user.id),
+        adminService.getUserTransactions(user.id),
+        subscriptionService.getUserSubscription(user.id),
+      ]);
       setSelectedUser(userWithStats);
-      setTransactions(userTransactions);
+      setUserTransactions(transactions);
+      setUserSubscription(subscription);
       setUserDialogOpen(true);
     } catch (error) {
       console.error("Error loading user details:", error);
@@ -221,6 +238,32 @@ export function UsersManagement() {
     }
   };
 
+  const handleChangePlan = async (planId: string) => {
+    if (!selectedUser) return;
+
+    setChangingPlan(true);
+    try {
+      await subscriptionService.updateUserSubscription(selectedUser.id, planId);
+      toast({
+        title: "Plán změněn",
+        description: "Plán uživatele byl úspěšně aktualizován",
+      });
+      
+      // Reload user subscription
+      const subscription = await subscriptionService.getUserSubscription(selectedUser.id);
+      setUserSubscription(subscription);
+    } catch (error) {
+      console.error("Error changing plan:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se změnit plán",
+        variant: "destructive",
+      });
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
   const getActivityStatus = (lastSignIn: string | null) => {
     if (!lastSignIn) return { label: "Nikdy", color: "secondary" };
     
@@ -243,8 +286,8 @@ export function UsersManagement() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Hledat podle jména nebo emailu..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -280,7 +323,7 @@ export function UsersManagement() {
             {filteredUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  {searchQuery ? "Žádní uživatelé nenalezeni" : "Zatím nemáte žádné uživatele"}
+                  {searchTerm ? "Žádní uživatelé nenalezeni" : "Zatím nemáte žádné uživatele"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -374,31 +417,39 @@ export function UsersManagement() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-base">Základní info</CardTitle>
+                        <CardTitle className="text-sm font-medium">Základní informace</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <div className="flex justify-between">
+                      <CardContent className="space-y-2">
+                        <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Email:</span>
                           <span className="font-medium">{selectedUser.email}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Kredity:</span>
-                          <Badge variant="outline" className="font-mono">
-                            {selectedUser.credits || 0}
+                          <span className="font-semibold text-primary">{selectedUser.credits}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Plán:</span>
+                          <Badge className={subscriptionService.getPlanBadgeColor(userSubscription?.plan?.tier || "free")}>
+                            {subscriptionService.getPlanDisplayName(userSubscription?.plan?.tier || "free")}
                           </Badge>
                         </div>
-                        <div className="flex justify-between">
+                        {userSubscription?.expires_at && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Vyprší:</span>
+                            <span>{new Date(userSubscription.expires_at).toLocaleDateString("cs-CZ")}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Registrace:</span>
                           <span>{new Date(selectedUser.created_at).toLocaleDateString("cs-CZ")}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Poslední přihlášení:</span>
-                          <span>
-                            {selectedUser.last_sign_in_at 
-                              ? new Date(selectedUser.last_sign_in_at).toLocaleDateString("cs-CZ")
-                              : "Nikdy"}
-                          </span>
-                        </div>
+                        {selectedUser.last_sign_in_at && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Poslední přihlášení:</span>
+                            <span>{new Date(selectedUser.last_sign_in_at).toLocaleDateString("cs-CZ")}</span>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
@@ -506,12 +557,12 @@ export function UsersManagement() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        {transactions.length === 0 ? (
+                        {userTransactions.length === 0 ? (
                           <p className="text-center py-8 text-muted-foreground">
                             Žádné transakce
                           </p>
                         ) : (
-                          transactions.map((transaction) => (
+                          userTransactions.map((transaction) => (
                             <div
                               key={transaction.id}
                               className="flex items-center justify-between p-3 border rounded-lg"
@@ -537,6 +588,42 @@ export function UsersManagement() {
                 </TabsContent>
 
                 <TabsContent value="actions" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Změnit plán</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                        {availablePlans.map((plan) => {
+                          const isCurrent = plan.id === userSubscription?.plan_id;
+                          
+                          return (
+                            <Button
+                              key={plan.id}
+                              variant={isCurrent ? "outline" : "default"}
+                              className="flex flex-col h-auto py-3"
+                              disabled={isCurrent || changingPlan}
+                              onClick={() => handleChangePlan(plan.id)}
+                            >
+                              <span className={`text-xs mb-1 ${subscriptionService.getPlanBadgeColor(plan.tier)}`}>
+                                {subscriptionService.getPlanDisplayName(plan.tier)}
+                              </span>
+                              <span className="font-semibold">
+                                {plan.price > 0 ? `${plan.price} ${plan.currency}` : "Free"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {plan.credits_included} kreditů
+                              </span>
+                              {isCurrent && (
+                                <span className="text-xs mt-1">Aktuální</span>
+                              )}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Správa kreditů</CardTitle>

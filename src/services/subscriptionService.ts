@@ -3,29 +3,71 @@ import type { Tables } from "@/integrations/supabase/types";
 import { authState } from "./authStateService";
 
 export type Subscription = Tables<"user_subscriptions">;
-export type SubscriptionPlan = "free" | "basic" | "pro" | "enterprise";
+export type SubscriptionPlan = Tables<"subscription_plans">;
+export type SubscriptionTier = "free" | "basic" | "pro" | "enterprise";
+
+export interface SubscriptionWithPlan extends Subscription {
+  plan?: SubscriptionPlan;
+}
 
 export const subscriptionService = {
-  async getCurrentSubscription(): Promise<Subscription | null> {
+  async getCurrentSubscription(): Promise<SubscriptionWithPlan | null> {
     const user = await authState.getUser();
     if (!user) return null;
 
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .select("*")
+      .select(`
+        *,
+        plan:plan_id (*)
+      `)
       .eq("user_id", user.id)
       .eq("status", "active")
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
       console.error("Error fetching subscription:", error);
       return null;
     }
 
-    return data;
+    return data as unknown as SubscriptionWithPlan;
   },
 
-  async createSubscription(plan: SubscriptionPlan): Promise<Subscription> {
+  async getUserSubscription(userId: string): Promise<SubscriptionWithPlan | null> {
+    const { data, error } = await supabase
+      .from("user_subscriptions")
+      .select(`
+        *,
+        plan:plan_id (*)
+      `)
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      console.error("Error fetching user subscription:", error);
+      return null;
+    }
+
+    return data as unknown as SubscriptionWithPlan;
+  },
+
+  async getAllPlans(): Promise<SubscriptionPlan[]> {
+    const { data, error } = await supabase
+      .from("subscription_plans")
+      .select("*")
+      .eq("is_active", true)
+      .order("price", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching plans:", error);
+      return [];
+    }
+
+    return data || [];
+  },
+
+  async createSubscription(planId: string): Promise<Subscription> {
     const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
 
@@ -37,10 +79,10 @@ export const subscriptionService = {
       .from("user_subscriptions")
       .insert({
         user_id: user.id,
-        plan_id: plan,
+        plan_id: planId,
         status: "active",
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
+        started_at: startDate.toISOString(),
+        expires_at: endDate.toISOString(),
       } as any)
       .select()
       .single();
@@ -53,22 +95,43 @@ export const subscriptionService = {
     return data;
   },
 
-  async upgradeSubscription(
-    subscriptionId: string,
-    newPlan: SubscriptionPlan
-  ): Promise<void> {
-    const { error } = await supabase
+  async updateUserSubscription(userId: string, planId: string): Promise<void> {
+    // First, cancel any existing active subscriptions
+    await supabase
       .from("user_subscriptions")
       .update({
-        plan_id: newPlan,
-        updated_at: new Date().toISOString(),
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
       } as any)
-      .eq("id", subscriptionId);
+      .eq("user_id", userId)
+      .eq("status", "active");
+
+    // Create new subscription
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const { error } = await supabase
+      .from("user_subscriptions")
+      .insert({
+        user_id: userId,
+        plan_id: planId,
+        status: "active",
+        started_at: startDate.toISOString(),
+        expires_at: endDate.toISOString(),
+      } as any);
 
     if (error) {
-      console.error("Error upgrading subscription:", error);
+      console.error("Error updating subscription:", error);
       throw error;
     }
+  },
+
+  async upgradeSubscription(newPlanId: string): Promise<void> {
+    const user = await authState.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    await this.updateUserSubscription(user.id, newPlanId);
   },
 
   async cancelSubscription(subscriptionId: string): Promise<void> {
@@ -79,8 +142,9 @@ export const subscriptionService = {
       .from("user_subscriptions")
       .update({
         status: "cancelled",
+        cancelled_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq("id", subscriptionId)
       .eq("user_id", user.id);
 
@@ -90,13 +154,16 @@ export const subscriptionService = {
     }
   },
 
-  async getSubscriptionHistory(): Promise<Subscription[]> {
+  async getSubscriptionHistory(): Promise<SubscriptionWithPlan[]> {
     const user = await authState.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .select("*")
+      .select(`
+        *,
+        plan:plan_id (*)
+      `)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -105,41 +172,26 @@ export const subscriptionService = {
       return [];
     }
 
-    return data || [];
+    return (data || []) as unknown as SubscriptionWithPlan[];
   },
 
-  getPlanLimits(plan: SubscriptionPlan) {
-    const limits = {
-      free: {
-        credits_per_month: 10,
-        max_conversations: 5,
-        max_images: 3,
-        max_videos: 0,
-        support: "community",
-      },
-      basic: {
-        credits_per_month: 100,
-        max_conversations: 50,
-        max_images: 30,
-        max_videos: 5,
-        support: "email",
-      },
-      pro: {
-        credits_per_month: 500,
-        max_conversations: -1,
-        max_images: -1,
-        max_videos: 50,
-        support: "priority",
-      },
-      enterprise: {
-        credits_per_month: -1,
-        max_conversations: -1,
-        max_images: -1,
-        max_videos: -1,
-        support: "dedicated",
-      },
+  getPlanBadgeColor(tier: string): string {
+    const colors: Record<string, string> = {
+      free: "bg-muted text-muted-foreground",
+      basic: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+      pro: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+      enterprise: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
     };
+    return colors[tier] || colors.free;
+  },
 
-    return limits[plan];
+  getPlanDisplayName(tier: string): string {
+    const names: Record<string, string> = {
+      free: "Free",
+      basic: "Basic",
+      pro: "Pro",
+      enterprise: "Premium",
+    };
+    return names[tier] || "Free";
   },
 };
