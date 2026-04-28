@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Video, Sparkles, LogOut, Trash2, Play, Clock, Loader2, UserPlus, Coins } from "lucide-react";
@@ -52,6 +52,8 @@ export default function AIInfluencer() {
   const [voiceType, setVoiceType] = useState<VoiceType>("neutral");
   const [personality, setPersonality] = useState<Personality>("professional");
   const [script, setScript] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [language, setLanguage] = useState("cs");
 
   useEffect(() => {
     loadCredits();
@@ -97,6 +99,8 @@ export default function AIInfluencer() {
         description: description.trim(),
         voice_type: voiceType,
         personality,
+        avatar_url: avatarUrl,
+        language,
       });
 
       await loadInfluencers();
@@ -105,6 +109,8 @@ export default function AIInfluencer() {
       setDescription("");
       setVoiceType("neutral");
       setPersonality("professional");
+      setAvatarUrl("");
+      setLanguage("cs");
     } catch (error) {
       console.error("Error creating influencer:", error);
       alert("Chyba při vytváření influencera");
@@ -264,6 +270,12 @@ export default function AIInfluencer() {
                           <div className="space-y-2">
                             <Label htmlFor="name">Jméno influencera</Label>
                             <div className="flex gap-2">
+                              {avatarUrl && (
+                                <Avatar className="h-10 w-10 shrink-0">
+                                  <AvatarImage src={avatarUrl} />
+                                  <AvatarFallback>AI</AvatarFallback>
+                                </Avatar>
+                              )}
                               <Input
                                 id="name"
                                 value={name}
@@ -275,6 +287,7 @@ export default function AIInfluencer() {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setAvatarLibraryOpen(true)}
+                                className="shrink-0"
                               >
                                 <User className="h-4 w-4 mr-2" />
                                 Vybrat z knihovny
