@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -409,6 +409,45 @@ export type Database = {
           original_text?: string
           summary_level?: string | null
           summary_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      favorite_prompts: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          is_favorite: boolean | null
+          prompt_text: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          use_count: number | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          prompt_text: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          use_count?: number | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          prompt_text?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          use_count?: number | null
           user_id?: string
         }
         Relationships: []
