@@ -10,68 +10,30 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 
-const subscriptionPlans = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 299,
-    period: "měsíc",
-    credits: 1000,
-    icon: <Zap className="h-8 w-8" />,
-    features: [
-      "1 000 kreditů měsíčně",
-      "Přístup ke všem AI modelům",
-      "Chat s GPT-4, Claude, Gemini",
-      "Generování obrázků",
-      "Základní podpora",
-      "Historie konverzací",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Professional",
-    price: 799,
-    period: "měsíc",
-    credits: 3000,
-    icon: <Rocket className="h-8 w-8" />,
-    popular: true,
-    features: [
-      "3 000 kreditů měsíčně",
-      "Všechny funkce Starter",
-      "Generování videí",
-      "AI hudba",
-      "Pokročilé asistenty",
-      "Prioritní podpora",
-      "API přístup",
-      "Neomezená historie",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 1999,
-    period: "měsíc",
-    credits: 10000,
-    icon: <Crown className="h-8 w-8" />,
-    features: [
-      "10 000 kreditů měsíčně",
-      "Všechny funkce Professional",
-      "Vlastní AI asistenti",
-      "Virální videa",
-      "AI influencer",
-      "Dedikovaná podpora 24/7",
-      "SLA garantace",
-      "Vlastní integrace",
-    ],
-  },
-];
+interface SubscriptionPlan {
+  id: string;
+  tier: string;
+  name: string;
+  price: number;
+  billing_period: string;
+  credits_included: number;
+  features: string[];
+  is_active: boolean;
+}
+
+const planIcons: Record<string, JSX.Element> = {
+  free: <Zap className="h-8 w-8" />,
+  basic: <Zap className="h-8 w-8" />,
+  pro: <Rocket className="h-8 w-8" />,
+  enterprise: <Crown className="h-8 w-8" />,
+};
 
 export default function Pricing() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
-  const [dbPlans, setDbPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -90,10 +52,11 @@ export default function Pricing() {
         .from("subscription_plans")
         .select("*")
         .eq("is_active", true)
+        .neq("tier", "free")
         .order("price", { ascending: true });
 
       if (error) throw error;
-      setDbPlans(data || []);
+      setPlans(data || []);
     } catch (error) {
       console.error("Error loading plans:", error);
     }
@@ -110,61 +73,46 @@ export default function Pricing() {
     setLoading(planId);
 
     try {
-      const plan = subscriptionPlans.find(p => p.id === planId);
+      const plan = plans.find(p => p.id === planId);
       if (!plan) throw new Error("Invalid plan");
 
-      // We need to fetch plan_id from subscription_plans instead of inserting hardcoded string
-      const { data: dbPlan, error: fetchPlanError } = await supabase
-        .from("subscription_plans")
-        .select("id")
-        .eq("tier", planId === "starter" ? "basic" : planId)
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+      const { data: subscription, error: subError } = await supabase
+        .from("user_subscriptions")
+        .insert({
+          user_id: user.id,
+          plan_id: plan.id,
+          status: "active",
+          expires_at: periodEnd.toISOString(),
+        })
+        .select()
         .single();
 
-      if (fetchPlanError) {
-        // If plan doesn't exist in DB, fallback to handling just payment and credits
-        console.warn("Plan not found in DB, skipping subscription record creation");
-      } else {
-        // Create subscription
-        const periodEnd = new Date();
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      if (subError) throw subError;
 
-        const { data: subscription, error: subError } = await supabase
-          .from("user_subscriptions")
-          .insert({
-            user_id: user.id,
-            plan_id: dbPlan.id,
-            status: "active",
-            expires_at: periodEnd.toISOString(),
-          })
-          .select()
-          .single();
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .insert({
+          user_id: user.id,
+          amount: plan.price,
+          method: "card",
+          payment_type: "subscription",
+          status: "completed",
+          metadata: { plan_name: plan.name, subscription_id: subscription.id }
+        });
 
-        if (subError) throw subError;
+      if (paymentError) throw paymentError;
 
-        // Create payment record
-        const { error: paymentError } = await supabase
-          .from("payments")
-          .insert({
-            user_id: user.id,
-            amount: plan.price,
-            method: "card",
-            payment_type: "subscription",
-            status: "completed",
-            metadata: { plan_name: plan.name, subscription_id: subscription.id }
-          });
-
-        if (paymentError) throw paymentError;
-      }
-
-      // Add monthly credits
       await supabase.rpc("add_credits", {
         target_user_id: user.id,
-        amount: plan.credits
+        amount: plan.credits_included
       });
 
       toast({
         title: "Předplatné aktivováno! 🎉",
-        description: `Bylo přidáno ${plan.credits.toLocaleString("cs-CZ")} kreditů`,
+        description: `Bylo přidáno ${plan.credits_included.toLocaleString("cs-CZ")} kreditů`,
       });
 
       router.push("/dashboard");
@@ -179,6 +127,8 @@ export default function Pricing() {
       setLoading(null);
     }
   };
+
+  const isPopular = (tier: string) => tier === "pro";
 
   return (
     <div className="min-h-screen bg-background">
@@ -218,63 +168,69 @@ export default function Pricing() {
           </TabsList>
 
           <TabsContent value="subscription">
-            <div className="grid gap-6 md:grid-cols-3">
-              {subscriptionPlans.map((plan) => (
-                <Card
-                  key={plan.id}
-                  className={`relative ${plan.popular ? "border-primary shadow-lg scale-105" : ""}`}
-                >
-                  {plan.popular && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
-                      Nejpopulárnější
-                    </Badge>
-                  )}
-                  <CardHeader className="text-center pb-4">
-                    <div className="flex justify-center mb-4 text-primary">
-                      {plan.icon}
-                    </div>
-                    <CardTitle className="text-2xl font-heading">{plan.name}</CardTitle>
-                    <CardDescription className="text-muted-foreground mt-2">
-                      {plan.credits.toLocaleString("cs-CZ")} kreditů/{plan.period}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="text-center">
-                      <div className="flex items-baseline justify-center gap-1">
-                        <span className="text-4xl font-bold">{plan.price}</span>
-                        <span className="text-muted-foreground">Kč</span>
+            {plans.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Načítání plánů...</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-3">
+                {plans.map((plan) => (
+                  <Card
+                    key={plan.id}
+                    className={`relative ${isPopular(plan.tier) ? "border-primary shadow-lg scale-105" : ""}`}
+                  >
+                    {isPopular(plan.tier) && (
+                      <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+                        Nejpopulárnější
+                      </Badge>
+                    )}
+                    <CardHeader className="text-center pb-4">
+                      <div className="flex justify-center mb-4 text-primary">
+                        {planIcons[plan.tier] || <Zap className="h-8 w-8" />}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">/{plan.period}</p>
-                    </div>
-
-                    <ul className="space-y-3">
-                      {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <Check className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                          <span className="text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Button
-                      onClick={() => handleSubscribe(plan.id)}
-                      disabled={loading !== null}
-                      className="w-full"
-                      variant={plan.popular ? "default" : "outline"}
-                    >
-                      {loading === plan.id ? (
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                          Zpracovává se...
+                      <CardTitle className="text-2xl font-heading">{plan.name}</CardTitle>
+                      <CardDescription className="text-muted-foreground mt-2">
+                        {plan.credits_included.toLocaleString("cs-CZ")} kreditů/{plan.billing_period === "monthly" ? "měsíc" : "rok"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="text-center">
+                        <div className="flex items-baseline justify-center gap-1">
+                          <span className="text-4xl font-bold">{plan.price.toLocaleString("cs-CZ")}</span>
+                          <span className="text-muted-foreground">Kč</span>
                         </div>
-                      ) : (
-                        "Vybrat plán"
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                        <p className="text-sm text-muted-foreground mt-1">/{plan.billing_period === "monthly" ? "měsíc" : "rok"}</p>
+                      </div>
+
+                      <ul className="space-y-3">
+                        {Array.isArray(plan.features) && plan.features.map((feature: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <Check className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                            <span className="text-sm">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <Button
+                        onClick={() => handleSubscribe(plan.id)}
+                        disabled={loading !== null}
+                        className="w-full"
+                        variant={isPopular(plan.tier) ? "default" : "outline"}
+                      >
+                        {loading === plan.id ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                            Zpracovává se...
+                          </div>
+                        ) : (
+                          "Vybrat plán"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             <div className="mt-12 text-center">
               <p className="text-muted-foreground mb-4">
@@ -299,7 +255,7 @@ export default function Pricing() {
               </p>
               <Button
                 size="lg"
-                onClick={() => setShowCreditDialog(true)}
+                onClick={() => router.push("/credits")}
                 className="gap-2"
               >
                 <Sparkles className="h-5 w-5" />

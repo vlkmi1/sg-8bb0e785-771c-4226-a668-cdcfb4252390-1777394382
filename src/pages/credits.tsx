@@ -4,9 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Coins, LogOut, CreditCard, QrCode, Check, Gift, Sparkles } from "lucide-react";
+import { Coins, LogOut, CreditCard, QrCode, Gift, Sparkles, Zap } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { paymentService, type CreditPackage, type Payment } from "@/services/paymentService";
@@ -41,7 +40,6 @@ export default function Credits() {
       setPackages(packagesData);
       setCredits(userCredits);
 
-      // Check available payment methods
       const [paypalAvailable, stripeAvailable, bankAvailable] = await Promise.all([
         paymentService.isPaymentMethodAvailable("paypal"),
         paymentService.isPaymentMethodAvailable("stripe"),
@@ -69,7 +67,6 @@ export default function Credits() {
     setLoading(true);
     try {
       const paypalUrl = await paymentService.initPayPalPayment(selectedPackage.id);
-      // In real app, redirect to PayPal
       alert(`Budete přesměrováni na PayPal pro platbu ${selectedPackage.price} Kč`);
       window.location.href = paypalUrl;
     } catch (error) {
@@ -87,7 +84,7 @@ export default function Credits() {
     try {
       const payment = await paymentService.createPayment({
         amount: selectedPackage.price,
-        currency: "USD",
+        currency: selectedPackage.currency,
         description: `Credits purchase: ${selectedPackage.name}`,
         method: "bank_transfer",
         paymentType: "credits",
@@ -113,6 +110,18 @@ export default function Credits() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
+  };
+
+  const getBadgeIcon = (name: string) => {
+    if (name.includes("Populární") || name.includes("Starter")) return <Sparkles className="h-3 w-3 mr-1" />;
+    if (name.includes("Nejvýhodnější") || name.includes("Mega")) return <Gift className="h-3 w-3 mr-1" />;
+    return <Zap className="h-3 w-3 mr-1" />;
+  };
+
+  const getBadgeForPackage = (pkg: CreditPackage, idx: number) => {
+    if (idx === 2) return { text: "Nejvýhodnější", className: "bg-accent" };
+    if (idx === 1) return { text: "Populární", className: "bg-primary" };
+    return null;
   };
 
   return (
@@ -151,89 +160,85 @@ export default function Credits() {
               Dobit <span className="text-accent">kredity</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Získejte kredity pro používání AI funkcí. Vyberte si balíček s bonusovými kredity zdarma!
+              Získejte kredity pro používání AI funkcí. Větší balíčky obsahují extra bonusové kredity zdarma!
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 max-w-7xl mx-auto">
-            {packages.map((pkg, idx) => {
-              const totalCredits = pkg.credits + pkg.bonus_credits;
-              const isPopular = idx === 1;
-              const isBestValue = idx === 2;
+          {packages.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Načítání balíčků...</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 max-w-7xl mx-auto">
+              {packages.map((pkg, idx) => {
+                const totalCredits = pkg.credits + pkg.bonus_credits;
+                const badge = getBadgeForPackage(pkg, idx);
 
-              return (
-                <Card 
-                  key={pkg.id}
-                  className={`relative ${isBestValue ? "border-accent border-2" : ""} hover:shadow-lg transition-shadow`}
-                >
-                  {isPopular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        Populární
-                      </Badge>
-                    </div>
-                  )}
-                  {isBestValue && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-accent">
-                        <Gift className="h-3 w-3 mr-1" />
-                        Nejvýhodnější
-                      </Badge>
-                    </div>
-                  )}
-
-                  <CardHeader className="text-center pb-4">
-                    <div className="mx-auto p-3 bg-accent/10 rounded-xl mb-3 w-fit">
-                      <Coins className="h-8 w-8 text-accent" />
-                    </div>
-                    <CardTitle className="text-xl font-heading">{pkg.name}</CardTitle>
-                    <div className="pt-3">
-                      <div className="text-3xl font-bold text-accent">{totalCredits}</div>
-                      <div className="text-xs text-muted-foreground">kreditů</div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Základní:</span>
-                        <span className="font-semibold">{pkg.credits}</span>
+                return (
+                  <Card 
+                    key={pkg.id}
+                    className={`relative ${badge?.text === "Nejvýhodnější" ? "border-accent border-2" : ""} hover:shadow-lg transition-shadow`}
+                  >
+                    {badge && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Badge className={badge.className}>
+                          {getBadgeIcon(badge.text)}
+                          {badge.text}
+                        </Badge>
                       </div>
-                      {pkg.bonus_credits > 0 && (
+                    )}
+
+                    <CardHeader className="text-center pb-4">
+                      <div className="mx-auto p-3 bg-accent/10 rounded-xl mb-3 w-fit">
+                        <Coins className="h-8 w-8 text-accent" />
+                      </div>
+                      <CardTitle className="text-xl font-heading">{pkg.name}</CardTitle>
+                      <div className="pt-3">
+                        <div className="text-3xl font-bold text-accent">{totalCredits.toLocaleString("cs-CZ")}</div>
+                        <div className="text-xs text-muted-foreground">kreditů</div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">Bonus:</span>
-                          <span className="font-semibold text-accent">+{pkg.bonus_credits}</span>
+                          <span className="text-muted-foreground">Základní:</span>
+                          <span className="font-semibold">{pkg.credits.toLocaleString("cs-CZ")}</span>
                         </div>
-                      )}
-                      <div className="pt-2 border-t">
-                        <div className="text-center">
-                          <span className="text-2xl font-bold">{pkg.price} Kč</span>
+                        {pkg.bonus_credits > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">Bonus:</span>
+                            <span className="font-semibold text-accent">+{pkg.bonus_credits.toLocaleString("cs-CZ")}</span>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t">
+                          <div className="text-center">
+                            <span className="text-2xl font-bold">{pkg.price.toLocaleString("cs-CZ")} Kč</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <Button
-                      className="w-full"
-                      variant={isBestValue ? "default" : "outline"}
-                      onClick={() => handleSelectPackage(pkg)}
-                    >
-                      Vybrat balíček
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      <Button
+                        className="w-full"
+                        variant={badge?.text === "Nejvýhodnější" ? "default" : "outline"}
+                        onClick={() => handleSelectPackage(pkg)}
+                      >
+                        Vybrat balíček
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
 
-          {/* Payment method dialog */}
           <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle className="font-heading">Vyberte platební metodu</DialogTitle>
                 <DialogDescription>
                   {selectedPackage && (
-                    <>Dobíjíte {selectedPackage.credits + selectedPackage.bonus_credits} kreditů za {selectedPackage.price} Kč</>
+                    <>Dobíjíte {(selectedPackage.credits + selectedPackage.bonus_credits).toLocaleString("cs-CZ")} kreditů za {selectedPackage.price.toLocaleString("cs-CZ")} Kč</>
                   )}
                 </DialogDescription>
               </DialogHeader>
@@ -274,7 +279,6 @@ export default function Credits() {
             </DialogContent>
           </Dialog>
 
-          {/* QR Code dialog */}
           <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
             <DialogContent className="max-w-md">
               <DialogHeader>
@@ -285,13 +289,15 @@ export default function Credits() {
               </DialogHeader>
               <div className="space-y-6 py-4">
                 <div className="flex justify-center">
-                  <img src={qrCodeUrl} alt="QR kód pro platbu" className="w-64 h-64" />
+                  <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">QR kód bude vygenerován</p>
+                  </div>
                 </div>
                 {currentPayment && (
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Částka:</span>
-                      <span className="font-semibold">{currentPayment.amount} Kč</span>
+                      <span className="font-semibold">{currentPayment.amount.toLocaleString("cs-CZ")} Kč</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Variabilní symbol:</span>
