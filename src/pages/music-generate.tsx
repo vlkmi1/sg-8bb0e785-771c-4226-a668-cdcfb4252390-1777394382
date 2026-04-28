@@ -275,8 +275,8 @@ export default function MusicGenerate() {
                               disabled={availableProviders.length === 0}
                             >
                               {GENRES.map((g) => (
-                                <option key={g.value} value={g.value}>
-                                  {g.label}
+                                <option key={g.toLowerCase()} value={g.toLowerCase()}>
+                                  {g}
                                 </option>
                               ))}
                             </select>
@@ -292,8 +292,8 @@ export default function MusicGenerate() {
                               disabled={availableProviders.length === 0}
                             >
                               {MOODS.map((m) => (
-                                <option key={m.value} value={m.value}>
-                                  {m.label}
+                                <option key={m.toLowerCase()} value={m.toLowerCase()}>
+                                  {m}
                                 </option>
                               ))}
                             </select>
