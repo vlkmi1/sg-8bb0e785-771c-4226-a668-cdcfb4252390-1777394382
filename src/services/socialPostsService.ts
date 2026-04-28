@@ -119,7 +119,7 @@ export const socialPostsService = {
         .eq("user_id", userId);
 
       if (error) throw error;
-      return data || [];
+      return (data as unknown as SocialAccount[]) || [];
     } catch (error) {
       console.error("Error getting social accounts:", error);
       // Return empty array instead of throwing to prevent page crash
