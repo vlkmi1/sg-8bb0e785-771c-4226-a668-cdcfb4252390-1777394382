@@ -104,7 +104,7 @@ export default function Pricing() {
         .insert({
           user_id: user.id,
           amount: plan.price,
-          currency: plan.currency || "CZK",
+          currency: "CZK",
           method: "stripe",
           payment_type: "subscription",
           status: "pending",
