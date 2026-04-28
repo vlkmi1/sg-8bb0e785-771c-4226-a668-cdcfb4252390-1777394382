@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SEO } from "@/components/SEO";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, MessageSquarePlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
