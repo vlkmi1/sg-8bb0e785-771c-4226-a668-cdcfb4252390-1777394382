@@ -1,6 +1,6 @@
 ---
 title: Favorite Prompts Module
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [prompts, favorites, productivity]
@@ -26,13 +26,13 @@ Modul pro ukládání a správu oblíbených AI promptů. Uživatelé si mohou u
 - [x] Vytvořit tabulku `favorite_prompts` (id, user_id, title, prompt_text, category, tags, is_favorite, use_count, created_at, updated_at)
 - [x] RLS policies pro `favorite_prompts` (T1 - private user data)
 - [x] Service `favoritePromptsService.ts`
-- [ ] Stránka `/favorite-prompts` s CRUD UI
-- [ ] Komponenta `PromptSelector` pro rychlý výběr
-- [ ] Integrovat do Chat modulu
-- [ ] Integrovat do Generate Images
-- [ ] Integrovat do Ad Generator
-- [ ] Integrovat do Document Summary
-- [ ] Aktualizovat dashboard - karta "Oblíbené prompty"
+- [x] Stránka `/favorite-prompts` s CRUD UI
+- [x] Komponenta `PromptSelector` pro rychlý výběr
+- [x] Integrovat do Chat modulu
+- [x] Integrovat do Generate Images
+- [x] Integrovat do Ad Generator
+- [x] Integrovat do Document Summary
+- [x] Aktualizovat dashboard - karta "Oblíbené prompty"
 
 ## Acceptance
 - Uživatel může ukládat prompty z libovolného modulu

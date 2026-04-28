@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ImageIcon, Sparkles, LogOut, Loader2, Coins, Wand2, Download, Trash2, ChevronDown, Edit3, Clock } from "lucide-react";
+import { ImageIcon, Sparkles, LogOut, Loader2, Coins, Wand2, Download, Trash2, ChevronDown, Edit3, Clock, Star } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { imageGenerationService, type ImageProvider, type GeneratedImage } from "@/services/imageGenerationService";
 import { creditsService } from "@/services/creditsService";
+import { favoritePromptsService } from "@/services/favoritePromptsService";
+import { PromptSelector } from "@/components/PromptSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -149,6 +151,28 @@ export default function Generate() {
     }
   };
 
+  const handleSavePrompt = async () => {
+    if (!prompt.trim()) return;
+
+    try {
+      await favoritePromptsService.createPrompt({
+        title: prompt.slice(0, 50) + (prompt.length > 50 ? "..." : ""),
+        prompt_text: prompt,
+        category: "image",
+      });
+      toast({
+        title: "Prompt uložen",
+        description: "Prompt byl přidán do oblíbených",
+      });
+    } catch (error) {
+      console.error("Error saving prompt:", error);
+    }
+  };
+
+  const handleLoadPrompt = (promptText: string) => {
+    setPrompt(promptText);
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
@@ -208,7 +232,22 @@ export default function Generate() {
                 <CardContent>
                   <form onSubmit={handleGenerate} className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="prompt">Popis obrázku (Prompt)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="prompt">Popis obrázku (Prompt)</Label>
+                        <div className="flex gap-2">
+                          <PromptSelector category="image" onSelect={handleLoadPrompt} />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSavePrompt}
+                            disabled={!prompt.trim()}
+                          >
+                            <Star className="h-4 w-4 mr-1" />
+                            Uložit
+                          </Button>
+                        </div>
+                      </div>
                       <Textarea
                         id="prompt"
                         placeholder="Například: Magický les s létajícími draky při západu slunce, digitální umění, vysoké detaily"

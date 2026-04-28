@@ -8,8 +8,10 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
-import { Send, LogOut, MessageSquare, Sparkles, Edit2, Check, X } from "lucide-react";
-import { conversationsService } from "@/services/conversationsService";
+import { Send, LogOut, MessageSquare, Sparkles, Edit2, Check, X, Star } from "lucide-react";
+import { conversationsService, type Conversation, type Message } from "@/services/conversationsService";
+import { favoritePromptsService } from "@/services/favoritePromptsService";
+import { PromptSelector } from "@/components/PromptSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -21,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { creditsService } from "@/services/creditsService";
 
 type Conversation = Tables<"conversations">;
 type Message = {
@@ -31,16 +35,17 @@ type Message = {
 
 export default function Chat() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gpt-4");
+  const [credits, setCredits] = useState(0);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
 
   const models = [
     { id: "gpt-4", name: "GPT-4", provider: "OpenAI", icon: "🤖" },
@@ -156,6 +161,28 @@ export default function Chat() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleSavePrompt = async () => {
+    if (!input.trim()) return;
+
+    try {
+      await favoritePromptsService.createPrompt({
+        title: input.slice(0, 50) + (input.length > 50 ? "..." : ""),
+        prompt_text: input,
+        category: "chat",
+      });
+      toast({
+        title: "Prompt uložen",
+        description: "Prompt byl přidán do oblíbených",
+      });
+    } catch (error) {
+      console.error("Error saving prompt:", error);
+    }
+  };
+
+  const handleLoadPrompt = (promptText: string) => {
+    setInput(promptText);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -394,53 +421,40 @@ export default function Chat() {
             )}
           </main>
 
-          <div className="border-t bg-card">
-            <div className="container mx-auto max-w-4xl p-6">
-              {messages.length > 0 && (
-                <div className="mb-4">
-                  <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="w-64">
-                      <SelectValue>
-                        <div className="flex items-center gap-2">
-                          <span>{models.find(m => m.id === selectedModel)?.icon}</span>
-                          <span>{models.find(m => m.id === selectedModel)?.name}</span>
-                        </div>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {models.map((model) => (
-                        <SelectItem key={model.id} value={model.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{model.icon}</span>
-                            <div>
-                              <div className="font-medium">{model.name}</div>
-                              <div className="text-xs text-muted-foreground">{model.provider}</div>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="flex gap-3">
-                <Input
+          <div className="border-t p-4 bg-card">
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <PromptSelector category="chat" onSelect={handleLoadPrompt} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSavePrompt}
+                  disabled={!input.trim()}
+                >
+                  <Star className="h-4 w-4 mr-1" />
+                  Uložit
+                </Button>
+              </div>
+              <div className="flex gap-3">
+                <Textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Napište zprávu..."
-                  className="flex-1"
-                  disabled={loading}
+                  rows={3}
+                  className="resize-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e as any);
+                    }
+                  }}
                 />
                 <Button type="submit" disabled={loading || !input.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
-              </form>
-
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                Model: <Badge variant="secondary" className="ml-1">{models.find(m => m.id === selectedModel)?.name}</Badge>
-              </p>
-            </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>

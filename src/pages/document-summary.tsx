@@ -6,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Sparkles, LogOut, Loader2, Coins, Trash2 } from "lucide-react";
+import { FileText, Sparkles, LogOut, Loader2, Coins, Upload, Download, Trash2, Star } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { documentSummaryService, type DocumentSummary, type SummaryLevel } from "@/services/documentSummaryService";
+import { documentSummaryService, type DocumentSummary } from "@/services/documentSummaryService";
 import { creditsService } from "@/services/creditsService";
+import { favoritePromptsService } from "@/services/favoritePromptsService";
+import { PromptSelector } from "@/components/PromptSelector";
 import { authState } from "@/services/authStateService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,14 +33,14 @@ const SUMMARY_LEVELS = [
 
 export default function DocumentSummary() {
   const router = useRouter();
+  const { toast } = useToast();
   const [text, setText] = useState("");
-  const [summaryLevel, setSummaryLevel] = useState<SummaryLevel>("medium");
-  const [selectedModel, setSelectedModel] = useState("gpt-4");
+  const [summaryLevel, setSummaryLevel] = useState("medium");
+  const [model, setModel] = useState("gpt-4");
   const [loading, setLoading] = useState(false);
   const [summaries, setSummaries] = useState<DocumentSummary[]>([]);
-  const [activeTab, setActiveTab] = useState("create");
+  const [activeTab, setActiveTab] = useState("generate");
   const [credits, setCredits] = useState(0);
-  const { toast } = useToast();
 
   const loadCredits = async () => {
     try {
@@ -87,7 +89,7 @@ export default function DocumentSummary() {
         body: JSON.stringify({
           text: text.trim(),
           level: summaryLevel,
-          model: selectedModel,
+          model: model,
           userId: user.id,
         }),
       });
@@ -103,7 +105,7 @@ export default function DocumentSummary() {
         originalText: text.trim(),
         summaryText: summary,
         summaryLevel,
-        modelUsed: selectedModel,
+        modelUsed: model,
       });
 
       await loadCredits();
@@ -125,6 +127,28 @@ export default function DocumentSummary() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSavePrompt = async () => {
+    if (!text.trim()) return;
+
+    try {
+      await favoritePromptsService.createPrompt({
+        title: text.slice(0, 50) + (text.length > 50 ? "..." : ""),
+        prompt_text: text,
+        category: "summary",
+      });
+      toast({
+        title: "Prompt uložen",
+        description: "Text byl přidán do oblíbených",
+      });
+    } catch (error) {
+      console.error("Error saving prompt:", error);
+    }
+  };
+
+  const handleLoadPrompt = (promptText: string) => {
+    setText(promptText);
   };
 
   const handleDelete = async (id: string) => {
@@ -193,7 +217,22 @@ export default function DocumentSummary() {
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="text">Text k shrnutí</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="text">Text ke shrnutí</Label>
+                        <div className="flex gap-2">
+                          <PromptSelector category="summary" onSelect={handleLoadPrompt} />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSavePrompt}
+                            disabled={!text.trim()}
+                          >
+                            <Star className="h-4 w-4 mr-1" />
+                            Uložit
+                          </Button>
+                        </div>
+                      </div>
                       <Textarea
                         id="text"
                         placeholder="Vložte text který chcete shrnout..."
@@ -211,7 +250,7 @@ export default function DocumentSummary() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="level">Úroveň shrnutí</Label>
-                        <Select value={summaryLevel} onValueChange={(v) => setSummaryLevel(v as SummaryLevel)}>
+                        <Select value={summaryLevel} onValueChange={(v) => setSummaryLevel(v)}>
                           <SelectTrigger id="level">
                             <SelectValue />
                           </SelectTrigger>
@@ -227,7 +266,7 @@ export default function DocumentSummary() {
 
                       <div className="space-y-2">
                         <Label htmlFor="model">AI Model</Label>
-                        <Select value={selectedModel} onValueChange={setSelectedModel}>
+                        <Select value={model} onValueChange={setModel}>
                           <SelectTrigger id="model">
                             <SelectValue />
                           </SelectTrigger>

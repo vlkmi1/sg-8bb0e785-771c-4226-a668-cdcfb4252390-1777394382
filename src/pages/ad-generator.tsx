@@ -7,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Sparkles, LogOut, Loader2, Coins, Trash2, Copy, Check } from "lucide-react";
+import { Megaphone, Sparkles, LogOut, Loader2, Coins, Copy, Trash2, Download, Star } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { adGeneratorService, type AdGeneration, type AdPlatform, type AdFormat } from "@/services/adGeneratorService";
+import { adGeneratorService, type AdGeneration } from "@/services/adGeneratorService";
 import { creditsService } from "@/services/creditsService";
+import { favoritePromptsService } from "@/services/favoritePromptsService";
+import { PromptSelector } from "@/components/PromptSelector";
 import { authState } from "@/services/authStateService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -40,17 +42,17 @@ const AD_FORMATS = [
 
 export default function AdGenerator() {
   const router = useRouter();
+  const { toast } = useToast();
   const [productDescription, setProductDescription] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
-  const [platform, setPlatform] = useState<AdPlatform>("facebook");
-  const [adFormat, setAdFormat] = useState<AdFormat>("single_image");
-  const [selectedModel, setSelectedModel] = useState("gpt-4");
+  const [platform, setPlatform] = useState("facebook");
+  const [adFormat, setAdFormat] = useState("single_image");
+  const [model, setModel] = useState("gpt-4");
   const [loading, setLoading] = useState(false);
   const [ads, setAds] = useState<AdGeneration[]>([]);
-  const [activeTab, setActiveTab] = useState("create");
+  const [activeTab, setActiveTab] = useState("generate");
   const [credits, setCredits] = useState(0);
   const [copiedField, setCopiedField] = useState<string>("");
-  const { toast } = useToast();
 
   useEffect(() => {
     loadCredits();
@@ -72,6 +74,40 @@ export default function AdGenerator() {
       setAds(data);
     } catch (error) {
       console.error("Error loading ads:", error);
+    }
+  };
+
+  const handleSavePrompt = async () => {
+    if (!productDescription.trim()) return;
+
+    const fullPrompt = `Produkt: ${productDescription}${targetAudience ? `\nCílová skupina: ${targetAudience}` : ""}`;
+    
+    try {
+      await favoritePromptsService.createPrompt({
+        title: productDescription.slice(0, 50) + (productDescription.length > 50 ? "..." : ""),
+        prompt_text: fullPrompt,
+        category: "ad",
+      });
+      toast({
+        title: "Prompt uložen",
+        description: "Prompt byl přidán do oblíbených",
+      });
+    } catch (error) {
+      console.error("Error saving prompt:", error);
+    }
+  };
+
+  const handleLoadPrompt = (promptText: string) => {
+    // Parse prompt text - format: "Produkt: XXX\nCílová skupina: YYY"
+    const lines = promptText.split("\n");
+    const productLine = lines.find(l => l.startsWith("Produkt:"));
+    const audienceLine = lines.find(l => l.startsWith("Cílová skupina:"));
+    
+    if (productLine) {
+      setProductDescription(productLine.replace("Produkt:", "").trim());
+    }
+    if (audienceLine) {
+      setTargetAudience(audienceLine.replace("Cílová skupina:", "").trim());
     }
   };
 
@@ -101,7 +137,7 @@ export default function AdGenerator() {
           targetAudience: targetAudience.trim(),
           platform,
           adFormat,
-          model: selectedModel,
+          model,
           userId: user.id,
         }),
       });
@@ -123,7 +159,7 @@ export default function AdGenerator() {
         cta: adContent.cta,
         hashtags: adContent.hashtags,
         imageSuggestions: adContent.imageSuggestions,
-        modelUsed: selectedModel,
+        modelUsed: model,
       });
 
       await loadCredits();
@@ -225,7 +261,22 @@ export default function AdGenerator() {
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="product">Popis produktu/služby</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="product">Popis produktu/služby</Label>
+                        <div className="flex gap-2">
+                          <PromptSelector category="ad" onSelect={handleLoadPrompt} />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSavePrompt}
+                            disabled={!productDescription.trim()}
+                          >
+                            <Star className="h-4 w-4 mr-1" />
+                            Uložit
+                          </Button>
+                        </div>
+                      </div>
                       <Textarea
                         id="product"
                         placeholder="Např.: Ekologické bambusové kartáčky na zuby s měkkými štětinami, 100% biologicky rozložitelné..."
@@ -250,7 +301,7 @@ export default function AdGenerator() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="platform">Platforma</Label>
-                        <Select value={platform} onValueChange={(v) => setPlatform(v as AdPlatform)}>
+                        <Select value={platform} onValueChange={(v) => setPlatform(v)}>
                           <SelectTrigger id="platform">
                             <SelectValue />
                           </SelectTrigger>
@@ -266,7 +317,7 @@ export default function AdGenerator() {
 
                       <div className="space-y-2">
                         <Label htmlFor="format">Formát reklamy</Label>
-                        <Select value={adFormat} onValueChange={(v) => setAdFormat(v as AdFormat)}>
+                        <Select value={adFormat} onValueChange={(v) => setAdFormat(v)}>
                           <SelectTrigger id="format">
                             <SelectValue />
                           </SelectTrigger>
@@ -283,7 +334,7 @@ export default function AdGenerator() {
 
                     <div className="space-y-2">
                       <Label htmlFor="model">AI Model</Label>
-                      <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <Select value={model} onValueChange={setModel}>
                         <SelectTrigger id="model">
                           <SelectValue />
                         </SelectTrigger>
