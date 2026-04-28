@@ -36,6 +36,7 @@ export default function Assistants() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
   const [credits, setCredits] = useState(0);
+  const [loading, setLoading] = useState(true); // Added loading state
 
   // Form states
   const [formData, setFormData] = useState({
@@ -62,6 +63,8 @@ export default function Assistants() {
       setCredits(userCredits);
     } catch (error) {
       console.error("Error loading data:", error);
+    } finally {
+      setLoading(false); // Ensure loading state is reset
     }
   };
 

@@ -98,12 +98,13 @@ export const assistantTemplates = [
 
 export const assistantService = {
   async getAssistants(): Promise<Assistant[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
       .from("assistants")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -122,7 +123,7 @@ export const assistantService = {
   },
 
   async createAssistant(params: CreateAssistantParams): Promise<Assistant> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -163,7 +164,7 @@ export const assistantService = {
   },
 
   async getConversation(assistantId: string): Promise<AssistantConversation | null> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -178,7 +179,7 @@ export const assistantService = {
   },
 
   async createConversation(assistantId: string): Promise<AssistantConversation> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -218,20 +219,31 @@ export const assistantService = {
   },
 
   async generateResponse(assistantId: string, userMessage: string): Promise<string> {
-    const assistant = await this.getAssistant(assistantId);
-    if (!assistant) throw new Error("Assistant not found");
+    const user = await authState.getUser();
+    if (!user) throw new Error("Not authenticated");
 
-    // Simulate AI response based on assistant's instructions
-    // In production, this would call the actual AI API with the assistant's context
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch("/api/assistant-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistantId,
+          userMessage,
+          userId: user.id,
+        }),
+      });
 
-    const responses = [
-      `Na základě mých instrukcí (${assistant.instructions.substring(0, 50)}...) ti mohu říct: ${userMessage}`,
-      `Jako ${assistant.name}, přemýšlím o tvé otázce. Zde je má odpověď na "${userMessage}".`,
-      `S mou osobností "${assistant.personality}" ti odpovídám: Díky za otázku o "${userMessage}". Rád ti pomohu.`,
-    ];
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate response");
+      }
 
-    return responses[Math.floor(Math.random() * responses.length)];
+      const data = await response.json();
+      return data.response;
+    } catch (error: any) {
+      console.error("Error generating response:", error);
+      throw new Error(error.message || "Failed to generate response");
+    }
   },
 
   async clearConversation(conversationId: string): Promise<void> {
