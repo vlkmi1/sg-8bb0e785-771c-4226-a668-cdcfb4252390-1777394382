@@ -75,14 +75,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function transcribeAudio(audioData: string, apiKey: string): Promise<string> {
   try {
-    // Convert base64 to buffer
+    // Convert base64 to buffer then to Blob
     const buffer = Buffer.from(audioData.split(",")[1], "base64");
+    const blob = new Blob([buffer], { type: "audio/webm" });
     
     const formData = new FormData();
-    formData.append("file", buffer, {
-      filename: "audio.webm",
-      contentType: "audio/webm",
-    });
+    formData.append("file", blob, "audio.webm");
     formData.append("model", "whisper-1");
     formData.append("language", "cs");
 
@@ -90,9 +88,8 @@ async function transcribeAudio(audioData: string, apiKey: string): Promise<strin
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
-        ...formData.getHeaders(),
       },
-      body: formData as any,
+      body: formData,
     });
 
     if (!response.ok) {
