@@ -21,7 +21,7 @@ export type SocialAccount = {
   platform: SocialPlatform;
   account_name: string;
   access_token?: string;
-  is_connected: boolean;
+  is_active: boolean;
 };
 
 async function getUserId(): Promise<string> {
@@ -68,12 +68,12 @@ export const socialPostsService = {
         video_url: post.video_url,
         scheduled_time: post.scheduled_time,
         status: post.scheduled_time ? "scheduled" : "draft",
-      })
+      } as any)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as unknown as SocialPost;
   },
 
   async getPosts(): Promise<SocialPost[]> {
@@ -86,13 +86,13 @@ export const socialPostsService = {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return data as unknown as SocialPost[];
   },
 
   async updatePost(postId: string, updates: Partial<SocialPost>): Promise<void> {
     const { error } = await supabase
       .from("social_posts")
-      .update(updates)
+      .update(updates as any)
       .eq("id", postId);
 
     if (error) throw error;
@@ -116,6 +116,36 @@ export const socialPostsService = {
       .eq("user_id", userId);
 
     if (error) throw error;
-    return data || [];
+    return data as unknown as SocialAccount[];
   },
+
+  async createAccount(account: {
+    platform: SocialPlatform;
+    account_name: string;
+  }): Promise<SocialAccount> {
+    const userId = await getUserId();
+
+    const { data, error } = await supabase
+      .from("social_accounts")
+      .insert({
+        user_id: userId,
+        platform: account.platform,
+        account_name: account.account_name,
+        is_active: true,
+      } as any)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as unknown as SocialAccount;
+  },
+
+  async deleteAccount(accountId: string): Promise<void> {
+    const { error } = await supabase
+      .from("social_accounts")
+      .delete()
+      .eq("id", accountId);
+
+    if (error) throw error;
+  }
 };
