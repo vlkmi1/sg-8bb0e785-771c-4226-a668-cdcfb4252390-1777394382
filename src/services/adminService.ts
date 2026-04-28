@@ -216,17 +216,79 @@ export const adminService = {
     return data || [];
   },
 
-  async updateUserCredits(update: CreditUpdate): Promise<void> {
-    const { error } = await supabase.rpc("admin_update_credits", {
-      p_user_id: update.user_id,
-      p_amount: update.amount,
-      p_description: update.description,
+  async getUserWithStats(userId: string): Promise<any> {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    const { data: stats, error: statsError } = await supabase
+      .rpc("get_user_statistics", { p_user_id: userId });
+
+    if (statsError) {
+      console.error("Error fetching user stats:", statsError);
+    }
+
+    return {
+      ...profile,
+      stats: stats || {},
+    };
+  },
+
+  async updateUserCredits(userId: string, amount: number, description: string): Promise<void> {
+    const { error } = await supabase.rpc("admin_update_user_credits", {
+      p_user_id: userId,
+      p_amount: amount,
+      p_description: description,
     });
 
     if (error) {
       console.error("Error updating credits:", error);
       throw error;
     }
+  },
+
+  async toggleUserBlock(userId: string, isBlocked: boolean): Promise<void> {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_blocked: isBlocked })
+      .eq("id", userId);
+
+    if (error) {
+      console.error("Error toggling user block:", error);
+      throw error;
+    }
+  },
+
+  async toggleAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_admin: isAdmin })
+      .eq("id", userId);
+
+    if (error) {
+      console.error("Error toggling admin status:", error);
+      throw error;
+    }
+  },
+
+  async getUserTransactions(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from("credit_transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Error fetching user transactions:", error);
+      throw error;
+    }
+
+    return data || [];
   },
 
   async getUserStats(): Promise<UserStats> {
@@ -252,18 +314,6 @@ export const adminService = {
       active_users: activeUsers,
       total_credits_distributed: totalCreditsDistributed,
     };
-  },
-
-  async toggleAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ is_admin: isAdmin })
-      .eq("id", userId);
-
-    if (error) {
-      console.error("Error toggling admin status:", error);
-      throw error;
-    }
   },
 
   async getCreditTransactions() {

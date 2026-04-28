@@ -792,6 +792,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean | null
+          is_blocked: boolean | null
           last_sign_in_at: string | null
           updated_at: string | null
         }
@@ -803,6 +804,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          is_blocked?: boolean | null
           last_sign_in_at?: string | null
           updated_at?: string | null
         }
@@ -814,6 +816,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          is_blocked?: boolean | null
           last_sign_in_at?: string | null
           updated_at?: string | null
         }
@@ -1353,6 +1356,10 @@ export type Database = {
         Args: { p_amount: number; p_description: string; p_user_id: string }
         Returns: undefined
       }
+      admin_update_user_credits: {
+        Args: { p_amount: number; p_description: string; p_user_id: string }
+        Returns: undefined
+      }
       deduct_credits:
         | { Args: { amount: number; user_id: string }; Returns: number }
         | {
@@ -1361,6 +1368,7 @@ export type Database = {
           }
       generate_referral_code: { Args: never; Returns: string }
       get_user_credits: { Args: { p_user_id: string }; Returns: number }
+      get_user_statistics: { Args: { p_user_id: string }; Returns: Json }
       increment_referral_click: {
         Args: { code_val: string }
         Returns: undefined

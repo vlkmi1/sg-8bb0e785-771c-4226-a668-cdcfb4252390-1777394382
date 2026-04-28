@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
+import { UsersManagement } from "@/components/admin/UsersManagement";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo", url: "https://platform.openai.com/api-keys", supportsBalance: true },
@@ -817,18 +818,20 @@ export default function Admin() {
             <TabsContent value="users" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-heading flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    Správa uživatelů
-                  </CardTitle>
-                  <CardDescription>
-                    Přehled uživatelů a jejich předplatných
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="font-heading flex items-center gap-2">
+                        <Users className="h-5 w-5 text-primary" />
+                        Správa uživatelů
+                      </CardTitle>
+                      <CardDescription>
+                        Přehled všech uživatelů a jejich aktivit
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center text-muted-foreground py-8">
-                    Funkce připravena - zobrazení seznamu uživatelů s filtry
-                  </p>
+                  <UsersManagement />
                 </CardContent>
               </Card>
             </TabsContent>
