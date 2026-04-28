@@ -8,11 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink, TestTube2, CheckCircle2, XCircle } from "lucide-react";
+import { Shield, Key, Users, Coins, LogOut, Plus, Edit, Trash2, CreditCard, Crown, Settings, TrendingUp, Check, AlertCircle, ExternalLink, TestTube2, CheckCircle2, XCircle, Activity, DollarSign, Calendar } from "lucide-react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { useToast } from "@/hooks/use-toast";
-import { adminService, type AdminSetting } from "@/services/adminService";
+import { adminService, type AdminSetting, type APIUsageStats } from "@/services/adminService";
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -28,32 +28,16 @@ import {
 import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 
 const AI_PROVIDERS = [
-  { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo", url: "https://platform.openai.com/api-keys" },
-  { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku", url: "https://console.anthropic.com/settings/keys" },
-  { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra", url: "https://makersuite.google.com/app/apikey" },
-  { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small", url: "https://console.mistral.ai/api-keys" },
-  { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed", url: "https://dashboard.cohere.com/api-keys" },
-  { id: "xai", name: "X AI", icon: "𝕏", description: "Grok, Grok-2", url: "https://console.x.ai" },
-  { id: "nano-bannana", name: "Nano Bannana", icon: "🍌", description: "Fast AI Model for Quick Tasks", url: "https://nanobannana.ai" },
-  { id: "nano-bannana-pro", name: "Nano Bannana PRO", icon: "🍌✨", description: "Advanced Nano Bannana Model", url: "https://nanobannana.ai/pro" },
-  { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion, Image Generation", url: "https://platform.stability.ai/account/keys" },
-  { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation", url: "https://www.midjourney.com/account" },
-  { id: "fal", name: "Fal AI", icon: "🎯", description: "Fast Image & Video Generation", url: "https://fal.ai/dashboard/keys" },
-  { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation", url: "https://app.runwayml.com/settings" },
-  { id: "pika", name: "Pika Labs", icon: "🎥", description: "Text-to-Video, 3D Animations", url: "https://pika.art/settings" },
-  { id: "stability-video", name: "Stability Video", icon: "📹", description: "Stable Video Diffusion", url: "https://platform.stability.ai/account/keys" },
-  { id: "heygen", name: "HeyGen", icon: "👤", description: "AI Video Avatars & Influencers", url: "https://app.heygen.com/settings/api" },
-  { id: "d-id", name: "D-ID", icon: "🎭", description: "Digital People & Talking Heads", url: "https://studio.d-id.com/account-settings" },
-  { id: "synthesia", name: "Synthesia", icon: "🎬", description: "AI Video Platform with Avatars", url: "https://app.synthesia.io/settings/integrations" },
-  { id: "runway-gen2", name: "Runway Gen-2", icon: "🚀", description: "Advanced Video AI Models", url: "https://app.runwayml.com/settings" },
-  { id: "suno", name: "Suno AI", icon: "🎵", description: "AI Music with Vocals", url: "https://suno.ai/settings" },
-  { id: "musicgen", name: "MusicGen", icon: "🎹", description: "Meta AI Music Model", url: "https://huggingface.co/settings/tokens" },
-  { id: "mubert", name: "Mubert", icon: "🎧", description: "Real-time AI Music", url: "https://mubert.com/render/api" },
-  { id: "aiva", name: "AIVA", icon: "🎼", description: "AI Orchestral Composer", url: "https://www.aiva.ai/profile" },
-  { id: "soundraw", name: "Soundraw", icon: "🎶", description: "Royalty-Free AI Music", url: "https://soundraw.io/account" },
-  { id: "viral-runway", name: "Runway Viral", icon: "📲", description: "Viral Video Generation", url: "https://app.runwayml.com/settings" },
-  { id: "viral-pika", name: "Pika Viral", icon: "🔥", description: "Social Media Optimized Videos", url: "https://pika.art/settings" },
-  { id: "capcut", name: "CapCut AI", icon: "✂️", description: "TikTok Video Editor AI", url: "https://www.capcut.com/tools/api" },
+  { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo", url: "https://platform.openai.com/api-keys", supportsBalance: true },
+  { id: "anthropic", name: "Anthropic", icon: "🧠", description: "Claude 3 Opus, Sonnet, Haiku", url: "https://console.anthropic.com/settings/keys", supportsBalance: false },
+  { id: "google", name: "Google AI", icon: "🔮", description: "Gemini Pro, Gemini Ultra", url: "https://makersuite.google.com/app/apikey", supportsBalance: false },
+  { id: "mistral", name: "Mistral AI", icon: "⚡", description: "Mistral Large, Medium, Small", url: "https://console.mistral.ai/api-keys", supportsBalance: false },
+  { id: "cohere", name: "Cohere", icon: "🌟", description: "Command, Generate, Embed", url: "https://dashboard.cohere.com/api-keys", supportsBalance: false },
+  { id: "xai", name: "X AI", icon: "𝕏", description: "Grok, Grok-2", url: "https://console.x.ai", supportsBalance: false },
+  { id: "stability", name: "Stability AI", icon: "🎨", description: "Stable Diffusion, Image Generation", url: "https://platform.stability.ai/account/keys", supportsBalance: true },
+  { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation", url: "https://www.midjourney.com/account", supportsBalance: false },
+  { id: "fal", name: "Fal AI", icon: "🎯", description: "Fast Image & Video Generation", url: "https://fal.ai/dashboard/keys", supportsBalance: false },
+  { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation", url: "https://app.runwayml.com/settings", supportsBalance: false },
 ];
 
 // Provider to modules mapping
@@ -68,114 +52,27 @@ const PROVIDER_MODULES = {
   ],
   google: [
     { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Gemini do chatu" },
-    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Gemini" },
-  ],
-  mistral: [
-    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Mistral modely do chatu" },
-    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Mistral" },
-  ],
-  xai: [
-    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Grok do chatu" },
-    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Grok" },
   ],
   stability: [
     { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Vytvářet obrázky s Stable Diffusion" },
-    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Generovat avatary influencerů" },
-  ],
-  midjourney: [
-    { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Vytvářet art s Midjourney" },
-  ],
-  fal: [
-    { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Rychlé generování obrázků" },
-    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Rychlé generování videí" },
-  ],
-  runwayml: [
-    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Vytvářet videa s Gen-2" },
-    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Trendy pro sociální sítě" },
-  ],
-  pika: [
-    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Text-to-Video, animace" },
-    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Virální obsah" },
-  ],
-  "stability-video": [
-    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Stable Video Diffusion" },
-  ],
-  heygen: [
-    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Digitální avatary" },
-  ],
-  "d-id": [
-    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Talking heads, avatary" },
-  ],
-  synthesia: [
-    { name: "AI Influencer", path: "/ai-influencer", icon: "👤", description: "Video avatary" },
-  ],
-  "runway-gen2": [
-    { name: "Generování videí", path: "/video-generate", icon: "🎥", description: "Pokročilé video AI" },
-    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Virální obsah Gen-2" },
-  ],
-  suno: [
-    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "AI hudba s vokály" },
-  ],
-  musicgen: [
-    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Instrumentální AI hudba" },
-  ],
-  mubert: [
-    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Real-time AI hudba" },
-  ],
-  aiva: [
-    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Orchestrální skladby" },
-  ],
-  soundraw: [
-    { name: "Hudba", path: "/music-generate", icon: "🎵", description: "Royalty-free hudba" },
-  ],
-  "viral-runway": [
-    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "Virální video generace" },
-  ],
-  "viral-pika": [
-    { name: "Virální videa", path: "/viral-videos", icon: "🔥", description: "Social media optimalizace" },
-  ],
-  capcut: [
-    { name: "Virální videa", path: "/viral-videos", icon: "📲", description: "TikTok AI editor" },
   ],
 };
 
 export default function Admin() {
   const router = useRouter();
   const [settings, setSettings] = useState<AdminSetting[]>([]);
+  const [usageStats, setUsageStats] = useState<APIUsageStats[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [planDialogOpen, setPlanDialogOpen] = useState(false);
-  const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [checkingBalance, setCheckingBalance] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string } | null>>({});
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [showModelsDialog, setShowModelsDialog] = useState(false);
-  const [currentProvider, setCurrentProvider] = useState("");
+  const [apiKeysTab, setApiKeysTab] = useState<"active" | "inactive">("active");
   const { toast } = useToast();
-  const [showModuleSuggestions, setShowModuleSuggestions] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // Plan form states
-  const [planForm, setPlanForm] = useState({
-    tier: "basic",
-    name: "",
-    price: 0,
-    credits_included: 0,
-    features: [] as string[],
-    modules: [] as string[],
-  });
-
-  // Package form states
-  const [packageForm, setPackageForm] = useState({
-    name: "",
-    credits: 0,
-    price: 0,
-    bonus_credits: 0,
-  });
 
   useEffect(() => {
     loadData();
@@ -183,12 +80,14 @@ export default function Admin() {
 
   const loadData = async () => {
     try {
-      const [settingsData, plansData, packagesData] = await Promise.all([
+      const [settingsData, statsData, plansData, packagesData] = await Promise.all([
         adminService.getAdminSettings(),
+        adminService.getAPIUsageStats(),
         loadPlans(),
         loadPackages(),
       ]);
       setSettings(settingsData);
+      setUsageStats(statsData);
       setPlans(plansData);
       setPackages(packagesData);
     } catch (error) {
@@ -224,40 +123,13 @@ export default function Admin() {
       return;
     }
 
-    const providerToSave = selectedProvider;
-    const keyToSave = apiKey.trim();
-
     setLoading(true);
     try {
-      await adminService.saveAdminSetting(providerToSave, keyToSave);
+      await adminService.saveAdminSetting(selectedProvider, apiKey.trim());
       toast({
         title: "Úspěch",
         description: "API klíč byl uložen",
       });
-      
-      // Auto-fetch models after saving
-      try {
-        const modelsResponse = await fetch("/api/fetch-models", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: providerToSave, apiKey: keyToSave }),
-        });
-
-        if (modelsResponse.ok) {
-          const { models } = await modelsResponse.json();
-          setAvailableModels(models);
-          setCurrentProvider(providerToSave);
-          setShowModelsDialog(true);
-        }
-      } catch (error) {
-        console.error("Failed to fetch models:", error);
-      }
-      
-      // Show module suggestions if provider has modules
-      if (PROVIDER_MODULES[providerToSave as keyof typeof PROVIDER_MODULES]) {
-        setCurrentProvider(providerToSave);
-        setShowModuleSuggestions(true);
-      }
       
       setSelectedProvider("");
       setApiKey("");
@@ -272,6 +144,40 @@ export default function Admin() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCheckBalance = async (providerId: string) => {
+    const setting = settings.find(s => s.provider === providerId);
+    if (!setting?.api_key) return;
+
+    setCheckingBalance(providerId);
+    try {
+      const result = await adminService.checkAPIBalance(providerId, setting.api_key);
+      
+      if (result.success) {
+        toast({
+          title: "Balance načten",
+          description: result.balance !== null 
+            ? `Zůstatek: ${result.balance} ${result.currency || ""}`
+            : result.message,
+        });
+        loadData(); // Refresh to show updated balance
+      } else {
+        toast({
+          title: "Chyba",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se načíst zůstatek",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingBalance(null);
     }
   };
 
@@ -332,6 +238,13 @@ export default function Admin() {
     router.push("/auth/login");
   };
 
+  const getProviderStats = (providerId: string) => {
+    return usageStats.find(s => s.provider === providerId);
+  };
+
+  const activeProviders = AI_PROVIDERS.filter(p => settings.some(s => s.provider === p.id));
+  const inactiveProviders = AI_PROVIDERS.filter(p => !settings.some(s => s.provider === p.id));
+
   return (
     <AdminGuard>
       <div className="min-h-screen bg-background">
@@ -385,108 +298,234 @@ export default function Admin() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {AI_PROVIDERS.map((provider) => {
-                      const hasSetting = settings.some(s => s.provider === provider.id);
-                      const testResult = testResults[provider.id];
-                      
-                      return (
-                        <Card key={provider.id}>
-                          <CardHeader>
-                            <div className="flex items-start justify-between">
-                              <div className="text-3xl mb-2">{provider.icon}</div>
-                              <div className="flex flex-col gap-1 items-end">
-                                {hasSetting ? (
-                                  <Badge variant="default" className="bg-accent">Nastaveno</Badge>
-                                ) : (
-                                  <Badge variant="secondary">Chybí</Badge>
-                                )}
-                                {testResult && (
-                                  <Badge variant={testResult.success ? "default" : "destructive"} className="text-xs">
-                                    {testResult.success ? (
-                                      <><CheckCircle2 className="h-3 w-3 mr-1" />Test OK</>
-                                    ) : (
-                                      <><XCircle className="h-3 w-3 mr-1" />Test failed</>
-                                    )}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <CardTitle className="text-base">{provider.name}</CardTitle>
-                            <CardDescription className="text-xs">{provider.description}</CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-2">
-                            <Button
-                              variant="outline"
-                              className="w-full"
-                              size="sm"
-                              onClick={() => window.open(provider.url, "_blank")}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Získat API klíč
-                            </Button>
-                            
-                            <Dialog 
-                              open={dialogOpen && selectedProvider === provider.id} 
-                              onOpenChange={(open) => {
-                                setDialogOpen(open);
-                                if (open) setSelectedProvider(provider.id);
-                              }}
-                            >
-                              <DialogTrigger asChild>
-                                <Button variant="outline" className="w-full" size="sm">
-                                  <Key className="h-4 w-4 mr-2" />
-                                  {hasSetting ? "Změnit" : "Přidat"}
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle className="font-heading">
-                                    {provider.name} API klíč
-                                  </DialogTitle>
-                                  <DialogDescription>
-                                    Zadejte API klíč od poskytovatele {provider.name}
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="apiKey">API klíč</Label>
-                                    <Input
-                                      id="apiKey"
-                                      type="password"
-                                      placeholder="sk-..."
-                                      value={apiKey}
-                                      onChange={(e) => setApiKey(e.target.value)}
-                                    />
-                                  </div>
-                                  <Button 
-                                    onClick={handleSaveApiKey} 
-                                    className="w-full" 
-                                    disabled={loading}
-                                  >
-                                    {loading ? "Ukládání..." : "Uložit"}
-                                  </Button>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
+                  <Tabs value={apiKeysTab} onValueChange={(v) => setApiKeysTab(v as "active" | "inactive")}>
+                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                      <TabsTrigger value="active">
+                        Aktivní ({activeProviders.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="inactive">
+                        Neaktivní ({inactiveProviders.length})
+                      </TabsTrigger>
+                    </TabsList>
 
-                            {hasSetting && (
+                    <TabsContent value="active" className="mt-6">
+                      {activeProviders.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Key className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p>Zatím nemáte nastavené žádné API klíče</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {activeProviders.map((provider) => {
+                            const setting = settings.find(s => s.provider === provider.id);
+                            const stats = getProviderStats(provider.id);
+                            const testResult = testResults[provider.id];
+                            
+                            return (
+                              <Card key={provider.id} className="relative">
+                                <CardHeader>
+                                  <div className="flex items-start justify-between">
+                                    <div className="text-3xl mb-2">{provider.icon}</div>
+                                    <div className="flex flex-col gap-1 items-end">
+                                      <Badge variant="default" className="bg-accent">Aktivní</Badge>
+                                      {testResult && (
+                                        <Badge variant={testResult.success ? "default" : "destructive"} className="text-xs">
+                                          {testResult.success ? (
+                                            <><CheckCircle2 className="h-3 w-3 mr-1" />OK</>
+                                          ) : (
+                                            <><XCircle className="h-3 w-3 mr-1" />Chyba</>
+                                          )}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <CardTitle className="text-base">{provider.name}</CardTitle>
+                                  <CardDescription className="text-xs">{provider.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                  {setting?.balance !== null && setting?.balance !== undefined && (
+                                    <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                                      <DollarSign className="h-4 w-4 text-accent" />
+                                      <div className="flex-1">
+                                        <p className="text-xs text-muted-foreground">Zůstatek</p>
+                                        <p className="font-semibold">{setting.balance} USD</p>
+                                      </div>
+                                      {setting.balance_updated_at && (
+                                        <span className="text-xs text-muted-foreground">
+                                          {new Date(setting.balance_updated_at).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {stats && (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Požadavky celkem</span>
+                                        <span className="font-semibold">{stats.total_requests}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Dnes</span>
+                                        <span className="font-semibold">{stats.requests_today}</span>
+                                      </div>
+                                      {stats.total_cost > 0 && (
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-muted-foreground">Náklady (odhad)</span>
+                                          <span className="font-semibold">${stats.total_cost.toFixed(2)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {setting?.last_used_at && (
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Calendar className="h-3 w-3" />
+                                      Naposledy použito: {new Date(setting.last_used_at).toLocaleString("cs-CZ")}
+                                    </div>
+                                  )}
+
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleTestApiKey(provider.id)}
+                                      disabled={testingProvider === provider.id}
+                                    >
+                                      <TestTube2 className="h-4 w-4 mr-1" />
+                                      {testingProvider === provider.id ? "Test..." : "Test"}
+                                    </Button>
+
+                                    {provider.supportsBalance && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleCheckBalance(provider.id)}
+                                        disabled={checkingBalance === provider.id}
+                                      >
+                                        <Activity className="h-4 w-4 mr-1" />
+                                        {checkingBalance === provider.id ? "..." : "Balance"}
+                                      </Button>
+                                    )}
+                                  </div>
+
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" className="w-full" size="sm">
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Změnit klíč
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>{provider.name} API klíč</DialogTitle>
+                                        <DialogDescription>
+                                          Aktualizovat API klíč pro {provider.name}
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                          <Label htmlFor="apiKey">Nový API klíč</Label>
+                                          <Input
+                                            id="apiKey"
+                                            type="password"
+                                            placeholder="sk-..."
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                          />
+                                        </div>
+                                        <Button 
+                                          onClick={() => {
+                                            setSelectedProvider(provider.id);
+                                            handleSaveApiKey();
+                                          }} 
+                                          className="w-full" 
+                                          disabled={loading}
+                                        >
+                                          {loading ? "Ukládání..." : "Uložit"}
+                                        </Button>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="inactive" className="mt-6">
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {inactiveProviders.map((provider) => (
+                          <Card key={provider.id} className="opacity-60">
+                            <CardHeader>
+                              <div className="flex items-start justify-between">
+                                <div className="text-3xl mb-2">{provider.icon}</div>
+                                <Badge variant="secondary">Nenastaveno</Badge>
+                              </div>
+                              <CardTitle className="text-base">{provider.name}</CardTitle>
+                              <CardDescription className="text-xs">{provider.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
                               <Button
                                 variant="outline"
                                 className="w-full"
                                 size="sm"
-                                onClick={() => handleTestApiKey(provider.id)}
-                                disabled={testingProvider === provider.id}
+                                onClick={() => window.open(provider.url, "_blank")}
                               >
-                                <TestTube2 className="h-4 w-4 mr-2" />
-                                {testingProvider === provider.id ? "Testování..." : "Test API"}
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Získat API klíč
                               </Button>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                              
+                              <Dialog 
+                                open={dialogOpen && selectedProvider === provider.id} 
+                                onOpenChange={(open) => {
+                                  setDialogOpen(open);
+                                  if (open) setSelectedProvider(provider.id);
+                                }}
+                              >
+                                <DialogTrigger asChild>
+                                  <Button variant="default" className="w-full" size="sm">
+                                    <Key className="h-4 w-4 mr-2" />
+                                    Přidat klíč
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle className="font-heading">
+                                      {provider.name} API klíč
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                      Zadejte API klíč od poskytovatele {provider.name}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="apiKey">API klíč</Label>
+                                      <Input
+                                        id="apiKey"
+                                        type="password"
+                                        placeholder="sk-..."
+                                        value={apiKey}
+                                        onChange={(e) => setApiKey(e.target.value)}
+                                      />
+                                    </div>
+                                    <Button 
+                                      onClick={handleSaveApiKey} 
+                                      className="w-full" 
+                                      disabled={loading}
+                                    >
+                                      {loading ? "Ukládání..." : "Uložit"}
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -794,103 +833,6 @@ export default function Admin() {
           </Tabs>
         </main>
       </div>
-      <AlertDialog open={showModuleSuggestions} onOpenChange={setShowModuleSuggestions}>
-        <AlertDialogContent className="max-w-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Check className="h-5 w-5 text-accent" />
-              API klíč úspěšně přidán!
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-left">
-              Skvělé! Nyní můžete využít{" "}
-              <span className="font-semibold">
-                {AI_PROVIDERS.find(p => p.id === currentProvider)?.name}
-              </span>{" "}
-              v následujících modulech:
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className="grid gap-3 my-4">
-            {currentProvider && PROVIDER_MODULES[currentProvider as keyof typeof PROVIDER_MODULES]?.map((module, idx) => (
-              <Card 
-                key={idx}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => {
-                  router.push(module.path);
-                  setShowModuleSuggestions(false);
-                }}
-              >
-                <CardContent className="flex items-center gap-4 p-4">
-                  <div className="text-3xl">{module.icon}</div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold">{module.name}</h4>
-                    <p className="text-sm text-muted-foreground">{module.description}</p>
-                  </div>
-                  <ExternalLink className="h-5 w-5 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zavřít</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => {
-                if (currentProvider && PROVIDER_MODULES[currentProvider as keyof typeof PROVIDER_MODULES]) {
-                  const firstModule = PROVIDER_MODULES[currentProvider as keyof typeof PROVIDER_MODULES][0];
-                  router.push(firstModule.path);
-                }
-                setShowModuleSuggestions(false);
-              }}
-            >
-              Vyzkoušet hned
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Dialog pro zobrazení dostupných modelů */}
-      <Dialog open={showModelsDialog} onOpenChange={setShowModelsDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Dostupné modely pro {currentProvider}</DialogTitle>
-            <DialogDescription>
-              Tyto modely jsou dostupné s vašim API klíčem. Použijte je při vytváření konverzací.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-2">
-            {availableModels.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2">
-                {availableModels.map((model, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50"
-                  >
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {model}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">
-                Žádné modely nenalezeny
-              </p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button onClick={() => setShowModelsDialog(false)}>
-              Zavřít
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation Dialog for Deleting User */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-      </AlertDialog>
     </AdminGuard>
   );
 }

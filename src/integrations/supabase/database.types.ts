@@ -93,29 +93,41 @@ export type Database = {
       admin_settings: {
         Row: {
           api_key: string
+          balance: number | null
+          balance_updated_at: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
+          last_used_at: string | null
           model_name: string | null
           provider: string
+          request_count: number | null
           updated_at: string | null
         }
         Insert: {
           api_key: string
+          balance?: number | null
+          balance_updated_at?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          last_used_at?: string | null
           model_name?: string | null
           provider: string
+          request_count?: number | null
           updated_at?: string | null
         }
         Update: {
           api_key?: string
+          balance?: number | null
+          balance_updated_at?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          last_used_at?: string | null
           model_name?: string | null
           provider?: string
+          request_count?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -193,6 +205,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      api_usage_stats: {
+        Row: {
+          cost_estimate: number | null
+          created_at: string | null
+          date: string
+          id: string
+          provider: string
+          request_count: number
+          request_type: string
+          tokens_used: number | null
+        }
+        Insert: {
+          cost_estimate?: number | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          provider: string
+          request_count?: number
+          request_type: string
+          tokens_used?: number | null
+        }
+        Update: {
+          cost_estimate?: number | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          provider?: string
+          request_count?: number
+          request_type?: string
+          tokens_used?: number | null
+        }
+        Relationships: []
       }
       assistant_conversations: {
         Row: {
