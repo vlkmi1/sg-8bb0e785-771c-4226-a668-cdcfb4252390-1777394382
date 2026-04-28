@@ -76,6 +76,7 @@ export default function Admin() {
   const [checkingBalance, setCheckingBalance] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string } | null>>({});
   const [apiKeysTab, setApiKeysTab] = useState<"active" | "inactive">("active");
+  const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -84,16 +85,18 @@ export default function Admin() {
 
   const loadData = async () => {
     try {
-      const [settingsData, statsData, plansData, packagesData] = await Promise.all([
+      const [settingsData, statsData, plansData, packagesData, paymentSettingsData] = await Promise.all([
         adminService.getAdminSettings(),
         adminService.getAPIUsageStats(),
         loadPlans(),
         loadPackages(),
+        adminService.getPaymentSettings(),
       ]);
       setSettings(settingsData);
       setUsageStats(statsData);
       setPlans(plansData);
       setPackages(packagesData);
+      setPaymentSettings(paymentSettingsData);
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -240,6 +243,26 @@ export default function Admin() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
+  };
+
+  const handleSavePaymentSettings = async () => {
+    setLoading(true);
+    try {
+      await adminService.updatePaymentSettings(paymentSettings);
+      toast({
+        title: "Úspěch",
+        description: "Nastavení plateb bylo uloženo",
+      });
+    } catch (error) {
+      console.error("Error saving payment settings:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se uložit nastavení plateb",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getProviderStats = (providerId: string) => {
@@ -669,7 +692,11 @@ export default function Admin() {
                       <Input
                         id="paypal-client"
                         placeholder="AXX..."
-                        defaultValue=""
+                        value={paymentSettings["paypal_client_id"] || ""}
+                        onChange={(e) => setPaymentSettings(prev => ({
+                          ...prev,
+                          paypal_client_id: e.target.value
+                        }))}
                       />
                     </div>
                     <div className="space-y-2">
@@ -678,7 +705,11 @@ export default function Admin() {
                         id="paypal-secret"
                         type="password"
                         placeholder="EXX..."
-                        defaultValue=""
+                        value={paymentSettings["paypal_secret"] || ""}
+                        onChange={(e) => setPaymentSettings(prev => ({
+                          ...prev,
+                          paypal_secret: e.target.value
+                        }))}
                       />
                     </div>
                     <div className="space-y-2">
@@ -686,12 +717,45 @@ export default function Admin() {
                       <Input
                         id="bank-account"
                         placeholder="123456789/0100"
-                        defaultValue="123456789/0100"
+                        value={paymentSettings["bank_account_number"] || ""}
+                        onChange={(e) => setPaymentSettings(prev => ({
+                          ...prev,
+                          bank_account_number: e.target.value
+                        }))}
                       />
                     </div>
-                    <Button className="w-full">
+                    <div className="space-y-2">
+                      <Label htmlFor="stripe-key">Stripe Publishable Key</Label>
+                      <Input
+                        id="stripe-key"
+                        placeholder="pk_live_..."
+                        value={paymentSettings["stripe_publishable_key"] || ""}
+                        onChange={(e) => setPaymentSettings(prev => ({
+                          ...prev,
+                          stripe_publishable_key: e.target.value
+                        }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="stripe-secret">Stripe Secret Key</Label>
+                      <Input
+                        id="stripe-secret"
+                        type="password"
+                        placeholder="sk_live_..."
+                        value={paymentSettings["stripe_secret_key"] || ""}
+                        onChange={(e) => setPaymentSettings(prev => ({
+                          ...prev,
+                          stripe_secret_key: e.target.value
+                        }))}
+                      />
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={handleSavePaymentSettings}
+                      disabled={loading}
+                    >
                       <Settings className="h-4 w-4 mr-2" />
-                      Uložit nastavení plateb
+                      {loading ? "Ukládání..." : "Uložit nastavení plateb"}
                     </Button>
                   </div>
                 </CardContent>
