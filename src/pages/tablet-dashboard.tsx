@@ -1,12 +1,33 @@
+import { Suspense, lazy } from "react";
 import { SEO } from "@/components/SEO";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, Menu } from "lucide-react";
-import { TabletCreditsWidget, TabletQuickActionsWidget, TabletRecentActivityWidget, TabletStatsCardsWidget } from "@/components/dashboard/TabletWidgets";
+import { Bell, Menu } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import Link from "next/link";
+import { LazyWidget } from "@/components/dashboard/LazyWidget";
+import {
+  TabletCreditsWidgetSkeleton,
+  TabletQuickActionsWidgetSkeleton,
+  TabletRecentActivityWidgetSkeleton,
+  TabletStatsCardsWidgetSkeleton,
+} from "@/components/dashboard/WidgetSkeleton";
+
+// Lazy load widgets
+const TabletCreditsWidget = lazy(() =>
+  import("@/components/dashboard/TabletWidgets").then((mod) => ({ default: mod.TabletCreditsWidget }))
+);
+const TabletQuickActionsWidget = lazy(() =>
+  import("@/components/dashboard/TabletWidgets").then((mod) => ({ default: mod.TabletQuickActionsWidget }))
+);
+const TabletRecentActivityWidget = lazy(() =>
+  import("@/components/dashboard/TabletWidgets").then((mod) => ({ default: mod.TabletRecentActivityWidget }))
+);
+const TabletStatsCardsWidget = lazy(() =>
+  import("@/components/dashboard/TabletWidgets").then((mod) => ({ default: mod.TabletStatsCardsWidget }))
+);
 
 export default function TabletDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -91,14 +112,34 @@ export default function TabletDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column */}
             <div className="space-y-6">
-              <TabletCreditsWidget />
-              <TabletStatsCardsWidget />
+              {/* Credits - preload immediately */}
+              <Suspense fallback={<TabletCreditsWidgetSkeleton />}>
+                <TabletCreditsWidget />
+              </Suspense>
+
+              {/* Stats Cards - lazy load */}
+              <LazyWidget fallback={<TabletStatsCardsWidgetSkeleton />}>
+                <Suspense fallback={<TabletStatsCardsWidgetSkeleton />}>
+                  <TabletStatsCardsWidget />
+                </Suspense>
+              </LazyWidget>
             </div>
 
             {/* Right Column */}
             <div className="space-y-6">
-              <TabletQuickActionsWidget />
-              <TabletRecentActivityWidget />
+              {/* Quick Actions - lazy load */}
+              <LazyWidget fallback={<TabletQuickActionsWidgetSkeleton />}>
+                <Suspense fallback={<TabletQuickActionsWidgetSkeleton />}>
+                  <TabletQuickActionsWidget />
+                </Suspense>
+              </LazyWidget>
+
+              {/* Recent Activity - lazy load */}
+              <LazyWidget fallback={<TabletRecentActivityWidgetSkeleton />}>
+                <Suspense fallback={<TabletRecentActivityWidgetSkeleton />}>
+                  <TabletRecentActivityWidget />
+                </Suspense>
+              </LazyWidget>
             </div>
           </div>
         </main>

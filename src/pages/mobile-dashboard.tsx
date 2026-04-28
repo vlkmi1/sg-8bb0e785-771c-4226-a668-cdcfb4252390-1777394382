@@ -1,12 +1,32 @@
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import { SEO } from "@/components/SEO";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Bell, Settings } from "lucide-react";
-import { CreditsWidget, QuickActionsWidget, RecentActivityWidget, StatsCardsWidget } from "@/components/dashboard/MobileWidgets";
+import { Menu, Bell } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import Link from "next/link";
+import { LazyWidget } from "@/components/dashboard/LazyWidget";
+import {
+  CreditsWidgetSkeleton,
+  QuickActionsWidgetSkeleton,
+  RecentActivityWidgetSkeleton,
+  StatsCardsWidgetSkeleton,
+} from "@/components/dashboard/WidgetSkeleton";
+
+// Lazy load widgets
+const CreditsWidget = lazy(() =>
+  import("@/components/dashboard/MobileWidgets").then((mod) => ({ default: mod.CreditsWidget }))
+);
+const QuickActionsWidget = lazy(() =>
+  import("@/components/dashboard/MobileWidgets").then((mod) => ({ default: mod.QuickActionsWidget }))
+);
+const RecentActivityWidget = lazy(() =>
+  import("@/components/dashboard/MobileWidgets").then((mod) => ({ default: mod.RecentActivityWidget }))
+);
+const StatsCardsWidget = lazy(() =>
+  import("@/components/dashboard/MobileWidgets").then((mod) => ({ default: mod.StatsCardsWidget }))
+);
 
 export default function MobileDashboard() {
   const [open, setOpen] = useState(false);
@@ -64,10 +84,31 @@ export default function MobileDashboard() {
 
         {/* Main Content */}
         <main className="p-4 pb-20 space-y-4">
-          <CreditsWidget />
-          <QuickActionsWidget />
-          <RecentActivityWidget />
-          <StatsCardsWidget />
+          {/* Credits - preload immediately */}
+          <Suspense fallback={<CreditsWidgetSkeleton />}>
+            <CreditsWidget />
+          </Suspense>
+
+          {/* Quick Actions - lazy load when scrolling */}
+          <LazyWidget fallback={<QuickActionsWidgetSkeleton />}>
+            <Suspense fallback={<QuickActionsWidgetSkeleton />}>
+              <QuickActionsWidget />
+            </Suspense>
+          </LazyWidget>
+
+          {/* Recent Activity - lazy load */}
+          <LazyWidget fallback={<RecentActivityWidgetSkeleton />}>
+            <Suspense fallback={<RecentActivityWidgetSkeleton />}>
+              <RecentActivityWidget />
+            </Suspense>
+          </LazyWidget>
+
+          {/* Stats Cards - lazy load */}
+          <LazyWidget fallback={<StatsCardsWidgetSkeleton />}>
+            <Suspense fallback={<StatsCardsWidgetSkeleton />}>
+              <StatsCardsWidget />
+            </Suspense>
+          </LazyWidget>
         </main>
       </div>
     </AuthGuard>
