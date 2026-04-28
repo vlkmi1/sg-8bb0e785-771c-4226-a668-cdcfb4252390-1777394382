@@ -68,9 +68,9 @@ export default function Pricing() {
         id: plan.id,
         tier: plan.tier,
         name: plan.name,
-        price: plan.price,
+        price: Number(plan.price),
         billing_period: plan.billing_period,
-        credits_included: plan.credits_included,
+        credits_included: Number(plan.credits_included),
         is_active: plan.is_active,
         features: Array.isArray(plan.features) ? plan.features : []
       }));

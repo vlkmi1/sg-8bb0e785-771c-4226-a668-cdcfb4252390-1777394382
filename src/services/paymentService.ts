@@ -319,8 +319,8 @@ export const paymentService = {
     return (data || []).map(pkg => ({
       id: pkg.id,
       name: pkg.name,
-      credits: pkg.credits,
-      bonus_credits: pkg.bonus_credits,
+      credits: Number(pkg.credits),
+      bonus_credits: Number(pkg.bonus_credits),
       price: Number(pkg.price),
       currency: pkg.currency,
       description: pkg.name,
