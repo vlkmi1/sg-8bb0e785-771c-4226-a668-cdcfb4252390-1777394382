@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 interface MusicRequest {
+  generationId?: string;
   prompt: string;
   genre?: string;
   mood?: string;
@@ -21,99 +21,124 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { prompt, genre, mood, duration, provider, userId }: MusicRequest = req.body;
+    const { generationId, prompt, genre, mood, duration, provider, userId } = req.body;
 
-    if (!prompt || !duration || !provider || !userId) {
+    if (!generationId || !prompt || !duration || !provider || !userId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Get admin API key for the selected provider
-    const { data: adminSettings } = await supabase
-      .from("admin_settings" as any)
+    // Get admin API key for the provider
+    const { data: adminSetting } = await supabaseAdmin
+      .from("admin_settings")
       .select("api_key")
       .eq("provider", provider)
       .single();
 
-    if (!adminSettings?.api_key) {
-      return res.status(500).json({ 
-        error: `${provider} API key not configured. Please contact administrator.` 
+    if (!adminSetting?.api_key) {
+      // Update generation status to failed
+      await supabaseAdmin
+        .from("music_generations")
+        .update({ 
+          status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", generationId);
+
+      return res.status(400).json({ 
+        error: `${provider} API key not configured. Please add it in Admin Settings.` 
       });
     }
 
     let audioUrl: string | null = null;
-    const actualDuration = duration;
 
     // Generate music based on provider
     switch (provider) {
       case "suno":
-        audioUrl = await generateWithSuno(prompt, genre, mood, duration, adminSettings.api_key);
+        audioUrl = await generateWithSuno(prompt, genre, mood, duration, adminSetting.api_key);
         break;
       case "musicgen":
-        audioUrl = await generateWithMusicGen(prompt, genre, mood, duration, adminSettings.api_key);
+        audioUrl = await generateWithMusicGen(prompt, genre, duration, adminSetting.api_key);
         break;
       case "mubert":
-        audioUrl = await generateWithMubert(prompt, genre, mood, duration, adminSettings.api_key);
+        audioUrl = await generateWithMubert(prompt, mood, duration, adminSetting.api_key);
         break;
       case "aiva":
-        audioUrl = await generateWithAIVA(prompt, genre, mood, duration, adminSettings.api_key);
+        audioUrl = await generateWithAIVA(prompt, genre, duration, adminSetting.api_key);
         break;
       case "soundraw":
-        audioUrl = await generateWithSoundraw(prompt, genre, mood, duration, adminSettings.api_key);
+        audioUrl = await generateWithSoundraw(prompt, genre, mood, duration, adminSetting.api_key);
         break;
       default:
-        return res.status(400).json({ error: "Invalid provider" });
+        throw new Error(`Unsupported provider: ${provider}`);
     }
 
     if (!audioUrl) {
-      // Fallback to mock for development
-      audioUrl = `https://example.com/music/${Date.now()}.mp3`;
+      // Update status to failed
+      await supabaseAdmin
+        .from("music_generations")
+        .update({ 
+          status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", generationId);
+
+      return res.status(500).json({ error: "Failed to generate music" });
     }
 
-    // Update the generation record with the audio URL
-    const { data: generation, error: updateError } = await supabase
+    // Update generation with audio URL and completed status
+    await supabaseAdmin
       .from("music_generations")
       .update({ 
         audio_url: audioUrl,
         status: "completed",
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .select()
-      .single();
+      .eq("id", generationId);
 
-    if (updateError) {
-      console.error("Error updating generation:", updateError);
-    }
-
-    return res.status(200).json({
-      success: true,
-      audioUrl,
-      duration: actualDuration,
-      generation,
+    // Track API usage
+    await supabaseAdmin.from("api_usage_stats").insert({
+      provider,
+      request_type: "music_generation",
+      request_count: 1,
+      date: new Date().toISOString().split("T")[0],
     });
 
+    return res.status(200).json({ 
+      success: true,
+      audioUrl,
+      generationId,
+    });
   } catch (error: any) {
-    console.error("Error generating music:", error);
+    console.error("Music generation error:", error);
+    
+    // Update status to failed if we have generationId
+    if (req.body.generationId) {
+      await supabaseAdmin
+        .from("music_generations")
+        .update({ 
+          status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", req.body.generationId)
+        .catch(() => {});
+    }
+
     return res.status(500).json({ 
-      error: error.message || "Failed to generate music" 
+      error: error.message || "Music generation failed" 
     });
   }
 }
 
-// Suno AI - https://suno.ai/
+// Provider-specific generation functions
 async function generateWithSuno(
   prompt: string,
-  genre: string | undefined,
-  mood: string | undefined,
-  duration: number,
-  apiKey: string
+  genre?: string,
+  mood?: string,
+  duration?: number,
+  apiKey?: string
 ): Promise<string | null> {
+  // Suno AI API implementation
   try {
-    const fullPrompt = `${prompt}. Genre: ${genre || "Pop"}. Mood: ${mood || "Energetic"}. Duration: ${duration} seconds.`;
-    
-    // Suno API call
     const response = await fetch("https://api.suno.ai/v1/generate", {
       method: "POST",
       headers: {
@@ -121,34 +146,31 @@ async function generateWithSuno(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: fullPrompt,
-        make_instrumental: false,
-        wait_audio: true,
+        prompt,
+        genre,
+        mood,
+        duration,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Suno API error: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error("Suno API error");
 
     const data = await response.json();
-    return data.audio_url || data[0]?.audio_url || null;
+    return data.audio_url || null;
   } catch (error) {
     console.error("Suno generation error:", error);
     return null;
   }
 }
 
-// Meta MusicGen - https://ai.meta.com/resources/models-and-libraries/musicgen/
 async function generateWithMusicGen(
   prompt: string,
-  genre: string | undefined,
-  mood: string | undefined,
-  duration: number,
-  apiKey: string
+  genre?: string,
+  duration?: number,
+  apiKey?: string
 ): Promise<string | null> {
+  // MusicGen (Replicate) API implementation
   try {
-    // Using Replicate API for MusicGen
     const response = await fetch("https://api.replicate.com/v1/predictions", {
       method: "POST",
       headers: {
@@ -156,49 +178,57 @@ async function generateWithMusicGen(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        version: "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
+        version: "meta/musicgen",
         input: {
-          prompt: `${prompt}. ${genre || ""}. ${mood || ""}`,
-          duration: duration,
-          model_version: "stereo-large",
-          output_format: "mp3",
+          prompt: `${genre ? genre + " " : ""}${prompt}`,
+          duration: duration || 30,
         },
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`MusicGen API error: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error("MusicGen API error");
 
     const prediction = await response.json();
     
     // Poll for completion
-    let result = prediction;
-    while (result.status !== "succeeded" && result.status !== "failed") {
+    let audioUrl = null;
+    for (let i = 0; i < 60; i++) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
-        headers: { "Authorization": `Token ${apiKey}` },
-      });
-      result = await pollResponse.json();
+      
+      const statusResponse = await fetch(
+        `https://api.replicate.com/v1/predictions/${prediction.id}`,
+        {
+          headers: {
+            "Authorization": `Token ${apiKey}`,
+          },
+        }
+      );
+      
+      const status = await statusResponse.json();
+      
+      if (status.status === "succeeded") {
+        audioUrl = status.output;
+        break;
+      } else if (status.status === "failed") {
+        throw new Error("MusicGen generation failed");
+      }
     }
 
-    return result.output || null;
+    return audioUrl;
   } catch (error) {
     console.error("MusicGen generation error:", error);
     return null;
   }
 }
 
-// Mubert - https://mubert.com/
 async function generateWithMubert(
   prompt: string,
-  genre: string | undefined,
-  mood: string | undefined,
-  duration: number,
-  apiKey: string
+  mood?: string,
+  duration?: number,
+  apiKey?: string
 ): Promise<string | null> {
   try {
-    const response = await fetch("https://api-b2b.mubert.com/v2/RecordTrack", {
+    const response = await fetch("https://api.mubert.com/v2/RecordTrack", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -206,17 +236,17 @@ async function generateWithMubert(
       body: JSON.stringify({
         method: "RecordTrack",
         params: {
-          pat: apiKey,
-          duration: duration,
-          tags: `${genre || ""}, ${mood || ""}`,
+          license: "basic",
+          token: apiKey,
           mode: "track",
+          duration: duration || 30,
+          tags: mood,
+          bitrate: 320,
         },
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Mubert API error: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error("Mubert API error");
 
     const data = await response.json();
     return data.data?.tasks?.[0]?.download_link || null;
@@ -226,70 +256,62 @@ async function generateWithMubert(
   }
 }
 
-// AIVA - https://www.aiva.ai/
 async function generateWithAIVA(
   prompt: string,
-  genre: string | undefined,
-  mood: string | undefined,
-  duration: number,
-  apiKey: string
+  genre?: string,
+  duration?: number,
+  apiKey?: string
 ): Promise<string | null> {
   try {
-    // AIVA requires preset selection
-    const response = await fetch("https://api.aiva.ai/v1/compositions", {
+    const response = await fetch("https://api.aiva.ai/v1/generate", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        preset_id: "electronic", // Map genre to preset
-        duration: duration,
-        title: prompt.substring(0, 50),
+        prompt,
+        style: genre,
+        duration: duration || 30,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`AIVA API error: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error("AIVA API error");
 
     const data = await response.json();
-    return data.download_url || null;
+    return data.audio_url || null;
   } catch (error) {
     console.error("AIVA generation error:", error);
     return null;
   }
 }
 
-// Soundraw - https://soundraw.io/
 async function generateWithSoundraw(
   prompt: string,
-  genre: string | undefined,
-  mood: string | undefined,
-  duration: number,
-  apiKey: string
+  genre?: string,
+  mood?: string,
+  duration?: number,
+  apiKey?: string
 ): Promise<string | null> {
   try {
-    const response = await fetch("https://api.soundraw.io/api/v1/music/create", {
+    const response = await fetch("https://api.soundraw.io/v1/generate", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        genre: genre?.toLowerCase() || "pop",
-        mood: mood?.toLowerCase() || "energetic",
-        length: duration,
-        theme: prompt,
+        prompt,
+        genre,
+        mood,
+        length: duration || 30,
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Soundraw API error: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error("Soundraw API error");
 
     const data = await response.json();
-    return data.music_url || null;
+    return data.audio_url || null;
   } catch (error) {
     console.error("Soundraw generation error:", error);
     return null;

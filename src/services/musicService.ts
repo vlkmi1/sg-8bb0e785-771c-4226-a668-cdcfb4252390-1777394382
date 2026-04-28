@@ -21,7 +21,7 @@ export const musicService = {
     if (!user) throw new Error("User not authenticated");
 
     // Create initial record with processing status
-    const { data, error } = await supabase
+    const { data: initialRecord, error: insertError } = await supabase
       .from("music_generations")
       .insert({
         user_id: user.id,
@@ -35,57 +35,35 @@ export const musicService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (insertError) throw insertError;
 
-    // Call API to generate music in background
-    try {
-      const response = await fetch("/api/generate-music", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-        body: JSON.stringify({
-          prompt: params.prompt,
-          genre: params.genre,
-          mood: params.mood,
-          duration: params.duration,
-          provider: params.provider,
-          userId: user.id,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate music");
-      }
-
-      const result = await response.json();
-      
-      // Update record with completed status
-      await supabase
+    // Call API to generate music (non-blocking)
+    fetch("/api/generate-music", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      },
+      body: JSON.stringify({
+        generationId: initialRecord.id,
+        prompt: params.prompt,
+        genre: params.genre,
+        mood: params.mood,
+        duration: params.duration,
+        provider: params.provider,
+        userId: user.id,
+      }),
+    }).catch(error => {
+      console.error("Music generation API error:", error);
+      // Update status to failed if API call fails
+      supabase
         .from("music_generations")
-        .update({ 
-          audio_url: result.audioUrl,
-          status: "completed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", data.id);
+        .update({ status: "failed" })
+        .eq("id", initialRecord.id)
+        .then(() => {});
+    });
 
-    } catch (error) {
-      console.error("Music generation error:", error);
-      // Update status to failed
-      await supabase
-        .from("music_generations")
-        .update({ 
-          status: "failed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", data.id);
-      throw error;
-    }
-
-    return data;
+    return initialRecord;
   },
 
   async getGenerations(): Promise<MusicGeneration[]> {
@@ -95,6 +73,7 @@ export const musicService = {
     const { data, error } = await supabase
       .from("music_generations")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -121,7 +100,8 @@ export const musicService = {
     const { error } = await supabase
       .from("music_generations")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
 
     if (error) throw error;
   },
