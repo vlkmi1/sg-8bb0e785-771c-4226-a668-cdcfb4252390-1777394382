@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .update({ 
               status: "completed",
               processed_at: new Date().toISOString() 
-            })
+            } as any)
             .eq("id", paymentId);
             
           // Poznámka: Kompletní připsání kreditů by vyžadovalo admin API s právy k zápisu do profiles/subscriptions

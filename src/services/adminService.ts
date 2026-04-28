@@ -492,17 +492,18 @@ export const adminService = {
         .update({ 
           status: "completed",
           processed_at: new Date().toISOString()
-        })
+        } as any)
         .eq("id", paymentId);
 
       if (updatePaymentError) throw updatePaymentError;
 
       // 2. Add credits or activate subscription based on payment type
       const metadata = payment.metadata as any;
+      const profiles = payment.profiles as any;
 
       if (payment.payment_type === "credits" && metadata?.credits) {
         // Add credits to user profile
-        const currentCredits = payment.profiles?.credits || 0;
+        const currentCredits = (Array.isArray(profiles) ? profiles[0]?.credits : profiles?.credits) || 0;
         const newCredits = currentCredits + Number(metadata.credits);
 
         const { error: creditsError } = await supabase
@@ -530,7 +531,7 @@ export const adminService = {
 
         // Also add subscription credits
         if (metadata?.credits_amount) {
-          const currentCredits = payment.profiles?.credits || 0;
+          const currentCredits = (Array.isArray(profiles) ? profiles[0]?.credits : profiles?.credits) || 0;
           const newCredits = currentCredits + Number(metadata.credits_amount);
 
           const { error: creditsError } = await supabase
@@ -576,7 +577,7 @@ export const adminService = {
         status: "failed",
         processed_at: new Date().toISOString(),
         metadata: { rejection_reason: reason }
-      })
+      } as any)
       .eq("id", paymentId);
 
     if (error) throw error;
