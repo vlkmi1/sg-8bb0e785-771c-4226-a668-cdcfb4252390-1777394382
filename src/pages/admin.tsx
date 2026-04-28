@@ -49,7 +49,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
-import { toast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
 import { adminService } from "@/services/adminService";
 import { UsersManagement } from "@/components/admin/UsersManagement";
@@ -59,8 +59,8 @@ import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 interface AdminSetting {
-  provider: string;
-  api_key: string;
+  provider?: string;
+  api_key?: string;
   balance?: number;
   balance_updated_at?: string;
   last_used_at?: string;
