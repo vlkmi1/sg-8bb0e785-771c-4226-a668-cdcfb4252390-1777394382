@@ -162,6 +162,7 @@ export default function Dashboard() {
       path: "/chat",
       count: stats.conversations,
       cost: "1 kredit/zpráva",
+      hasApi: true,
     },
     {
       id: "images",
@@ -172,6 +173,7 @@ export default function Dashboard() {
       path: "/generate",
       count: stats.images,
       cost: "2 kredity/obrázek",
+      hasApi: true,
     },
     {
       id: "videos",
@@ -182,6 +184,7 @@ export default function Dashboard() {
       path: "/video-generate",
       count: stats.videos,
       cost: "5 kreditů/video",
+      hasApi: false, // Částečné API
     },
     {
       id: "voice",
@@ -192,6 +195,7 @@ export default function Dashboard() {
       path: "/voice-chat",
       count: stats.voiceChats,
       cost: "3 kredity/zpráva",
+      hasApi: true,
     },
   ];
 
@@ -274,9 +278,16 @@ export default function Dashboard() {
                         <div className={`p-3 bg-${module.color}/10 rounded-xl`}>
                           <Icon className={`h-6 w-6 text-${module.color}`} />
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {module.count}
-                        </Badge>
+                        <div className="flex gap-2">
+                          {!module.hasApi && (
+                            <Badge variant="secondary" className="bg-muted text-xs">
+                              Připravujeme
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            {module.count}
+                          </Badge>
+                        </div>
                       </div>
                       <CardTitle className="font-heading text-lg">{module.title}</CardTitle>
                       <CardDescription className="text-sm">
@@ -638,10 +649,15 @@ export default function Dashboard() {
                   <div className="p-3 bg-destructive/10 rounded-xl">
                     <Zap className="h-8 w-8 text-destructive" />
                   </div>
-                  <Badge variant="secondary" className="bg-destructive text-destructive-foreground">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    HOT
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Badge variant="secondary" className="bg-muted">
+                      Připravujeme
+                    </Badge>
+                    <Badge variant="secondary" className="bg-destructive text-destructive-foreground">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      HOT
+                    </Badge>
+                  </div>
                 </div>
                 <CardTitle className="font-heading">Viral Videos</CardTitle>
                 <CardDescription>Videa pro sociální sítě</CardDescription>
