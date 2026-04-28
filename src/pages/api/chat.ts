@@ -148,6 +148,12 @@ function getProviderFromModel(model: string): string {
 
 async function callOpenAI(message: string, model: string, apiKey: string): Promise<string> {
   try {
+    const currentDate = new Date().toLocaleDateString('cs-CZ', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -156,7 +162,13 @@ async function callOpenAI(message: string, model: string, apiKey: string): Promi
       },
       body: JSON.stringify({
         model: model,
-        messages: [{ role: "user", content: message }],
+        messages: [
+          { 
+            role: "system", 
+            content: `Jsi užitečný AI asistent. Aktuální datum je ${currentDate}. Vždy používej aktuální informace a datum.` 
+          },
+          { role: "user", content: message }
+        ],
         temperature: 0.7,
       }),
     });
@@ -182,6 +194,12 @@ async function callOpenAI(message: string, model: string, apiKey: string): Promi
 
 async function callAnthropic(message: string, model: string, apiKey: string): Promise<string> {
   try {
+    const currentDate = new Date().toLocaleDateString('cs-CZ', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -192,6 +210,7 @@ async function callAnthropic(message: string, model: string, apiKey: string): Pr
       body: JSON.stringify({
         model: model,
         max_tokens: 1024,
+        system: `Jsi užitečný AI asistent. Aktuální datum je ${currentDate}. Vždy používej aktuální informace a datum.`,
         messages: [{ role: "user", content: message }],
       }),
     });
@@ -217,6 +236,14 @@ async function callAnthropic(message: string, model: string, apiKey: string): Pr
 
 async function callGoogle(message: string, model: string, apiKey: string): Promise<string> {
   try {
+    const currentDate = new Date().toLocaleDateString('cs-CZ', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
+    const systemPrompt = `Jsi užitečný AI asistent. Aktuální datum je ${currentDate}. Vždy používej aktuální informace a datum.`;
+    
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
@@ -225,7 +252,12 @@ async function callGoogle(message: string, model: string, apiKey: string): Promi
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: message }] }],
+          contents: [{ 
+            parts: [
+              { text: systemPrompt },
+              { text: message }
+            ] 
+          }],
         }),
       }
     );
@@ -251,6 +283,12 @@ async function callGoogle(message: string, model: string, apiKey: string): Promi
 
 async function callMistral(message: string, model: string, apiKey: string): Promise<string> {
   try {
+    const currentDate = new Date().toLocaleDateString('cs-CZ', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
     const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -259,7 +297,13 @@ async function callMistral(message: string, model: string, apiKey: string): Prom
       },
       body: JSON.stringify({
         model: model,
-        messages: [{ role: "user", content: message }],
+        messages: [
+          { 
+            role: "system", 
+            content: `Jsi užitečný AI asistent. Aktuální datum je ${currentDate}. Vždy používej aktuální informace a datum.` 
+          },
+          { role: "user", content: message }
+        ],
       }),
     });
 
@@ -284,6 +328,12 @@ async function callMistral(message: string, model: string, apiKey: string): Prom
 
 async function callXAI(message: string, model: string, apiKey: string): Promise<string> {
   try {
+    const currentDate = new Date().toLocaleDateString('cs-CZ', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
     const response = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -292,7 +342,13 @@ async function callXAI(message: string, model: string, apiKey: string): Promise<
       },
       body: JSON.stringify({
         model: model,
-        messages: [{ role: "user", content: message }],
+        messages: [
+          { 
+            role: "system", 
+            content: `Jsi užitečný AI asistent. Aktuální datum je ${currentDate}. Vždy používej aktuální informace a datum.` 
+          },
+          { role: "user", content: message }
+        ],
       }),
     });
 
