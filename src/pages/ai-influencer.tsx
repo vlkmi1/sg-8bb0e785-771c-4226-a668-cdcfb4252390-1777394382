@@ -134,10 +134,21 @@ export default function AIInfluencer() {
       setVideoDialogOpen(false);
       setScript("");
       setActiveTab("videos");
+      
+      // Success notification
+      alert("✅ Video bylo úspěšně vygenerováno! Najdete ho v záložce Videa.");
     } catch (error) {
       console.error("Error generating video:", error);
-      if (error instanceof Error && error.message.includes("Insufficient credits")) {
-        alert("Nemáte dostatek kreditů. Kontaktujte administrátora.");
+      if (error instanceof Error) {
+        if (error.message.includes("Insufficient credits")) {
+          alert("❌ Nemáte dostatek kreditů. Potřebujete minimálně 10 kreditů.");
+        } else if (error.message.includes("API key")) {
+          alert("❌ Chyba konfigurace API. Kontaktujte administrátora.");
+        } else {
+          alert(`❌ Chyba při generování videa: ${error.message}`);
+        }
+      } else {
+        alert("❌ Neočekávaná chyba při generování videa.");
       }
     } finally {
       setLoading(false);
