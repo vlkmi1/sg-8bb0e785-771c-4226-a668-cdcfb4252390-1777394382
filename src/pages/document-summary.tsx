@@ -19,10 +19,13 @@ import { toast } from "@/hooks/use-toast";
 
 interface Summary {
   id: string;
-  title: string;
-  content: string;
-  summary: string;
+  file_name: string;
+  original_text: string;
+  summary_text: string;
   created_at: string;
+  model_used?: string;
+  summary_level?: string;
+  user_id?: string;
 }
 
 export default function DocumentSummary() {
@@ -196,7 +199,7 @@ export default function DocumentSummary() {
                       <Card key={summary.id} className="bg-muted/50">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base">
-                            {summary.title}
+                            {summary.file_name}
                           </CardTitle>
                           <p className="text-xs text-muted-foreground">
                             {new Date(summary.created_at).toLocaleDateString("cs-CZ")}
@@ -204,7 +207,7 @@ export default function DocumentSummary() {
                         </CardHeader>
                         <CardContent>
                           <p className="text-sm whitespace-pre-wrap">
-                            {summary.summary}
+                            {summary.summary_text}
                           </p>
                         </CardContent>
                       </Card>
