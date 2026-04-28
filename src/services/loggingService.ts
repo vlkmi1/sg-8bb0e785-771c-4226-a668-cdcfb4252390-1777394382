@@ -144,7 +144,7 @@ export const loggingService = {
       throw error;
     }
 
-    return (data || []) as LogEntry[];
+    return (data || []) as unknown as LogEntry[];
   },
 
   /**
@@ -158,7 +158,7 @@ export const loggingService = {
       throw error;
     }
 
-    return data as LogStatistics;
+    return data as unknown as LogStatistics;
   },
 
   /**
