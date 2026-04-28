@@ -1174,6 +1174,50 @@ export type Database = {
         }
         Relationships: []
       }
+      system_logs: {
+        Row: {
+          category: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          log_level: string
+          message: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          log_level: string
+          message: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          log_level?: string
+          message?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_subscriptions: {
         Row: {
           auto_renew: boolean
@@ -1360,6 +1404,7 @@ export type Database = {
         Args: { p_amount: number; p_description: string; p_user_id: string }
         Returns: undefined
       }
+      clean_old_logs: { Args: { days_to_keep?: number }; Returns: number }
       deduct_credits:
         | { Args: { amount: number; user_id: string }; Returns: number }
         | {
@@ -1367,6 +1412,7 @@ export type Database = {
             Returns: number
           }
       generate_referral_code: { Args: never; Returns: string }
+      get_log_statistics: { Args: { days?: number }; Returns: Json }
       get_user_credits: { Args: { p_user_id: string }; Returns: number }
       get_user_statistics: { Args: { p_user_id: string }; Returns: Json }
       increment_referral_click: {

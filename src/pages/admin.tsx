@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 import { UsersManagement } from "@/components/admin/UsersManagement";
+import { SystemLogs } from "@/components/admin/SystemLogs";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo", url: "https://platform.openai.com/api-keys", supportsBalance: true },
@@ -275,7 +276,7 @@ export default function Admin() {
 
         <main className="container mx-auto px-6 py-8">
           <Tabs defaultValue="api-keys" className="space-y-6">
-            <TabsList className="grid w-full max-w-5xl mx-auto grid-cols-7">
+            <TabsList className="grid w-full max-w-5xl mx-auto grid-cols-8">
               <TabsTrigger value="analytics">Analytika</TabsTrigger>
               <TabsTrigger value="api-keys">API klíče</TabsTrigger>
               <TabsTrigger value="subscriptions">Předplatná</TabsTrigger>
@@ -283,6 +284,7 @@ export default function Admin() {
               <TabsTrigger value="payments">Platby</TabsTrigger>
               <TabsTrigger value="affiliate">Affiliate</TabsTrigger>
               <TabsTrigger value="users">Uživatelé</TabsTrigger>
+              <TabsTrigger value="logs">Logy</TabsTrigger>
             </TabsList>
 
             <TabsContent value="analytics">
@@ -834,6 +836,10 @@ export default function Admin() {
                   <UsersManagement />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="logs" className="space-y-6">
+              <SystemLogs />
             </TabsContent>
           </Tabs>
         </main>
