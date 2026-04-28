@@ -25,8 +25,11 @@ export type SocialAccount = {
 };
 
 async function getUserId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("User not authenticated");
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    console.error("Auth error:", error);
+    throw new Error("User not authenticated");
+  }
   return user.id;
 }
 
@@ -108,15 +111,20 @@ export const socialPostsService = {
   },
 
   async getAccounts(): Promise<SocialAccount[]> {
-    const userId = await getUserId();
+    try {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from("social_accounts")
+        .select("*")
+        .eq("user_id", userId);
 
-    const { data, error } = await supabase
-      .from("social_accounts")
-      .select("*")
-      .eq("user_id", userId);
-
-    if (error) throw error;
-    return data as unknown as SocialAccount[];
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error getting social accounts:", error);
+      // Return empty array instead of throwing to prevent page crash
+      return [];
+    }
   },
 
   async createAccount(account: {

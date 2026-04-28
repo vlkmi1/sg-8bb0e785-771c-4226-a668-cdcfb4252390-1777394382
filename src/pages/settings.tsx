@@ -75,6 +75,8 @@ export default function Settings() {
       setSocialAccounts(accounts);
     } catch (error) {
       console.error("Error loading social accounts:", error);
+      // Don't crash the page, just show empty list
+      setSocialAccounts([]);
     }
   };
 
