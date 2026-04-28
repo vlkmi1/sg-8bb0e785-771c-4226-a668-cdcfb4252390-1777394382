@@ -4,174 +4,36 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
-  Brain, 
-  ImageIcon, 
-  Video, 
-  Mic, 
-  Share2, 
-  User, 
-  Music,
-  Sparkles,
+  MessageSquare, 
+  Wand2, 
+  Crown, 
+  Sparkles, 
   ArrowRight,
-  Check,
-  Zap,
-  Globe,
-  Shield,
+  Video,
+  Mic,
+  Share2,
+  User,
+  Music,
+  FileText,
+  Image as ImageIcon,
+  Megaphone,
+  Edit3,
   Star,
-  TrendingUp,
-  Users,
-  Crown,
-  ChevronRight,
   Bot,
-  Coins,
-  DollarSign
+  TrendingUp,
+  Zap,
+  Shield,
+  ChevronDown
 } from "lucide-react";
+import { SEO } from "@/components/SEO";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { supabase } from "@/integrations/supabase/client";
 
-const FEATURES = [
-  {
-    icon: Brain,
-    title: "AI Chat",
-    description: "Konverzujte s nejpokročilejšími AI modely světa",
-    models: "GPT-4, Claude 3, Gemini, Nano Bannana",
-    gradient: "from-primary/20 to-secondary/20",
-    color: "text-primary"
-  },
-  {
-    icon: ImageIcon,
-    title: "Generování obrázků",
-    description: "Vytvořte úžasné vizuály pomocí AI za sekundy",
-    models: "DALL-E, Stable Diffusion, Midjourney",
-    gradient: "from-accent/20 to-primary/20",
-    color: "text-accent"
-  },
-  {
-    icon: Video,
-    title: "Generování videí",
-    description: "Produkujte profesionální videa s AI",
-    models: "RunwayML, Pika Labs, Stability Video",
-    gradient: "from-secondary/20 to-accent/20",
-    color: "text-secondary"
-  },
-  {
-    icon: Mic,
-    title: "Hlasový chat",
-    description: "Mluvte s AI v reálném čase jako s člověkem",
-    models: "OpenAI Whisper, ElevenLabs, Google TTS",
-    gradient: "from-primary/20 to-accent/20",
-    color: "text-primary"
-  },
-  {
-    icon: Share2,
-    title: "Social Media Manager",
-    description: "Automatizujte příspěvky na 6 sociálních sítích",
-    models: "Facebook, Instagram, LinkedIn, Twitter, YouTube, TikTok",
-    gradient: "from-secondary/20 to-primary/20",
-    color: "text-secondary"
-  },
-  {
-    icon: User,
-    title: "AI Influencer",
-    description: "Vytvořte vlastního virtuálního influencera",
-    models: "HeyGen, D-ID, Synthesia, Runway Gen-2",
-    gradient: "from-accent/20 to-secondary/20",
-    color: "text-accent"
-  },
-  {
-    icon: Music,
-    title: "Music Generator",
-    description: "Komponujte originální hudbu pomocí AI",
-    models: "Suno AI, MusicGen, Mubert, AIVA",
-    gradient: "from-primary/20 to-secondary/20",
-    color: "text-primary"
-  },
-];
-
-const STATS = [
-  { value: "21+", label: "AI Modelů" },
-  { value: "7", label: "Modulů" },
-  { value: "6", label: "Sociálních sítí" },
-  { value: "24/7", label: "Dostupnost" },
-];
-
-const PRICING_TIERS = [
-  {
-    name: "Free",
-    price: "0",
-    period: "měsíc",
-    credits: "50",
-    features: [
-      "AI Chat",
-      "50 kreditů/měsíc",
-      "Základní modely",
-      "Email podpora"
-    ],
-    cta: "Začít zdarma",
-    popular: false
-  },
-  {
-    name: "Pro",
-    price: "449",
-    period: "měsíc",
-    credits: "300",
-    features: [
-      "Všechny funkce Free",
-      "300 kreditů/měsíc",
-      "Generování obrázků & videí",
-      "Hlasový chat",
-      "Social Media Manager",
-      "Prioritní podpora"
-    ],
-    cta: "Začít teď",
-    popular: true
-  },
-  {
-    name: "Enterprise",
-    price: "1199",
-    period: "měsíc",
-    credits: "∞",
-    features: [
-      "Všechny funkce Pro",
-      "Neomezené kredity",
-      "AI Influencer",
-      "Music Generator",
-      "Všechny premium modely",
-      "Dedikovaná podpora"
-    ],
-    cta: "Kontaktovat",
-    popular: false
-  },
-];
-
-const BENEFITS = [
-  {
-    icon: Zap,
-    title: "Bleskově rychlé",
-    description: "Všechny AI modely v jednom místě bez přepínání"
-  },
-  {
-    icon: Shield,
-    title: "100% bezpečné",
-    description: "Vaše data jsou šifrována a nikdy se nesdílí"
-  },
-  {
-    icon: Globe,
-    title: "Vždy dostupné",
-    description: "Cloudová platforma dostupná odkudkoliv, kdykoliv"
-  },
-  {
-    icon: TrendingUp,
-    title: "Průběžně vylepšováno",
-    description: "Každý týden nové funkce a AI modely"
-  },
-];
-
 export default function Home() {
   const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -179,389 +41,524 @@ export default function Home() {
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    setIsLoggedIn(!!session);
-    setLoading(false);
+    setIsAuthenticated(!!session);
   };
 
-  const handleCTA = () => {
-    if (isLoggedIn) {
-      router.push("/dashboard");
-    } else {
-      router.push("/auth/register");
+  const features = [
+    {
+      icon: MessageSquare,
+      title: "AI Chat",
+      description: "Komunikujte s GPT-4, Claude, Gemini a dalšími modely",
+      href: "/chat",
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10"
+    },
+    {
+      icon: Wand2,
+      title: "Generování obrázků",
+      description: "Vytvářejte úžasné AI obrázky pomocí DALL-E a Stable Diffusion",
+      href: "/generate",
+      color: "text-purple-500",
+      bgColor: "bg-purple-500/10"
+    },
+    {
+      icon: Video,
+      title: "AI Video",
+      description: "Generujte virální krátká videa pro sociální sítě",
+      href: "/viral-videos",
+      color: "text-pink-500",
+      bgColor: "bg-pink-500/10"
+    },
+    {
+      icon: User,
+      title: "AI Influencer",
+      description: "Vytvořte si vlastního AI influencera pro sociální sítě",
+      href: "/ai-influencer",
+      color: "text-rose-500",
+      bgColor: "bg-rose-500/10"
+    },
+    {
+      icon: Share2,
+      title: "Sociální příspěvky",
+      description: "Automaticky generujte přitažlivé příspěvky pro všechny platformy",
+      href: "/social-posts",
+      color: "text-indigo-500",
+      bgColor: "bg-indigo-500/10"
+    },
+    {
+      icon: Mic,
+      title: "Voice Chat",
+      description: "Mluvte s AI pomocí hlasového rozhraní",
+      href: "/voice-chat",
+      color: "text-green-500",
+      bgColor: "bg-green-500/10"
+    },
+    {
+      icon: Music,
+      title: "AI Hudba",
+      description: "Vytvářejte originální hudbu pomocí umělé inteligence",
+      href: "/music-generate",
+      color: "text-orange-500",
+      bgColor: "bg-orange-500/10"
+    },
+    {
+      icon: Bot,
+      title: "AI Asistenti",
+      description: "Vytvořte si specializované AI asistenty pro různé úkoly",
+      href: "/assistants",
+      color: "text-cyan-500",
+      bgColor: "bg-cyan-500/10"
+    },
+    {
+      icon: FileText,
+      title: "Sumarizace dokumentů",
+      description: "Vytvořte stručné shrnutí dlouhých textů",
+      href: "/document-summary",
+      color: "text-amber-500",
+      bgColor: "bg-amber-500/10"
+    },
+    {
+      icon: Megaphone,
+      title: "Generátor reklam",
+      description: "Vytvářejte efektivní reklamní kampaně pomocí AI",
+      href: "/ad-generator",
+      color: "text-red-500",
+      bgColor: "bg-red-500/10"
+    },
+    {
+      icon: Edit3,
+      title: "Editor obrázků",
+      description: "Upravujte a vylepšujte obrázky pomocí AI",
+      href: "/image-editor",
+      color: "text-violet-500",
+      bgColor: "bg-violet-500/10"
+    },
+    {
+      icon: Star,
+      title: "Oblíbené prompty",
+      description: "Ukládejte a sdílejte své nejlepší AI prompty",
+      href: "/favorite-prompts",
+      color: "text-yellow-500",
+      bgColor: "bg-yellow-500/10"
     }
-  };
+  ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Načítání...</div>
-      </div>
-    );
-  }
+  const pricing = [
+    {
+      name: "Free",
+      price: "0",
+      period: "zdarma navždy",
+      credits: "50",
+      features: [
+        "Přístup ke všem AI modelům",
+        "50 kreditů měsíčně",
+        "Omezená historie (7 dní)",
+        "Základní podpora"
+      ],
+      cta: "Začít zdarma",
+      highlighted: false
+    },
+    {
+      name: "Basic",
+      price: "149",
+      period: "měsíčně",
+      credits: "500",
+      features: [
+        "Vše z Free plánu",
+        "500 kreditů měsíčně",
+        "Neomezená historie",
+        "Prioritní podpora"
+      ],
+      cta: "Vybrat Basic",
+      highlighted: false
+    },
+    {
+      name: "Pro",
+      price: "499",
+      period: "měsíčně",
+      credits: "2000",
+      features: [
+        "Vše z Basic plánu",
+        "2000 kreditů měsíčně",
+        "Pokročilé funkce",
+        "API přístup"
+      ],
+      cta: "Vybrat Pro",
+      highlighted: true
+    },
+    {
+      name: "Business",
+      price: "999",
+      period: "měsíčně",
+      credits: "5000",
+      features: [
+        "Vše z Pro plánu",
+        "5000 kreditů měsíčně",
+        "Týmové funkce",
+        "Dedikovaná podpora"
+      ],
+      cta: "Vybrat Business",
+      highlighted: false
+    }
+  ];
+
+  const faq = [
+    {
+      question: "Co jsou kredity a jak fungují?",
+      answer: "Kredity jsou jednotky, které spotřebováváte při používání AI funkcí. Jeden kredit odpovídá přibližně jedné AI operaci (zpráva, obrázek, atd.). Každý měsíc dostanete kredity podle vašeho předplatného."
+    },
+    {
+      question: "Mohu kredity přenést do dalšího měsíce?",
+      answer: "Ano! Nevyužité kredity z měsíčního předplatného se přenášejí do dalšího měsíce. Jednorázově zakoupené kredity platí navždy."
+    },
+    {
+      question: "Jaké AI modely jsou k dispozici?",
+      answer: "Podporujeme nejpopulárnější AI modely včetně GPT-4, GPT-3.5, Claude 3, Gemini Pro, DALL-E 3, Stable Diffusion a další. Pravidelně přidáváme nové modely."
+    },
+    {
+      question: "Můžu zrušit předplatné kdykoliv?",
+      answer: "Ano, předplatné můžete kdykoli zrušit. Kredity vám zůstanou k dispozici až do konce aktuálního fakturačního období."
+    },
+    {
+      question: "Je k dispozici firemní verze?",
+      answer: "Ano! Business a Enterprise plány nabízejí pokročilé funkce pro týmy včetně sdíleného kreditu, správy uživatelů a dedikované podpory."
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl">
-              <Brain className="h-6 w-6 text-white" />
+    <>
+      <SEO 
+        title="kAIkus - Všechny AI nástroje na jednom místě"
+        description="Generujte text, obrázky, videa, hudbu a další pomocí nejlepších AI modelů. GPT-4, Claude, DALL-E, Stable Diffusion a více."
+      />
+      
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+        {/* Header */}
+        <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-primary to-accent rounded-xl">
+                  <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <h1 className="text-lg sm:text-xl font-heading font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  kAIkus
+                </h1>
+              </Link>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <ThemeSwitch />
+                {isAuthenticated ? (
+                  <Button onClick={() => router.push("/dashboard")} size="sm" className="text-xs sm:text-sm">
+                    Dashboard
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" onClick={() => router.push("/auth/login")} size="sm" className="text-xs sm:text-sm hidden sm:inline-flex">
+                      Přihlásit
+                    </Button>
+                    <Button onClick={() => router.push("/auth/register")} size="sm" className="text-xs sm:text-sm">
+                      Registrace
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-            <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              kAIkus
-            </h1>
           </div>
-          <div className="flex items-center gap-4">
-            <ThemeSwitch />
-            {isLoggedIn ? (
-              <Button onClick={() => router.push("/dashboard")}>
-                Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" onClick={() => router.push("/auth/login")}>
-                  Přihlásit se
-                </Button>
-                <Button onClick={() => router.push("/auth/register")}>
-                  Začít zdarma
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-32">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 -z-10" />
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-10 -z-10" />
-        
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <Badge variant="secondary" className="mb-4">
-              <Sparkles className="h-3 w-3 mr-1" />
-              21+ AI modelů na jednom místě
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20 lg:py-32">
+          <div className="text-center max-w-4xl mx-auto space-y-6 sm:space-y-8">
+            <Badge className="bg-accent/20 text-accent hover:bg-accent/30 text-xs sm:text-sm px-3 sm:px-4 py-1">
+              <Zap className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+              Všechny AI nástroje na jednom místě
             </Badge>
             
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-tight">
-              Váš kompletní{" "}
-              <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                AI ekosystém
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-tight">
+              Vytvářejte s pomocí <br className="hidden sm:inline" />
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">
+                umělé inteligence
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-              Spojte sílu GPT-4, Claude, Gemini, DALL-E, Stable Diffusion a dalších špičkových AI modelů v jediné platformě.
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
+              Generujte text, obrázky, videa, hudbu a další pomocí nejlepších AI modelů.
+              Vše z jednoho místa, jednoduše a rychle.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" onClick={handleCTA} className="text-lg h-14 px-8">
-                <Sparkles className="mr-2 h-5 w-5" />
-                Začít zdarma
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="text-lg h-14 px-8">
-                Prozkoumat funkce
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4 px-4 sm:px-0">
+              {isAuthenticated ? (
+                <Button 
+                  size="lg" 
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full sm:w-auto text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-8"
+                >
+                  Přejít na Dashboard
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    size="lg" 
+                    onClick={() => router.push("/auth/register")}
+                    className="w-full sm:w-auto text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-8"
+                  >
+                    Začít zdarma
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={() => router.push("/pricing")}
+                    className="w-full sm:w-auto text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-8"
+                  >
+                    Zobrazit ceník
+                  </Button>
+                </>
+              )}
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-12 max-w-3xl mx-auto">
-              {STATS.map((stat, idx) => (
-                <div key={idx} className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 pt-8 text-xs sm:text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-accent" />
+                <span>Bezpečné a šifrované</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-accent" />
+                <span>Okamžité výsledky</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-accent" />
+                <span>Neustále aktualizováno</span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-muted/30">
-        <div className="container mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <Badge variant="secondary" className="mb-4">
-              <Star className="h-3 w-3 mr-1" />
-              7 výkonných modulů
-            </Badge>
-            <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-              Všechno co potřebujete pro AI práci
+        {/* Features Grid */}
+        <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold mb-3 sm:mb-4">
+              Nástroje pro <span className="text-primary">každou potřebu</span>
             </h2>
-            <p className="text-lg text-muted-foreground">
-              Od konverzací přes tvorbu obsahu až po automatizaci sociálních sítí
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
+              Od chatování s AI přes tvorbu obsahu až po generování hudby – vše na jednom místě
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto">
-            {FEATURES.map((feature, idx) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={idx} className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50 overflow-hidden">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity -z-10`} />
-                  <CardHeader>
-                    <div className={`p-3 bg-gradient-to-br ${feature.gradient} rounded-xl w-fit mb-4`}>
-                      <Icon className={`h-8 w-8 ${feature.color}`} />
-                    </div>
-                    <CardTitle className="font-heading text-xl">{feature.title}</CardTitle>
-                    <CardDescription className="text-base">{feature.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">
-                      <span className="font-semibold">Podporované modely:</span>
-                      <p className="mt-1">{feature.models}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-6">
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
-            {BENEFITS.map((benefit, idx) => {
-              const Icon = benefit.icon;
-              return (
-                <div key={idx} className="text-center space-y-3">
-                  <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center">
-                    <Icon className="h-8 w-8 text-primary" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {features.map((feature, index) => (
+              <Card 
+                key={index}
+                className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                onClick={() => isAuthenticated ? router.push(feature.href) : router.push("/auth/register")}
+              >
+                <CardHeader className="space-y-3 sm:space-y-4">
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${feature.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <feature.icon className={`h-6 w-6 sm:h-7 sm:w-7 ${feature.color}`} />
                   </div>
-                  <h3 className="font-heading font-semibold text-lg">{benefit.title}</h3>
-                  <p className="text-sm text-muted-foreground">{benefit.description}</p>
-                </div>
-              );
-            })}
+                  <CardTitle className="text-base sm:text-lg font-heading">{feature.title}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{feature.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="ghost" size="sm" className="w-full group-hover:bg-primary/10 text-xs sm:text-sm">
+                    Vyzkoušet
+                    <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Pricing Section */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <Badge variant="secondary" className="mb-4">
-              <Crown className="h-3 w-3 mr-1" />
-              Flexibilní ceny
-            </Badge>
-            <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-              Vyberte si plán podle vašich potřeb
+        {/* Pricing Section */}
+        <section id="pricing" className="container mx-auto px-4 sm:px-6 py-12 sm:py-20 bg-muted/30">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold mb-3 sm:mb-4">
+              Jednoduché a <span className="text-primary">transparentní</span> ceny
             </h2>
-            <p className="text-lg text-muted-foreground">
-              Začněte zdarma nebo získejte plný přístup k AI superschopnostem
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
+              Vyberte si plán, který vám nejlépe vyhovuje. Bez skrytých poplatků.
             </p>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-3 max-w-6xl mx-auto">
-            {PRICING_TIERS.map((tier, idx) => (
-              <Card key={idx} className={`relative ${tier.popular ? 'border-primary border-2 shadow-2xl scale-105' : ''}`}>
-                {tier.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-gradient-to-r from-primary to-secondary text-white">
-                      <Star className="h-3 w-3 mr-1" />
-                      Nejoblíbenější
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-7xl mx-auto">
+            {pricing.map((plan, index) => (
+              <Card 
+                key={index}
+                className={`relative ${plan.highlighted ? 'border-primary shadow-xl scale-100 sm:scale-105' : ''}`}
+              >
+                {plan.highlighted && (
+                  <div className="absolute -top-3 sm:-top-4 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-gradient-to-r from-primary to-accent text-white px-3 sm:px-4 py-1 text-xs sm:text-sm">
+                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      Nejpopulárnější
                     </Badge>
                   </div>
                 )}
-                <CardHeader className="text-center pb-8">
-                  <CardTitle className="text-2xl font-heading mb-2">{tier.name}</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-5xl font-bold">{tier.price}</span>
-                    <span className="text-muted-foreground ml-2">Kč/{tier.period}</span>
+                <CardHeader className="text-center pt-6 sm:pt-8">
+                  <CardTitle className="text-lg sm:text-xl font-heading mb-2">{plan.name}</CardTitle>
+                  <div className="space-y-1 sm:space-y-2">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-3xl sm:text-4xl lg:text-5xl font-bold">{plan.price}</span>
+                      <span className="text-sm sm:text-base text-muted-foreground">Kč</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{plan.period}</p>
                   </div>
-                  <div className="text-sm text-muted-foreground mt-2">
-                    {tier.credits} kreditů/měsíc
-                  </div>
+                  <Badge variant="secondary" className="mt-3 sm:mt-4 text-xs sm:text-sm">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {plan.credits} kreditů/měsíc
+                  </Badge>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <ul className="space-y-3">
-                    {tier.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
+                <CardContent className="space-y-4 sm:space-y-6">
+                  <ul className="space-y-2 sm:space-y-3">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                        <div className="mt-0.5 h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-accent text-xs sm:text-sm">✓</span>
+                        </div>
+                        <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
                   <Button 
-                    className="w-full" 
-                    variant={tier.popular ? "default" : "outline"}
-                    onClick={handleCTA}
+                    className="w-full text-xs sm:text-sm h-10 sm:h-11"
+                    variant={plan.highlighted ? "default" : "outline"}
+                    onClick={() => isAuthenticated ? router.push("/pricing") : router.push("/auth/register")}
                   >
-                    {tier.cta}
+                    {plan.cta}
                   </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <p className="text-center text-sm text-muted-foreground mt-8">
-            Všechny plány zahrnují přístup k základním funkcím. Kredity lze kdykoliv dobít.
-          </p>
-        </div>
-      </section>
-
-      {/* Affiliate Program Section */}
-      <section className="py-20 px-6 bg-gradient-to-br from-accent/10 to-primary/10">
-        <div className="container mx-auto max-w-4xl text-center space-y-6">
-          <Badge className="bg-accent text-lg px-4 py-2">
-            <DollarSign className="h-5 w-5 mr-2" />
-            Vydělávejte s námi
-          </Badge>
-          <h2 className="text-4xl md:text-5xl font-heading font-bold">
-            Affiliate Program
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Sdílejte kAIkus a získejte provizi z každé platby vašich referrálů
-          </p>
-          
-          <div className="grid gap-6 md:grid-cols-2 mt-12 text-left">
-            <Card className="border-2 border-accent/50">
-              <CardHeader>
-                <div className="text-4xl mb-2">💰</div>
-                <CardTitle className="font-heading">20% z předplatného</CardTitle>
-                <CardDescription>
-                  Získejte 20% provizi z každé platby předplatného vašich referovaných uživatelů
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 border-primary/50">
-              <CardHeader>
-                <div className="text-4xl mb-2">💎</div>
-                <CardTitle className="font-heading">15% z kreditů</CardTitle>
-                <CardDescription>
-                  15% provize z každého nákupu kreditů vašich referrálů
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-            <Button size="lg" className="bg-accent hover:bg-accent/90" asChild>
-              <Link href="/auth/register">
-                <Share2 className="h-5 w-5 mr-2" />
-                Začít vydělávat
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/affiliate">
-                Zjistit více
-              </Link>
+          <div className="text-center mt-8 sm:mt-12">
+            <Button 
+              variant="link" 
+              onClick={() => router.push("/pricing")}
+              className="text-xs sm:text-sm"
+            >
+              Zobrazit kompletní ceník a jednorázové balíčky
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
+        </section>
 
-          <div className="mt-8 p-6 bg-muted/50 rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              ✓ Bez minimálního počtu referrálů • ✓ Výběr od 500 Kč • ✓ Transparentní tracking • ✓ Platba do 7 dnů
+        {/* FAQ Section */}
+        <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold mb-3 sm:mb-4">
+              Často kladené <span className="text-primary">otázky</span>
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
+              Máte dotazy? Máme odpovědi.
             </p>
           </div>
-        </div>
-      </section>
 
-      {/* Final CTA */}
-      <section className="py-20 px-6 bg-gradient-to-r from-primary via-secondary to-primary">
-        <div className="container mx-auto px-6">
-          <Card className="max-w-4xl mx-auto border-2 border-primary/20 shadow-2xl">
-            <CardContent className="p-12 text-center space-y-6">
-              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mb-6">
-                <Sparkles className="h-10 w-10 text-white" />
-              </div>
-              
-              <h2 className="text-3xl md:text-4xl font-heading font-bold">
-                Připraveni revolucionizovat svou práci s AI?
+          <Accordion type="single" collapsible className="max-w-3xl mx-auto space-y-3 sm:space-y-4">
+            {faq.map((item, index) => (
+              <AccordionItem key={index} value={`item-${index}`} className="border rounded-lg px-4 sm:px-6 bg-card">
+                <AccordionTrigger className="text-sm sm:text-base text-left py-4 sm:py-5 hover:no-underline">
+                  <span className="font-semibold pr-4">{item.question}</span>
+                </AccordionTrigger>
+                <AccordionContent className="text-xs sm:text-sm text-muted-foreground pb-4 sm:pb-5">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+
+        {/* CTA Section */}
+        <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20">
+          <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-primary/10 border-primary/20">
+            <CardContent className="text-center py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold mb-4 sm:mb-6">
+                Připraveni začít s AI?
               </h2>
-              
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Připojte se k tisícům uživatelů, kteří už využívají kAIkus pro zvýšení produktivity a kreativity
+              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
+                Zaregistrujte se zdarma a získejte 50 kreditů na vyzkoušení všech funkcí
               </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Button size="lg" onClick={handleCTA} className="text-lg h-14 px-8">
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Začít používat kAIkus
-                </Button>
-                <Button size="lg" variant="outline" onClick={() => router.push("/pricing")} className="text-lg h-14 px-8">
-                  Zobrazit ceny
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
+              <Button 
+                size="lg" 
+                onClick={() => router.push("/auth/register")}
+                className="text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-8"
+              >
+                Začít zdarma
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
             </CardContent>
           </Card>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="border-t bg-muted/30 py-12">
-        <div className="container mx-auto px-6">
-          <div className="grid gap-8 md:grid-cols-4">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl">
-                  <Brain className="h-5 w-5 text-white" />
+        {/* Footer */}
+        <footer className="border-t bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12 mb-8">
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-gradient-to-br from-primary to-accent rounded-lg">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-lg font-heading font-bold">kAIkus</span>
                 </div>
-                <h3 className="text-lg font-heading font-bold">kAIkus</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Váš univerzální AI nástroj pro tvorbu obsahu, generování obrázků, videí a mnoho dalšího.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Kompletní AI platforma pro moderní tvůrce a podnikatele.
-              </p>
+
+              <div>
+                <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Produkty</h3>
+                <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
+                  <li><Link href="/chat" className="hover:text-primary transition-colors">AI Chat</Link></li>
+                  <li><Link href="/generate" className="hover:text-primary transition-colors">Generování obrázků</Link></li>
+                  <li><Link href="/viral-videos" className="hover:text-primary transition-colors">AI Video</Link></li>
+                  <li><Link href="/social-posts" className="hover:text-primary transition-colors">Sociální příspěvky</Link></li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Firma</h3>
+                <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
+                  <li><Link href="/pricing" className="hover:text-primary transition-colors">Ceník</Link></li>
+                  <li><Link href="/affiliate" className="hover:text-primary transition-colors">Affiliate program</Link></li>
+                  <li><Link href="/terms" className="hover:text-primary transition-colors">Podmínky použití</Link></li>
+                  <li><Link href="/privacy-policy" className="hover:text-primary transition-colors">Ochrana soukromí</Link></li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Podpora</h3>
+                <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
+                  <li><Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link></li>
+                  <li><Link href="/settings" className="hover:text-primary transition-colors">Nastavení</Link></li>
+                  <li><a href="mailto:support@kaikus.cz" className="hover:text-primary transition-colors">Kontakt</a></li>
+                </ul>
+              </div>
             </div>
 
-            <div>
-              <h4 className="font-semibold mb-4">Produkt</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#features" className="hover:text-primary transition-colors">Funkce</a></li>
-                <li><Link href="/pricing" className="hover:text-primary transition-colors">Ceny</Link></li>
-                <li><Link href="/auth/register" className="hover:text-primary transition-colors">Začít zdarma</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Moduly</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>AI Chat</li>
-                <li>Generování obrázků</li>
-                <li>Generování videí</li>
-                <li>Hlasový chat</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Podpora</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Dokumentace</li>
-                <li>Email podpora</li>
-                <li>Časté otázky</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-              <h4 className="font-semibold mb-4">Právní</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/terms" className="hover:text-primary transition-colors">Obchodní podmínky</Link></li>
-                <li><Link href="/privacy-policy" className="hover:text-primary transition-colors">Ochrana soukromí</Link></li>
-              </ul>
+            <div className="border-t pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-muted-foreground">
+              <p>© 2026 kAIkus. Všechna práva vyhrazena.</p>
+              <div className="flex items-center gap-4 sm:gap-6">
+                <Link href="/terms" className="hover:text-primary transition-colors">Podmínky</Link>
+                <Link href="/privacy-policy" className="hover:text-primary transition-colors">Soukromí</Link>
+              </div>
             </div>
           </div>
+        </footer>
+      </div>
 
-          <div className="border-t mt-12 pt-8 text-center text-sm text-muted-foreground">
-            <p>© 2026 kAIkus. Všechna práva vyhrazena.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
+      <style jsx global>{`
+        @keyframes gradient {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-gradient {
+          background-size: 200% 200%;
+          animation: gradient 3s ease infinite;
+        }
+      `}</style>
+    </>
   );
 }
