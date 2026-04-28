@@ -1,56 +1,29 @@
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Settings, Coins, Home } from "lucide-react";
+import { Home } from "lucide-react";
+import { UserMenu } from "@/components/UserMenu";
 
 interface ModuleHeaderProps {
-  credits?: number;
-  showBackButton?: boolean;
+  credits: number;
 }
 
-export function ModuleHeader({ credits, showBackButton = true }: ModuleHeaderProps) {
+export function ModuleHeader({ credits }: ModuleHeaderProps) {
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          {showBackButton && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/dashboard")}
-            >
-              <Home className="h-4 w-4 mr-2" />
-              Dashboard
-            </Button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Credits Display */}
-          {typeof credits === "number" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/credits")}
-              className="gap-2"
-            >
-              <Coins className="h-4 w-4 text-amber-500" />
-              <span className="font-semibold">{credits}</span>
-              <span className="text-muted-foreground">kreditů</span>
-            </Button>
-          )}
-
-          {/* Settings Button */}
+    <header className="border-b bg-card sticky top-0 z-10">
+      <div className="container mx-auto px-6 py-3">
+        <div className="flex items-center justify-between">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/settings")}
+            variant="ghost"
+            onClick={() => router.push("/dashboard")}
+            className="gap-2"
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Nastavení
+            <Home className="h-4 w-4" />
+            Dashboard
           </Button>
+          
+          <UserMenu credits={credits} />
         </div>
       </div>
     </header>

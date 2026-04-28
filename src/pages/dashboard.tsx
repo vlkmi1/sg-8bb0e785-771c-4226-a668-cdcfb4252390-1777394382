@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { apiKeysService, type AIProvider } from "@/services/apiKeysService";
 import { CreditPurchaseDialog } from "@/components/CreditPurchaseDialog";
 import { useToast } from "@/hooks/use-toast";
+import { UserMenu } from "@/components/UserMenu";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -203,93 +204,11 @@ export default function Dashboard() {
                 <div className="p-2 bg-primary/10 rounded-xl">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <h1 className="text-xl font-heading font-bold">Dashboard</h1>
+                <h1 className="text-lg font-heading font-bold">kAIkus Dashboard</h1>
               </div>
-              <div className="flex items-center gap-3">
-                <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`gap-2 cursor-pointer ${subscriptionService.getPlanBadgeColor(currentTier)}`}
-                    >
-                      <Crown className="h-4 w-4" />
-                      <span className="font-semibold">{subscriptionService.getPlanDisplayName(currentTier)}</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle className="font-heading text-2xl">Změnit předplatné</DialogTitle>
-                      <DialogDescription>
-                        Vyberte plán, který nejlépe vyhovuje vašim potřebám
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 py-4">
-                      {availablePlans.map((plan) => {
-                        const isCurrent = plan.id === subscription?.plan_id;
-                        const features = Array.isArray(plan.features) ? plan.features : [];
-                        
-                        return (
-                          <Card key={plan.id} className={isCurrent ? "border-primary" : ""}>
-                            <CardHeader>
-                              <div className="flex items-center justify-between mb-2">
-                                <Badge className={subscriptionService.getPlanBadgeColor(plan.tier)}>
-                                  {subscriptionService.getPlanDisplayName(plan.tier)}
-                                </Badge>
-                                {isCurrent && (
-                                  <Badge variant="outline" className="text-xs">
-                                    Aktuální
-                                  </Badge>
-                                )}
-                              </div>
-                              <CardTitle className="text-2xl font-heading">
-                                {plan.price > 0 ? `${plan.price} ${plan.currency}` : "Zdarma"}
-                              </CardTitle>
-                              <CardDescription className="text-xs">
-                                {plan.billing_period === "monthly" ? "měsíčně" : "ročně"}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <div className="space-y-2">
-                                <p className="text-sm font-semibold">
-                                  {plan.credits_included} kreditů/{plan.billing_period === "monthly" ? "měsíc" : "rok"}
-                                </p>
-                                <ul className="text-xs space-y-1 text-muted-foreground">
-                                  {features.map((feature: any, idx: number) => (
-                                    <li key={idx}>✓ {feature}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                              <Button
-                                className="w-full"
-                                variant={isCurrent ? "outline" : "default"}
-                                disabled={isCurrent || upgradingPlan}
-                                onClick={() => handleUpgradePlan(plan.id)}
-                              >
-                                {isCurrent ? "Aktuální plán" : upgradingPlan ? "Měním..." : "Vybrat plán"}
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCreditDialog(true)}
-                  className="gap-2 hover:bg-primary/10 transition-colors cursor-pointer"
-                >
-                  <Coins className="h-4 w-4 text-primary" />
-                  <span className="font-semibold">{credits.toLocaleString("cs-CZ")}</span>
-                  <span className="text-muted-foreground text-xs">kreditů</span>
-                </Button>
+              <div className="flex items-center gap-2">
                 <ThemeSwitch />
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
+                <UserMenu credits={credits} />
               </div>
             </div>
           </div>
