@@ -37,7 +37,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider attribute="class" defaultTheme="light">
+      <ThemeProvider>
         <Component {...pageProps} />
         <Toaster />
         <InstallPWA />
