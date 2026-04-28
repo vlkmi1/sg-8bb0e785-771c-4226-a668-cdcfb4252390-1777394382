@@ -17,6 +17,7 @@ import { creditsService } from "@/services/creditsService";
 import { aiInfluencerService, type AIInfluencer, type InfluencerVideo, type VoiceType, type Personality } from "@/services/aiInfluencerService";
 import { supabase } from "@/integrations/supabase/client";
 import { InfluencerAvatarLibrary } from "@/components/InfluencerAvatarLibrary";
+import { VideoDetailDialog } from "@/components/VideoDetailDialog";
 
 const VOICE_TYPES = [
   { value: "neutral", label: "Neutrální", description: "Vyvážený a příjemný hlas" },
@@ -45,6 +46,8 @@ export default function AIInfluencer() {
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [avatarLibraryOpen, setAvatarLibraryOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<InfluencerVideo | null>(null);
+  const [videoDetailOpen, setVideoDetailOpen] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -198,6 +201,23 @@ export default function AIInfluencer() {
     setVoiceType(template.voiceType);
     setPersonality(template.personality);
     setLanguage("cs");
+  };
+
+  const handleVideoClick = (video: InfluencerVideo) => {
+    setSelectedVideo(video);
+    setVideoDetailOpen(true);
+  };
+
+  const handleUseInSocialMedia = (video: InfluencerVideo) => {
+    // Store video data in localStorage for cross-page transfer
+    localStorage.setItem("pendingSocialVideo", JSON.stringify({
+      videoUrl: video.video_url,
+      script: video.script,
+      influencerName: video.ai_influencers?.name,
+    }));
+    
+    // Navigate to social posts
+    router.push("/social-posts");
   };
 
   return (
@@ -454,7 +474,11 @@ export default function AIInfluencer() {
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {videos.map((video) => (
-                        <Card key={video.id} className="overflow-hidden">
+                        <Card 
+                          key={video.id} 
+                          className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                          onClick={() => handleVideoClick(video)}
+                        >
                           <div className="aspect-video bg-muted relative flex items-center justify-center">
                             <Play className="h-12 w-12 text-muted-foreground" />
                             {video.duration && (
@@ -485,7 +509,10 @@ export default function AIInfluencer() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteVideo(video.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteVideo(video.id);
+                                }}
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
@@ -565,6 +592,14 @@ export default function AIInfluencer() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Video Detail Dialog */}
+          <VideoDetailDialog
+            video={selectedVideo}
+            open={videoDetailOpen}
+            onOpenChange={setVideoDetailOpen}
+            onUseInSocialMedia={handleUseInSocialMedia}
+          />
 
           {/* Avatar Library Dialog */}
           <InfluencerAvatarLibrary

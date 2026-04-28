@@ -56,7 +56,27 @@ export default function SocialPosts() {
   const [imageSize, setImageSize] = useState("1024x1024");
 
   useEffect(() => {
-    loadData();
+    loadCredits();
+    loadPosts();
+    loadAccounts();
+    
+    // Check for pending video from AI Influencer
+    const pendingVideo = localStorage.getItem("pendingSocialVideo");
+    if (pendingVideo) {
+      try {
+        const videoData = JSON.parse(pendingVideo);
+        setVideoUrl(videoData.videoUrl);
+        setContent(videoData.script || "");
+        
+        // Clear the pending video
+        localStorage.removeItem("pendingSocialVideo");
+        
+        // Show success toast
+        alert(`✅ Video z AI Influencer (${videoData.influencerName}) bylo přidáno!`);
+      } catch (error) {
+        console.error("Error loading pending video:", error);
+      }
+    }
   }, []);
 
   const loadData = async () => {
