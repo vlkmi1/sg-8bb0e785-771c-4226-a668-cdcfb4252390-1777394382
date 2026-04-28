@@ -81,11 +81,16 @@ export const adminService = {
   },
 
   async saveAdminSetting(key: string, value: any): Promise<void> {
-    const { error } = await supabase.from("admin_settings" as any).upsert({ 
-      provider: key, 
-      api_key: value,
-      updated_at: new Date().toISOString()
-    });
+    const { error } = await supabase
+      .from("admin_settings" as any)
+      .upsert({ 
+        provider: key, 
+        api_key: value,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'provider'
+      });
+    
     if (error) {
       console.error("Error saving admin setting:", error);
       throw error;
