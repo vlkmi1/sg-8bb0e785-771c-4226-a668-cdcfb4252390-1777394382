@@ -15,6 +15,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { voiceService, type VoiceConversation, type VoiceProvider } from "@/services/voiceService";
 import { creditsService } from "@/services/creditsService";
 import { useToast } from "@/hooks/use-toast";
+import { ModuleHeader } from "@/components/ModuleHeader";
 
 const VOICE_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "Whisper & TTS" },
@@ -271,311 +272,288 @@ export default function VoiceChat() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-xl">
-                  <Mic className="h-5 w-5 text-primary" />
-                </div>
-                <h1 className="text-lg font-heading font-bold">Hlasový chat</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
-                  <Coins className="h-4 w-4 text-accent" />
-                  <span className="text-sm font-medium">{credits}</span>
-                  <span className="text-xs text-muted-foreground">kreditů</span>
-                </div>
-                <ThemeSwitch />
-                <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                  Dashboard
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
+      <div className="min-h-screen bg-background flex flex-col">
+        <ModuleHeader credits={credits} />
 
-        <main className="container mx-auto px-6 py-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-              <TabsTrigger value="record">
-                <Radio className="h-4 w-4 mr-2" />
-                Nahrávání
-              </TabsTrigger>
-              <TabsTrigger value="history">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Historie
-              </TabsTrigger>
-            </TabsList>
+        <div className="flex-1 flex overflow-hidden">
+          <main className="container mx-auto px-6 py-8">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+                <TabsTrigger value="record">
+                  <Radio className="h-4 w-4 mr-2" />
+                  Nahrávání
+                </TabsTrigger>
+                <TabsTrigger value="history">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Historie
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="record" className="space-y-6">
-              <div className="grid gap-6 lg:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="font-heading flex items-center gap-2">
-                        <Mic className="h-5 w-5 text-primary" />
-                        Hlasová zpráva
-                      </CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="live-mode" className="text-sm cursor-pointer">
-                          {liveChatMode ? "Živý chat" : "Jednorázově"}
-                        </Label>
-                        <Switch
-                          id="live-mode"
-                          checked={liveChatMode}
-                          onCheckedChange={setLiveChatMode}
-                          disabled={recording || processing || isLiveChatActive}
-                        />
+              <TabsContent value="record" className="space-y-6">
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between mb-2">
+                        <CardTitle className="font-heading flex items-center gap-2">
+                          <Mic className="h-5 w-5 text-primary" />
+                          Hlasová zpráva
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="live-mode" className="text-sm cursor-pointer">
+                            {liveChatMode ? "Živý chat" : "Jednorázově"}
+                          </Label>
+                          <Switch
+                            id="live-mode"
+                            checked={liveChatMode}
+                            onCheckedChange={setLiveChatMode}
+                            disabled={recording || processing || isLiveChatActive}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <CardDescription>
-                      {liveChatMode 
-                        ? "Kontinuální konverzace s AI. (5 kreditů za zprávu)" 
-                        : "Nahrajte hlasovou zprávu a AI vám odpoví. (5 kreditů za zprávu)"
-                      }
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex flex-col items-center justify-center py-8 space-y-6">
-                        <div className="relative">
-                          <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
-                            recording 
-                              ? "bg-accent/20 animate-pulse" 
-                              : processing
-                                ? "bg-primary/20 animate-pulse"
-                                : isLiveChatActive
-                                  ? "bg-green-500/20"
-                                  : "bg-muted"
-                          }`}>
-                            {recording && <Mic className="h-16 w-16 text-accent" />}
-                            {processing && <Loader2 className="h-16 w-16 text-primary animate-spin" />}
-                            {isLiveChatActive && !recording && !processing && <Zap className="h-16 w-16 text-green-500" />}
-                            {!recording && !processing && !isLiveChatActive && <MicOff className="h-16 w-16 text-muted-foreground" />}
+                      <CardDescription>
+                        {liveChatMode 
+                          ? "Kontinuální konverzace s AI. (5 kreditů za zprávu)" 
+                          : "Nahrajte hlasovou zprávu a AI vám odpoví. (5 kreditů za zprávu)"
+                        }
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex flex-col items-center justify-center py-8 space-y-6">
+                          <div className="relative">
+                            <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
+                              recording 
+                                ? "bg-accent/20 animate-pulse" 
+                                : processing
+                                  ? "bg-primary/20 animate-pulse"
+                                  : isLiveChatActive
+                                    ? "bg-green-500/20"
+                                    : "bg-muted"
+                            }`}>
+                              {recording && <Mic className="h-16 w-16 text-accent" />}
+                              {processing && <Loader2 className="h-16 w-16 text-primary animate-spin" />}
+                              {isLiveChatActive && !recording && !processing && <Zap className="h-16 w-16 text-green-500" />}
+                              {!recording && !processing && !isLiveChatActive && <MicOff className="h-16 w-16 text-muted-foreground" />}
+                            </div>
+                            {recording && (
+                              <div className="absolute -bottom-2 -right-2">
+                                <Badge variant="default" className="bg-accent">
+                                  <Radio className="h-3 w-3 mr-1 animate-pulse" />
+                                  REC
+                                </Badge>
+                              </div>
+                            )}
+                            {isLiveChatActive && !recording && (
+                              <div className="absolute -bottom-2 -right-2">
+                                <Badge variant="default" className="bg-green-500">
+                                  <Zap className="h-3 w-3 mr-1" />
+                                  LIVE
+                                </Badge>
+                              </div>
+                            )}
                           </div>
-                          {recording && (
-                            <div className="absolute -bottom-2 -right-2">
-                              <Badge variant="default" className="bg-accent">
-                                <Radio className="h-3 w-3 mr-1 animate-pulse" />
-                                REC
-                              </Badge>
-                            </div>
-                          )}
-                          {isLiveChatActive && !recording && (
-                            <div className="absolute -bottom-2 -right-2">
-                              <Badge variant="default" className="bg-green-500">
-                                <Zap className="h-3 w-3 mr-1" />
-                                LIVE
-                              </Badge>
-                            </div>
-                          )}
+
+                          <div className="text-center space-y-2">
+                            <p className="text-lg font-semibold">
+                              {!recording && !processing && !isLiveChatActive && "Připraveno"}
+                              {recording && "Nahrávám..."}
+                              {processing && "Zpracovávám..."}
+                              {isLiveChatActive && !recording && !processing && "Živý chat - čekám"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {recording && "Mluvte do mikrofonu"}
+                              {processing && "Generuji odpověď AI..."}
+                              {isLiveChatActive && !recording && !processing && "Přehrávám odpověď..."}
+                            </p>
+                          </div>
+
+                          <div className="flex gap-3">
+                            {liveChatMode ? (
+                              <>
+                                {!isLiveChatActive && (
+                                  <Button
+                                    size="lg"
+                                    onClick={startLiveChat}
+                                    className="gap-2 bg-green-600 hover:bg-green-700"
+                                    disabled={processing}
+                                  >
+                                    <Zap className="h-5 w-5" />
+                                    Spustit živý chat
+                                  </Button>
+                                )}
+                                {isLiveChatActive && (
+                                  <Button
+                                    size="lg"
+                                    onClick={stopLiveChat}
+                                    variant="destructive"
+                                    className="gap-2"
+                                  >
+                                    <StopCircle className="h-5 w-5" />
+                                    Ukončit živý chat
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {!recording && !processing && (
+                                  <Button
+                                    size="lg"
+                                    onClick={startRecording}
+                                    className="gap-2"
+                                  >
+                                    <Mic className="h-5 w-5" />
+                                    Začít nahrávat
+                                  </Button>
+                                )}
+                                {recording && (
+                                  <Button
+                                    size="lg"
+                                    onClick={stopRecording}
+                                    variant="destructive"
+                                    className="gap-2"
+                                  >
+                                    <StopCircle className="h-5 w-5" />
+                                    Zastavit
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="text-center space-y-2">
-                          <p className="text-lg font-semibold">
-                            {!recording && !processing && !isLiveChatActive && "Připraveno"}
-                            {recording && "Nahrávám..."}
-                            {processing && "Zpracovávám..."}
-                            {isLiveChatActive && !recording && !processing && "Živý chat - čekám"}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {recording && "Mluvte do mikrofonu"}
-                            {processing && "Generuji odpověď AI..."}
-                            {isLiveChatActive && !recording && !processing && "Přehrávám odpověď..."}
-                          </p>
-                        </div>
-
-                        <div className="flex gap-3">
-                          {liveChatMode ? (
-                            <>
-                              {!isLiveChatActive && (
-                                <Button
-                                  size="lg"
-                                  onClick={startLiveChat}
-                                  className="gap-2 bg-green-600 hover:bg-green-700"
-                                  disabled={processing}
-                                >
-                                  <Zap className="h-5 w-5" />
-                                  Spustit živý chat
-                                </Button>
-                              )}
-                              {isLiveChatActive && (
-                                <Button
-                                  size="lg"
-                                  onClick={stopLiveChat}
-                                  variant="destructive"
-                                  className="gap-2"
-                                >
-                                  <StopCircle className="h-5 w-5" />
-                                  Ukončit živý chat
-                                </Button>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              {!recording && !processing && (
-                                <Button
-                                  size="lg"
-                                  onClick={startRecording}
-                                  className="gap-2"
-                                >
-                                  <Mic className="h-5 w-5" />
-                                  Začít nahrávat
-                                </Button>
-                              )}
-                              {recording && (
-                                <Button
-                                  size="lg"
-                                  onClick={stopRecording}
-                                  variant="destructive"
-                                  className="gap-2"
-                                >
-                                  <StopCircle className="h-5 w-5" />
-                                  Zastavit
-                                </Button>
-                              )}
-                            </>
-                          )}
+                        <div className="space-y-4 pt-4 border-t">
+                          <div className="space-y-2">
+                            <Label>AI Provider</Label>
+                            <Select value={provider} onValueChange={(v) => setProvider(v as VoiceProvider)} disabled={recording || processing || isLiveChatActive}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {VOICE_PROVIDERS.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.icon} {p.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
 
-                      <div className="space-y-4 pt-4 border-t">
-                        <div className="space-y-2">
-                          <Label>AI Provider</Label>
-                          <Select value={provider} onValueChange={(v) => setProvider(v as VoiceProvider)} disabled={recording || processing || isLiveChatActive}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {VOICE_PROVIDERS.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.icon} {p.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-heading">Konverzace</CardTitle>
+                      <CardDescription>
+                        Přepis vaší konverzace s AI
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                        {conversation.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-8">
+                            Zatím žádná konverzace. Začněte {liveChatMode ? "živý chat" : "nahrávat hlasovou zprávu"}.
+                          </p>
+                        ) : (
+                          conversation.map((msg, idx) => (
+                            <div 
+                              key={idx} 
+                              className={`p-3 rounded-lg ${
+                                msg.role === "user" 
+                                  ? "bg-primary/10 ml-8" 
+                                  : "bg-secondary/10 mr-8"
+                              }`}
+                            >
+                              <p className="text-xs font-semibold mb-1">
+                                {msg.role === "user" ? "Vy" : "AI Asistent"}
+                              </p>
+                              <p className="text-sm">{msg.content}</p>
+                            </div>
+                          ))
+                        )}
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="bg-muted/50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">💡 Tipy pro hlasový chat</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground space-y-2">
+                    <p><strong>Jednorázový režim:</strong></p>
+                    <p>• Klikněte "Začít nahrávat", mluvte, klikněte "Zastavit"</p>
+                    <p>• AI odpoví a tím konverzace končí</p>
+                    <p className="pt-2"><strong>Živý chat režim:</strong></p>
+                    <p>• Zapněte přepínač "Živý chat"</p>
+                    <p>• Klikněte "Spustit živý chat"</p>
+                    <p>• Mluvte → AI odpoví → automaticky pokračuje nahrávání</p>
+                    <p>• Přirozená konverzace až do kliknutí "Ukončit živý chat"</p>
+                    <p className="pt-2">• Každá zpráva stojí 5 kreditů</p>
                   </CardContent>
                 </Card>
+              </TabsContent>
 
+              <TabsContent value="history" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="font-heading">Konverzace</CardTitle>
+                    <CardTitle className="font-heading">Historie konverzací</CardTitle>
                     <CardDescription>
-                      Přepis vaší konverzace s AI
+                      Všechny vaše hlasové zprávy a přepisy
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                      {conversation.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-8">
-                          Zatím žádná konverzace. Začněte {liveChatMode ? "živý chat" : "nahrávat hlasovou zprávu"}.
-                        </p>
-                      ) : (
-                        conversation.map((msg, idx) => (
-                          <div 
-                            key={idx} 
-                            className={`p-3 rounded-lg ${
-                              msg.role === "user" 
-                                ? "bg-primary/10 ml-8" 
-                                : "bg-secondary/10 mr-8"
-                            }`}
-                          >
-                            <p className="text-xs font-semibold mb-1">
-                              {msg.role === "user" ? "Vy" : "AI Asistent"}
-                            </p>
-                            <p className="text-sm">{msg.content}</p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card className="bg-muted/50">
-                <CardHeader>
-                  <CardTitle className="text-sm">💡 Tipy pro hlasový chat</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-2">
-                  <p><strong>Jednorázový režim:</strong></p>
-                  <p>• Klikněte "Začít nahrávat", mluvte, klikněte "Zastavit"</p>
-                  <p>• AI odpoví a tím konverzace končí</p>
-                  <p className="pt-2"><strong>Živý chat režim:</strong></p>
-                  <p>• Zapněte přepínač "Živý chat"</p>
-                  <p>• Klikněte "Spustit živý chat"</p>
-                  <p>• Mluvte → AI odpoví → automaticky pokračuje nahrávání</p>
-                  <p>• Přirozená konverzace až do kliknutí "Ukončit živý chat"</p>
-                  <p className="pt-2">• Každá zpráva stojí 5 kreditů</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="history" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-heading">Historie konverzací</CardTitle>
-                  <CardDescription>
-                    Všechny vaše hlasové zprávy a přepisy
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {messages.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
-                      Zatím nemáte žádné nahrávky
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {messages.map((message) => (
-                        <Card key={message.id}>
-                          <CardContent className="pt-4">
-                            <div className="flex items-start gap-4">
-                              <div className="p-3 bg-primary/10 rounded-lg">
-                                <Mic className="h-5 w-5 text-primary" />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-medium mb-2">
-                                  {new Date(message.created_at).toLocaleString("cs-CZ")}
-                                </p>
-                                {message.transcript && (
-                                  <div className="mb-3 p-3 bg-muted/50 rounded">
-                                    <p className="text-xs text-muted-foreground mb-1">Vy:</p>
-                                    <p className="text-sm">{message.transcript}</p>
+                    {messages.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">
+                        Zatím nemáte žádné nahrávky
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {messages.map((message) => (
+                          <Card key={message.id}>
+                            <CardContent className="pt-4">
+                              <div className="flex items-start gap-4">
+                                <div className="p-3 bg-primary/10 rounded-lg">
+                                  <Mic className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium mb-2">
+                                    {new Date(message.created_at).toLocaleString("cs-CZ")}
+                                  </p>
+                                  {message.transcript && (
+                                    <div className="mb-3 p-3 bg-muted/50 rounded">
+                                      <p className="text-xs text-muted-foreground mb-1">Vy:</p>
+                                      <p className="text-sm">{message.transcript}</p>
+                                    </div>
+                                  )}
+                                  {message.response_text && (
+                                    <div className="p-3 bg-primary/5 rounded">
+                                      <p className="text-xs text-muted-foreground mb-1">AI:</p>
+                                      <p className="text-sm">{message.response_text}</p>
+                                    </div>
+                                  )}
+                                  <div className="flex gap-2 mt-3">
+                                    <Badge variant="secondary">
+                                      {VOICE_PROVIDERS.find(p => p.id === message.provider)?.name}
+                                    </Badge>
                                   </div>
-                                )}
-                                {message.response_text && (
-                                  <div className="p-3 bg-primary/5 rounded">
-                                    <p className="text-xs text-muted-foreground mb-1">AI:</p>
-                                    <p className="text-sm">{message.response_text}</p>
-                                  </div>
-                                )}
-                                <div className="flex gap-2 mt-3">
-                                  <Badge variant="secondary">
-                                    {VOICE_PROVIDERS.find(p => p.id === message.provider)?.name}
-                                  </Badge>
                                 </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
 
-          {/* Hidden audio element for playing responses */}
-          <audio ref={audioRef} className="hidden" />
-        </main>
+            {/* Hidden audio element for playing responses */}
+            <audio ref={audioRef} className="hidden" />
+          </main>
+        </div>
       </div>
     </AuthGuard>
   );

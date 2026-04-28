@@ -17,6 +17,7 @@ import { PromptSelector } from "@/components/PromptSelector";
 import { authState } from "@/services/authStateService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ModuleHeader } from "@/components/ModuleHeader";
 
 const AI_MODELS = [
   { id: "gpt-4", name: "GPT-4" },
@@ -213,34 +214,9 @@ export default function AdGenerator() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-xl">
-                  <Megaphone className="h-5 w-5 text-primary" />
-                </div>
-                <h1 className="text-lg font-heading font-bold">Generátor reklam</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
-                  <Coins className="h-4 w-4 text-accent" />
-                  <span className="text-sm font-medium">{credits}</span>
-                  <span className="text-xs text-muted-foreground">kreditů</span>
-                </div>
-                <ThemeSwitch />
-                <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                  Dashboard
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
+        <ModuleHeader credits={credits} />
 
-        <main className="container mx-auto px-6 py-8">
+        <main className="container mx-auto px-4 py-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
               <TabsTrigger value="create">Vytvořit reklamu</TabsTrigger>

@@ -25,6 +25,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { creditsService } from "@/services/creditsService";
+import { ModuleHeader } from "@/components/ModuleHeader";
 
 type Conversation = Tables<"conversations">;
 type Message = {
@@ -289,172 +290,115 @@ export default function Chat() {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen bg-background">
-        <ConversationSidebar
-          selectedId={currentConversation?.id}
-          onSelectConversation={handleConversationSelect}
-          onNewConversation={handleNewConversation}
-        />
+      <div className="min-h-screen bg-background flex flex-col">
+        <ModuleHeader credits={credits} />
 
-        <div className="flex-1 flex flex-col">
-          <header className="border-b bg-card sticky top-0 z-10">
-            <div className="container mx-auto px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-xl">
-                      <MessageSquare className="h-5 w-5 text-primary" />
+        <div className="flex-1 flex overflow-hidden">
+          <ConversationSidebar
+            selectedId={currentConversation?.id}
+            onSelectConversation={handleConversationSelect}
+            onNewConversation={handleNewConversation}
+          />
+
+          <div className="flex-1 flex flex-col">
+            <main className="flex-1 overflow-y-auto">
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-6">
+                  <div className="text-center max-w-2xl space-y-6">
+                    <div className="inline-flex p-4 bg-primary/10 rounded-2xl">
+                      <Sparkles className="h-12 w-12 text-primary" />
                     </div>
-                    {currentConversation ? (
-                      isEditingTitle ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={editedTitle}
-                            onChange={(e) => setEditedTitle(e.target.value)}
-                            className="h-8 w-64"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleTitleEdit();
-                              if (e.key === "Escape") setIsEditingTitle(false);
-                            }}
-                          />
-                          <Button size="sm" variant="ghost" onClick={handleTitleEdit}>
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setIsEditingTitle(false)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <h1 className="text-lg font-heading font-bold">{currentConversation.title}</h1>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEditedTitle(currentConversation.title);
-                              setIsEditingTitle(true);
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )
-                    ) : (
-                      <h1 className="text-lg font-heading font-bold">AI Chat</h1>
-                    )}
+                    <h2 className="text-3xl font-heading font-bold">Začněte konverzaci</h2>
+                    <p className="text-muted-foreground text-lg">
+                      Vyberte AI model a začněte chatovat s nejmodernějšími jazykovými modely
+                    </p>
+
+                    <div className="pt-6">
+                      <p className="text-sm text-muted-foreground mb-4">Dostupné AI modely:</p>
+                      <Tabs value={selectedModel} onValueChange={setSelectedModel} className="w-full">
+                        <TabsList className="grid grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2">
+                          {models.map((model) => (
+                            <TabsTrigger
+                              key={model.id}
+                              value={model.id}
+                              className="flex flex-col items-center gap-2 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                            >
+                              <span className="text-2xl">{model.icon}</span>
+                              <div className="text-xs font-medium">{model.name}</div>
+                              <div className="text-xs opacity-70">{model.provider}</div>
+                            </TabsTrigger>
+                          ))}
+                        </TabsList>
+                      </Tabs>
+                    </div>
+
+                    <div className="grid gap-3 text-left max-w-md mx-auto pt-6">
+                      <Card className="border-primary/20">
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold mb-2">💡 Tipy pro lepší odpovědi</h3>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            <li>• Buďte konkrétní ve svých dotazech</li>
+                            <li>• Poskytněte kontext když je to potřeba</li>
+                            <li>• Vyzkoušejte různé modely pro srovnání</li>
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <ThemeSwitch />
-                  <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                    Dashboard
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                    <LogOut className="h-5 w-5" />
+              ) : (
+                <div className="container mx-auto max-w-4xl p-6 space-y-6">
+                  {messages.map((message, index) => (
+                    <ChatMessage key={index} role={message.role} content={message.content} />
+                  ))}
+                  {loading && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                      <span className="text-sm">
+                        {models.find(m => m.id === selectedModel)?.name} přemýšlí...
+                      </span>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </main>
+
+            <div className="border-t p-4 bg-card">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <PromptSelector category="chat" onSelect={handleLoadPrompt} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSavePrompt}
+                    disabled={!input.trim()}
+                  >
+                    <Star className="h-4 w-4 mr-1" />
+                    Uložit
                   </Button>
                 </div>
-              </div>
+                <div className="flex gap-3">
+                  <Textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Napište zprávu..."
+                    rows={3}
+                    className="resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e as any);
+                      }
+                    }}
+                  />
+                  <Button type="submit" disabled={loading || !input.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </form>
             </div>
-          </header>
-
-          <main className="flex-1 overflow-y-auto">
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center p-6">
-                <div className="text-center max-w-2xl space-y-6">
-                  <div className="inline-flex p-4 bg-primary/10 rounded-2xl">
-                    <Sparkles className="h-12 w-12 text-primary" />
-                  </div>
-                  <h2 className="text-3xl font-heading font-bold">Začněte konverzaci</h2>
-                  <p className="text-muted-foreground text-lg">
-                    Vyberte AI model a začněte chatovat s nejmodernějšími jazykovými modely
-                  </p>
-
-                  <div className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-4">Dostupné AI modely:</p>
-                    <Tabs value={selectedModel} onValueChange={setSelectedModel} className="w-full">
-                      <TabsList className="grid grid-cols-3 lg:grid-cols-5 gap-2 h-auto p-2">
-                        {models.map((model) => (
-                          <TabsTrigger
-                            key={model.id}
-                            value={model.id}
-                            className="flex flex-col items-center gap-2 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                          >
-                            <span className="text-2xl">{model.icon}</span>
-                            <div className="text-xs font-medium">{model.name}</div>
-                            <div className="text-xs opacity-70">{model.provider}</div>
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </Tabs>
-                  </div>
-
-                  <div className="grid gap-3 text-left max-w-md mx-auto pt-6">
-                    <Card className="border-primary/20">
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">💡 Tipy pro lepší odpovědi</h3>
-                        <ul className="text-sm text-muted-foreground space-y-1">
-                          <li>• Buďte konkrétní ve svých dotazech</li>
-                          <li>• Poskytněte kontext když je to potřeba</li>
-                          <li>• Vyzkoušejte různé modely pro srovnání</li>
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="container mx-auto max-w-4xl p-6 space-y-6">
-                {messages.map((message, index) => (
-                  <ChatMessage key={index} role={message.role} content={message.content} />
-                ))}
-                {loading && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                    <span className="text-sm">
-                      {models.find(m => m.id === selectedModel)?.name} přemýšlí...
-                    </span>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </main>
-
-          <div className="border-t p-4 bg-card">
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="flex items-center gap-2 mb-2">
-                <PromptSelector category="chat" onSelect={handleLoadPrompt} />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSavePrompt}
-                  disabled={!input.trim()}
-                >
-                  <Star className="h-4 w-4 mr-1" />
-                  Uložit
-                </Button>
-              </div>
-              <div className="flex gap-3">
-                <Textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Napište zprávu..."
-                  rows={3}
-                  className="resize-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit(e as any);
-                    }
-                  }}
-                />
-                <Button type="submit" disabled={loading || !input.trim()}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </form>
           </div>
         </div>
       </div>

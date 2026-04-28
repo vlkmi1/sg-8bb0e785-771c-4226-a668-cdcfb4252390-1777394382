@@ -11,6 +11,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { assistantService, type Assistant, type AssistantConversation, type Message } from "@/services/assistantService";
 import { creditsService } from "@/services/creditsService";
+import { ModuleHeader } from "@/components/ModuleHeader";
 
 export default function AssistantChat() {
   const router = useRouter();
@@ -145,35 +146,9 @@ export default function AssistantChat() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background flex flex-col">
-        <header className="border-b bg-card sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => router.push("/assistants")}>
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="text-3xl">{assistant.avatar_emoji}</div>
-                <div>
-                  <h1 className="text-lg font-heading font-bold">{assistant.name}</h1>
-                  <p className="text-sm text-muted-foreground">{assistant.description}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
-                  <Coins className="h-4 w-4 text-accent" />
-                  <span className="text-sm font-medium">{credits}</span>
-                  <span className="text-xs text-muted-foreground">kreditů</span>
-                </div>
-                <ThemeSwitch />
-                <Button variant="ghost" size="icon" onClick={handleClearConversation} title="Smazat konverzaci">
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
+        <ModuleHeader credits={credits} />
 
-        <main className="flex-1 container mx-auto px-6 py-6 flex flex-col max-w-4xl">
+        <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto space-y-4 mb-6">
             {messages.length === 0 ? (
               <Card className="bg-muted/50">
@@ -259,7 +234,7 @@ export default function AssistantChat() {
           <p className="text-xs text-muted-foreground text-center mt-2">
             Stiskněte Enter pro odeslání, Shift+Enter pro nový řádek • 1 kredit za zprávu
           </p>
-        </main>
+        </div>
       </div>
     </AuthGuard>
   );
