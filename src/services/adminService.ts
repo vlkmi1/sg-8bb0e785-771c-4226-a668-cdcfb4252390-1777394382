@@ -409,4 +409,20 @@ export const adminService = {
       throw new Error("Failed to update some payment settings");
     }
   },
+
+  async getActiveMusicProviders(): Promise<string[]> {
+    const { data, error } = await supabase
+      .from("admin_settings")
+      .select("provider")
+      .in("provider", ["suno", "musicgen", "mubert", "aiva", "soundraw"])
+      .not("api_key", "is", null)
+      .neq("api_key", "");
+
+    if (error) {
+      console.error("Error fetching active music providers:", error);
+      return [];
+    }
+
+    return (data || []).map((item: any) => item.provider);
+  },
 };

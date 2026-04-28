@@ -1,27 +1,29 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Music, Sparkles, LogOut, Trash2, Download, Loader2, Play, Pause, Settings, Coins } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Music, Sparkles, Loader2, Clock, Trash2, Download, Play, Pause, Coins, Settings, AlertCircle } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { ModuleHeader } from "@/components/ModuleHeader";
 import { musicService, type MusicGeneration, type MusicProvider } from "@/services/musicService";
 import { creditsService } from "@/services/creditsService";
+import { adminService } from "@/services/adminService";
 import { supabase } from "@/integrations/supabase/client";
-import { ModuleHeader } from "@/components/ModuleHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 const MUSIC_PROVIDERS = [
-  { id: "suno", name: "Suno AI", icon: "🎵", description: "Pokročilá AI hudba s vokály" },
-  { id: "musicgen", name: "MusicGen", icon: "🎹", description: "Meta AI hudební model" },
-  { id: "mubert", name: "Mubert", icon: "🎧", description: "AI hudba v reálném čase" },
-  { id: "aiva", name: "AIVA", icon: "🎼", description: "AI skladatel orchestrální hudby" },
-  { id: "soundraw", name: "Soundraw", icon: "🎶", description: "AI hudba bez autorských práv" },
+  { id: "suno", name: "Suno AI", icon: "🎵", description: "Profesionální AI hudba s vokály" },
+  { id: "musicgen", name: "MusicGen", icon: "🎼", description: "Meta's open-source hudební model" },
+  { id: "mubert", name: "Mubert", icon: "🎧", description: "Royalty-free AI hudba" },
+  { id: "aiva", name: "AIVA", icon: "🎹", description: "AI hudební kompozice" },
+  { id: "soundraw", name: "Soundraw", icon: "🎶", description: "AI hudební creator" },
 ];
 
 const GENRES = [
@@ -46,26 +48,43 @@ export default function MusicGenerate() {
   const [activeTab, setActiveTab] = useState("generate");
   const [prompt, setPrompt] = useState("");
   const [provider, setProvider] = useState<MusicProvider>("suno");
-  const [genre, setGenre] = useState("Pop");
-  const [mood, setMood] = useState("Energetic");
+  const [genre, setGenre] = useState("pop");
+  const [mood, setMood] = useState("happy");
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
   const [generations, setGenerations] = useState<MusicGeneration[]>([]);
   const [credits, setCredits] = useState(0);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [selectedGeneration, setSelectedGeneration] = useState<MusicGeneration | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [activeProviders, setActiveProviders] = useState<string[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoadingProviders(true);
     try {
-      const userCredits = await creditsService.getCredits();
+      const [userCredits, musicList, providers] = await Promise.all([
+        creditsService.getCredits(),
+        musicService.getGenerations(),
+        adminService.getActiveMusicProviders(),
+      ]);
+
       setCredits(userCredits);
-      const data = await musicService.getGenerations();
-      setGenerations(data);
+      setGenerations(musicList);
+      setActiveProviders(providers);
+
+      // Set first available provider as default
+      if (providers.length > 0 && !providers.includes(provider)) {
+        setProvider(providers[0] as MusicProvider);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
+    } finally {
+      setLoadingProviders(false);
     }
   };
 
@@ -134,259 +153,235 @@ export default function MusicGenerate() {
     return variants[status as keyof typeof variants] || "secondary";
   };
 
+  // Get only available providers
+  const availableProviders = MUSIC_PROVIDERS.filter(p => 
+    activeProviders.includes(p.id)
+  );
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background">
         <ModuleHeader credits={credits} />
 
         <main className="container mx-auto px-4 py-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-              <TabsTrigger value="generate">Generovat hudbu</TabsTrigger>
-              <TabsTrigger value="gallery">Moje skladby ({generations.length})</TabsTrigger>
-            </TabsList>
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Page Header */}
+            <div className="text-center space-y-2">
+              <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                AI Music Generator
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Vytvářejte unikátní hudbu pomocí AI
+              </p>
+            </div>
 
-            <TabsContent value="generate" className="space-y-6">
-              <div className="grid gap-6 lg:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-heading">Nová skladba</CardTitle>
-                    <CardDescription>
-                      Popište hudbu kterou chcete vytvořit a AI ji pro vás vygeneruje
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleGenerate} className="space-y-6">
-                      <div className="space-y-4">
+            {/* No Providers Warning */}
+            {!loadingProviders && availableProviders.length === 0 && (
+              <Card className="border-destructive bg-destructive/10">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-full bg-destructive/20">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <h3 className="font-heading font-semibold text-destructive">
+                        Žádný music provider není aktivní
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Pro použití Music Generatoru je potřeba nastavit alespoň jeden API klíč pro music providera (Suno AI, MusicGen, Mubert, AIVA nebo Soundraw).
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => router.push("/admin")}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Přejít do Admin nastavení
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Generation Form */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="font-heading flex items-center gap-2">
+                    <Music className="h-5 w-5 text-primary" />
+                    Vygenerovat novou hudbu
+                  </CardTitle>
+                  <CardDescription>
+                    Zadejte popis hudby, kterou chcete vytvořit
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleGenerate} className="space-y-6">
+                    {/* Provider Selection */}
+                    {loadingProviders ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <span className="ml-2 text-muted-foreground">Načítání providerů...</span>
+                      </div>
+                    ) : availableProviders.length > 0 ? (
+                      <>
+                        <div className="space-y-3">
+                          <Label>AI Provider</Label>
+                          <div className="grid gap-3 grid-cols-2 md:grid-cols-3">
+                            {availableProviders.map((prov) => (
+                              <button
+                                key={prov.id}
+                                type="button"
+                                onClick={() => setProvider(prov.id as MusicProvider)}
+                                className={`p-4 rounded-lg border-2 text-left transition-all hover:shadow-md ${
+                                  provider === prov.id
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <div className="text-2xl mb-2">{prov.icon}</div>
+                                <div className="font-semibold text-sm">{prov.name}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {prov.description}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Rest of the form */}
                         <div className="space-y-2">
-                          <Label htmlFor="prompt">Popis skladby *</Label>
+                          <Label htmlFor="prompt">Popis hudby</Label>
                           <Textarea
                             id="prompt"
-                            placeholder="Např. Energická elektronická hudba s tropickými beaty, pro letní party..."
+                            placeholder="Např: Optimistická popová skladba s elektrickými kytarami a synthesizery"
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
-                            className="h-24"
+                            rows={4}
                             required
+                            disabled={availableProviders.length === 0}
                           />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-2">
                             <Label htmlFor="genre">Žánr</Label>
-                            <Select value={genre} onValueChange={setGenre}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {GENRES.map((g) => (
-                                  <SelectItem key={g} value={g}>
-                                    {g}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <select
+                              id="genre"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                              value={genre}
+                              onChange={(e) => setGenre(e.target.value)}
+                              disabled={availableProviders.length === 0}
+                            >
+                              {GENRES.map((g) => (
+                                <option key={g.value} value={g.value}>
+                                  {g.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
 
                           <div className="space-y-2">
                             <Label htmlFor="mood">Nálada</Label>
-                            <Select value={mood} onValueChange={setMood}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {MOODS.map((m) => (
-                                  <SelectItem key={m} value={m}>
-                                    {m}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="duration">Délka skladby</Label>
-                          <Select value={duration.toString()} onValueChange={(v) => setDuration(parseInt(v))}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DURATIONS.map((d) => (
-                                <SelectItem key={d.value} value={d.value.toString()}>
-                                  {d.label} ({d.credits} kreditů)
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="provider">AI Model</Label>
-                          <Select value={provider} onValueChange={(v) => setProvider(v as MusicProvider)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {MUSIC_PROVIDERS.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  <div className="flex items-center gap-2">
-                                    <span>{p.icon}</span>
-                                    <span>{p.name}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={loading || !prompt.trim()}
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Generování...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Vygenerovat hudbu
-                          </>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-muted/30">
-                  <CardHeader>
-                    <CardTitle className="font-heading">AI Hudební modely</CardTitle>
-                    <CardDescription>
-                      Vyberte AI model podle vašich potřeb
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {MUSIC_PROVIDERS.map((p) => (
-                      <Card key={p.id} className={provider === p.id ? "border-primary" : ""}>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-3xl">{p.icon}</span>
-                            <div className="flex-1">
-                              <CardTitle className="text-base">{p.name}</CardTitle>
-                              <CardDescription className="text-xs">{p.description}</CardDescription>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="gallery" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-heading">Moje skladby</CardTitle>
-                  <CardDescription>
-                    Všechny vaše vygenerované hudební skladby
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {generations.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">Zatím nemáte žádné vygenerované skladby</p>
-                      <Button 
-                        onClick={() => setActiveTab("generate")} 
-                        className="mt-4"
-                      >
-                        Vytvořit první skladbu
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {generations.map((gen) => (
-                        <Card key={gen.id} className="overflow-hidden">
-                          <div className="aspect-square bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center relative">
-                            <Music className="h-16 w-16 text-primary/50" />
-                            <Badge 
-                              variant={getStatusBadge(gen.status) as any}
-                              className="absolute top-2 right-2"
+                            <select
+                              id="mood"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                              value={mood}
+                              onChange={(e) => setMood(e.target.value)}
+                              disabled={availableProviders.length === 0}
                             >
-                              {gen.status === "processing" && "Generování..."}
-                              {gen.status === "completed" && "Hotovo"}
-                              {gen.status === "failed" && "Chyba"}
-                            </Badge>
+                              {MOODS.map((m) => (
+                                <option key={m.value} value={m.value}>
+                                  {m.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <CardContent className="p-4 space-y-3">
-                            <div>
-                              <p className="font-semibold text-sm line-clamp-2">{gen.prompt}</p>
-                              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                <span>{gen.genre}</span>
-                                <span>•</span>
-                                <span>{gen.mood}</span>
-                                <span>•</span>
-                                <span>{gen.duration}s</span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1 text-xs">
-                                <span>{MUSIC_PROVIDERS.find(p => p.id === gen.provider)?.icon}</span>
-                                <span className="text-muted-foreground">
-                                  {MUSIC_PROVIDERS.find(p => p.id === gen.provider)?.name}
-                                </span>
-                              </div>
-                            </div>
+                        </div>
 
-                            {gen.status === "completed" && gen.audio_url && (
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={() => handlePlayPause(gen.id)}
-                                >
-                                  {playingId === gen.id ? (
-                                    <>
-                                      <Pause className="h-3 w-3 mr-1" />
-                                      Pauza
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Play className="h-3 w-3 mr-1" />
-                                      Přehrát
-                                    </>
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  asChild
-                                >
-                                  <a href={gen.audio_url} download>
-                                    <Download className="h-3 w-3" />
-                                  </a>
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDelete(gen.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                        <div className="space-y-2">
+                          <Label htmlFor="duration">
+                            Délka: {duration} sekund
+                          </Label>
+                          <Input
+                            id="duration"
+                            type="range"
+                            min="10"
+                            max="120"
+                            step="10"
+                            value={duration}
+                            onChange={(e) => setDuration(parseInt(e.target.value))}
+                            disabled={availableProviders.length === 0}
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>10s</span>
+                            <span>120s</span>
+                          </div>
+                        </div>
+
+                        <Card className="bg-muted/50">
+                          <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Coins className="h-5 w-5 text-primary" />
+                                <span className="text-sm font-medium">Cena generování</span>
                               </div>
-                            )}
+                              <Badge variant="secondary" className="text-base">
+                                5 kreditů
+                              </Badge>
+                            </div>
                           </CardContent>
                         </Card>
-                      ))}
-                    </div>
-                  )}
+
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          disabled={loading || credits < 5 || availableProviders.length === 0}
+                        >
+                          {loading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Generuji hudbu...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Vygenerovat hudbu
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    ) : null}
+                  </form>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+
+              <Card className="bg-muted/30">
+                <CardHeader>
+                  <CardTitle className="font-heading">AI Hudební modely</CardTitle>
+                  <CardDescription>
+                    Vyberte AI model podle vašich potřeb
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {MUSIC_PROVIDERS.map((p) => (
+                    <Card key={p.id} className={provider === p.id ? "border-primary" : ""}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{p.icon}</span>
+                          <div className="flex-1">
+                            <CardTitle className="text-base">{p.name}</CardTitle>
+                            <CardDescription className="text-xs">{p.description}</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </main>
       </div>
     </AuthGuard>
