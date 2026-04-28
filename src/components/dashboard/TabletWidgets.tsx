@@ -34,8 +34,8 @@ export function TabletCreditsWidget() {
 
   const loadCredits = async () => {
     try {
-      const balance = await creditsService.getBalance();
-      const history = await creditsService.getTransactions();
+      const balance = await creditsService.getCredits();
+      const history = await creditsService.getCreditTransactions();
       setCredits({
         balance,
         history: history.slice(0, 7)
@@ -149,8 +149,8 @@ export function TabletRecentActivityWidget() {
       const convos = await conversationsService.getConversations();
       const mapped = convos.slice(0, 8).map(c => ({
         id: c.id,
-        type: c.provider || "chat",
-        model: c.model_id || "gpt-4",
+        type: c.model_provider || "chat",
+        model: c.model_name || "gpt-4",
         created_at: c.created_at,
         status: "completed"
       }));

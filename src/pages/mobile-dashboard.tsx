@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { SEO } from "@/components/SEO";
-import AuthGuard from "@/components/AuthGuard";
+import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Bell, Settings } from "lucide-react";
 import { CreditsWidget, QuickActionsWidget, RecentActivityWidget, StatsCardsWidget } from "@/components/dashboard/MobileWidgets";
-import UserMenu from "@/components/UserMenu";
+import { UserMenu } from "@/components/UserMenu";
 
 export default function MobileDashboard() {
   const [open, setOpen] = useState(false);

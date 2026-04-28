@@ -1,9 +1,9 @@
 import { SEO } from "@/components/SEO";
-import AuthGuard from "@/components/AuthGuard";
+import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { Bell, Settings, Menu } from "lucide-react";
 import { TabletCreditsWidget, TabletQuickActionsWidget, TabletRecentActivityWidget, TabletStatsCardsWidget } from "@/components/dashboard/TabletWidgets";
-import UserMenu from "@/components/UserMenu";
+import { UserMenu } from "@/components/UserMenu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 
