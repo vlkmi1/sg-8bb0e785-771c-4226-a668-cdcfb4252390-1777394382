@@ -482,49 +482,18 @@ export default function Admin() {
                                 Získat API klíč
                               </Button>
                               
-                              <Dialog 
-                                open={dialogOpen && selectedProvider === provider.id} 
-                                onOpenChange={(open) => {
-                                  setDialogOpen(open);
-                                  if (open) setSelectedProvider(provider.id);
+                              <Button 
+                                variant="default" 
+                                className="w-full" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedProvider(provider.id);
+                                  setDialogOpen(true);
                                 }}
                               >
-                                <DialogTrigger asChild>
-                                  <Button variant="default" className="w-full" size="sm">
-                                    <Key className="h-4 w-4 mr-2" />
-                                    Přidat klíč
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle className="font-heading">
-                                      {provider.name} API klíč
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                      Zadejte API klíč od poskytovatele {provider.name}
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                      <Label htmlFor="apiKey">API klíč</Label>
-                                      <Input
-                                        id="apiKey"
-                                        type="password"
-                                        placeholder="sk-..."
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                      />
-                                    </div>
-                                    <Button 
-                                      onClick={handleSaveApiKey} 
-                                      className="w-full" 
-                                      disabled={loading}
-                                    >
-                                      {loading ? "Ukládání..." : "Uložit"}
-                                    </Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
+                                <Key className="h-4 w-4 mr-2" />
+                                Přidat klíč
+                              </Button>
                             </CardContent>
                           </Card>
                         ))}
@@ -844,6 +813,39 @@ export default function Admin() {
           </Tabs>
         </main>
       </div>
+
+      {/* Global API Key Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-heading">
+              {AI_PROVIDERS.find(p => p.id === selectedProvider)?.name} API klíč
+            </DialogTitle>
+            <DialogDescription>
+              Zadejte API klíč od poskytovatele {AI_PROVIDERS.find(p => p.id === selectedProvider)?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">API klíč</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="sk-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            </div>
+            <Button 
+              onClick={handleSaveApiKey} 
+              className="w-full" 
+              disabled={loading}
+            >
+              {loading ? "Ukládání..." : "Uložit"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminGuard>
   );
 }
