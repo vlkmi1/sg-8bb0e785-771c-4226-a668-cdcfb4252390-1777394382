@@ -425,4 +425,158 @@ export const adminService = {
 
     return (data || []).map((item: any) => item.provider);
   },
+
+  async getSystemLogs(limit: number = 100): Promise<any[]> {
+    const { data, error } = await supabase
+      .from("system_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Payment Management
+  async getPendingPayments(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from("payments")
+      .select(`
+        *,
+        profiles!payments_user_id_fkey(email, full_name)
+      `)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching pending payments:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async getAllPayments(limit: number = 100): Promise<any[]> {
+    const { data, error } = await supabase
+      .from("payments")
+      .select(`
+        *,
+        profiles!payments_user_id_fkey(email, full_name)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Error fetching payments:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async approvePayment(paymentId: string): Promise<void> {
+    const { data: payment, error: fetchError } = await supabase
+      .from("payments")
+      .select("*, profiles!payments_user_id_fkey(credits)")
+      .eq("id", paymentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!payment) throw new Error("Payment not found");
+
+    // Start transaction-like operations
+    try {
+      // 1. Update payment status to completed
+      const { error: updatePaymentError } = await supabase
+        .from("payments")
+        .update({ 
+          status: "completed",
+          processed_at: new Date().toISOString()
+        })
+        .eq("id", paymentId);
+
+      if (updatePaymentError) throw updatePaymentError;
+
+      // 2. Add credits or activate subscription based on payment type
+      const metadata = payment.metadata as any;
+
+      if (payment.payment_type === "credits" && metadata?.credits) {
+        // Add credits to user profile
+        const currentCredits = payment.profiles?.credits || 0;
+        const newCredits = currentCredits + Number(metadata.credits);
+
+        const { error: creditsError } = await supabase
+          .from("profiles")
+          .update({ credits: newCredits })
+          .eq("id", payment.user_id);
+
+        if (creditsError) throw creditsError;
+
+      } else if (payment.payment_type === "subscription" && metadata?.plan_id) {
+        // Activate subscription
+        const { error: subError } = await supabase
+          .from("subscriptions")
+          .upsert({
+            user_id: payment.user_id,
+            plan_id: metadata.plan_id,
+            status: "active",
+            current_period_start: new Date().toISOString(),
+            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // +30 days
+          }, {
+            onConflict: "user_id"
+          });
+
+        if (subError) throw subError;
+
+        // Also add subscription credits
+        if (metadata?.credits_amount) {
+          const currentCredits = payment.profiles?.credits || 0;
+          const newCredits = currentCredits + Number(metadata.credits_amount);
+
+          const { error: creditsError } = await supabase
+            .from("profiles")
+            .update({ credits: newCredits })
+            .eq("id", payment.user_id);
+
+          if (creditsError) throw creditsError;
+        }
+      }
+
+      // 3. Create credit transaction record
+      if (metadata?.credits || metadata?.credits_amount) {
+        const creditsAdded = Number(metadata?.credits || metadata?.credits_amount);
+        await supabase
+          .from("credit_transactions")
+          .insert({
+            user_id: payment.user_id,
+            amount: creditsAdded,
+            type: payment.payment_type === "credits" ? "purchase" : "subscription",
+            description: `Schválená platba: ${payment.payment_type}`,
+            metadata: { payment_id: paymentId }
+          });
+      }
+
+    } catch (error) {
+      // Rollback payment status on error
+      await supabase
+        .from("payments")
+        .update({ status: "pending" })
+        .eq("id", paymentId);
+      
+      throw error;
+    }
+  },
+
+  async rejectPayment(paymentId: string, reason?: string): Promise<void> {
+    const { error } = await supabase
+      .from("payments")
+      .update({ 
+        status: "failed",
+        processed_at: new Date().toISOString(),
+        metadata: { rejection_reason: reason }
+      })
+      .eq("id", paymentId);
+
+    if (error) throw error;
+  },
 };
