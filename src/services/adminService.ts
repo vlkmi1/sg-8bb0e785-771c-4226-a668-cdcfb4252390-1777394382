@@ -515,15 +515,15 @@ export const adminService = {
       } else if (payment.payment_type === "subscription" && metadata?.plan_id) {
         // Activate subscription
         const { error: subError } = await supabase
-          .from("subscriptions")
+          .from("user_subscriptions")
           .upsert({
             user_id: payment.user_id,
             plan_id: metadata.plan_id,
             status: "active",
-            current_period_start: new Date().toISOString(),
-            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // +30 days
+            started_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // +30 days
           }, {
-            onConflict: "user_id"
+            onConflict: "user_id,plan_id"
           });
 
         if (subError) throw subError;
@@ -550,9 +550,11 @@ export const adminService = {
           .insert({
             user_id: payment.user_id,
             amount: creditsAdded,
-            type: payment.payment_type === "credits" ? "purchase" : "subscription",
             description: `Schválená platba: ${payment.payment_type}`,
-            metadata: { payment_id: paymentId }
+            metadata: { 
+              payment_id: paymentId,
+              transaction_type: payment.payment_type === "credits" ? "purchase" : "subscription"
+            }
           });
       }
 
