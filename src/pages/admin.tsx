@@ -65,6 +65,8 @@ export default function Admin() {
   const [plans, setPlans] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);

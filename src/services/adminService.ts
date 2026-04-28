@@ -140,13 +140,15 @@ export const adminService = {
 
     try {
       // Try to increment existing record
-      const { data: existing } = await supabase
+      const { data } = await supabase
         .from("api_usage_stats" as any)
         .select("*")
         .eq("provider", provider)
         .eq("request_type", requestType)
         .eq("date", today)
         .single();
+
+      const existing = data as any;
 
       if (existing) {
         await supabase
