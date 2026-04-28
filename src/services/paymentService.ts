@@ -66,7 +66,8 @@ export const paymentService = {
       case "stripe":
         return !!(settings.stripe_publishable_key && settings.stripe_secret_key);
       case "bank_transfer":
-        return !!settings.bank_account_number;
+        // Check for bank_account_number (actual key in DB)
+        return !!(settings.bank_account_number || settings.bank_account);
       default:
         return false;
     }

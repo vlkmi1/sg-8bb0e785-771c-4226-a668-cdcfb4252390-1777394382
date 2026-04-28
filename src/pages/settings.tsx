@@ -147,18 +147,53 @@ export default function Settings() {
   const handleUpgradePlan = async (planId: string) => {
     setUpgradingPlan(true);
     try {
-      await subscriptionService.upgradeSubscription(planId);
+      const plan = availablePlans.find(p => p.id === planId);
+      if (!plan) throw new Error("Plán nenalezen");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Nepřihlášen");
+
+      // Create payment record with pending status
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .insert({
+          user_id: user.id,
+          amount: plan.price,
+          currency: "CZK",
+          method: "stripe", // Default, user would choose in real implementation
+          payment_type: "subscription",
+          status: "pending",
+          metadata: { 
+            plan_id: plan.id,
+            plan_name: plan.name,
+            credits_amount: plan.credits_included 
+          }
+        });
+
+      if (paymentError) throw paymentError;
+
       toast({
-        title: "Plán změněn",
-        description: "Váš plán byl úspěšně aktualizován",
+        title: "Objednávka vytvořena",
+        description: "Přesměrujeme vás na platební bránu. Předplatné bude aktivováno po úspěšné platbě.",
       });
-      await loadSubscription();
+
+      // TODO: V produkci přesměrovat na platební bránu
+      // const paymentUrl = await paymentService.initStripePayment(planId);
+      // window.location.href = paymentUrl;
+
+      // Pro demo - ukázat že je potřeba platba
+      toast({
+        title: "Platební brána vyžaduje konfiguraci",
+        description: "Kontaktujte administrátora. Předplatné bude změněno po zaplacení.",
+        variant: "destructive",
+      });
+
       setPlanDialogOpen(false);
     } catch (error) {
-      console.error("Error upgrading plan:", error);
+      console.error("Error creating subscription payment:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se změnit plán",
+        description: "Nepodařilo se vytvořit objednávku předplatného",
         variant: "destructive",
       });
     } finally {
