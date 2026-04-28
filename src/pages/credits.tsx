@@ -19,7 +19,7 @@ export default function Credits() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
-  const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
+  const [currentPayment, setCurrentPayment] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState({
     paypal: false,
