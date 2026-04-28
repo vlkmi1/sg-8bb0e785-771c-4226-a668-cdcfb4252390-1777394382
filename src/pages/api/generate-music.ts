@@ -113,14 +113,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Update status to failed if we have generationId
     if (req.body.generationId) {
-      await supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from("music_generations")
         .update({ 
           status: "failed",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", req.body.generationId)
-        .catch(() => {});
+        .eq("id", req.body.generationId);
+        
+      if (updateError) {
+        console.error("Failed to update status to failed:", updateError);
+      }
     }
 
     return res.status(500).json({ 
