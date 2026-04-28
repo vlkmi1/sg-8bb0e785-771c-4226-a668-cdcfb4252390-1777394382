@@ -51,6 +51,10 @@ export function UserMenu({ credits, showCredits = true }: UserMenuProps) {
     router.push("/auth/login");
   };
 
+  const handleNavigateToCredits = () => {
+    router.push("/credits");
+  };
+
   const getUserInitials = () => {
     if (profile?.full_name) {
       return profile.full_name
@@ -105,7 +109,7 @@ export function UserMenu({ credits, showCredits = true }: UserMenuProps) {
         
         {showCredits && credits !== undefined && (
           <>
-            <DropdownMenuItem onClick={() => router.push("/credits")}>
+            <DropdownMenuItem onClick={handleNavigateToCredits}>
               <Coins className="h-4 w-4 mr-2 text-primary" />
               <div className="flex-1 flex items-center justify-between">
                 <span>Kredity</span>
