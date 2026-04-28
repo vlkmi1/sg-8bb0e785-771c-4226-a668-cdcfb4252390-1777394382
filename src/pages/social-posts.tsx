@@ -56,23 +56,26 @@ export default function SocialPosts() {
   const [imageSize, setImageSize] = useState("1024x1024");
 
   useEffect(() => {
-    loadCredits();
-    loadPosts();
-    loadAccounts();
+    loadData();
     
     // Check for pending video from AI Influencer
     const pendingVideo = localStorage.getItem("pendingSocialVideo");
     if (pendingVideo) {
       try {
         const videoData = JSON.parse(pendingVideo);
-        setVideoUrl(videoData.videoUrl);
-        setContent(videoData.script || "");
+        
+        // Set the video URL and content for the default selected platform (Facebook)
+        setVideoUrls(prev => ({ ...prev, facebook: videoData.videoUrl }));
+        setContents(prev => ({ ...prev, facebook: videoData.script || "" }));
+        setTopic(`Nové video od influencera: ${videoData.influencerName}`);
         
         // Clear the pending video
         localStorage.removeItem("pendingSocialVideo");
         
         // Show success toast
-        alert(`✅ Video z AI Influencer (${videoData.influencerName}) bylo přidáno!`);
+        setTimeout(() => {
+          alert(`✅ Video z AI Influencer (${videoData.influencerName}) bylo přidáno do konceptu pro Facebook!`);
+        }, 500);
       } catch (error) {
         console.error("Error loading pending video:", error);
       }
