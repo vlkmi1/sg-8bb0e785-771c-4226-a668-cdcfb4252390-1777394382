@@ -58,17 +58,30 @@ export const authService = {
     return { user: data.user, error: null };
   },
 
-  async signInWithOAuth(provider: any): Promise<{ error: AuthError | null }> {
+  async signInWithOAuth(provider: "google" | "apple"): Promise<void> {
     const redirectUrl = `${getRedirectUrl()}/auth/callback`;
     
-    const { error } = await supabase.auth.signInWithOAuth({
+    console.log("OAuth: Starting sign in with", provider);
+    console.log("OAuth: Redirect URL:", redirectUrl);
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: redirectUrl,
+        queryParams: provider === "google" ? {
+          access_type: "offline",
+          prompt: "consent",
+        } : undefined,
       },
     });
 
-    return { error };
+    if (error) {
+      console.error("OAuth error:", error);
+      throw error;
+    }
+
+    console.log("OAuth: Redirect initiated", data);
+    // The browser will be redirected to the OAuth provider
   },
 
   async signOut(): Promise<{ error: AuthError | null }> {
