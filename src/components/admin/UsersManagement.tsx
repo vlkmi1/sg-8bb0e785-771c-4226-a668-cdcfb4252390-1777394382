@@ -45,6 +45,7 @@ export function UsersManagement() {
   const [userSubscription, setUserSubscription] = useState<any>(null);
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
   const [changingPlan, setChangingPlan] = useState(false);
+  const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -176,7 +177,7 @@ export function UsersManagement() {
         const updated = await adminService.getUserWithStats(selectedUser.id);
         const updatedTransactions = await adminService.getUserTransactions(selectedUser.id);
         setSelectedUser(updated);
-        setTransactions(updatedTransactions);
+        setUserTransactions(updatedTransactions);
       }
     } catch (error) {
       console.error("Error updating credits:", error);
