@@ -18,6 +18,7 @@ import { aiInfluencerService, type AIInfluencer, type InfluencerVideo, type Voic
 import { supabase } from "@/integrations/supabase/client";
 import { InfluencerAvatarLibrary } from "@/components/InfluencerAvatarLibrary";
 import { VideoDetailDialog } from "@/components/VideoDetailDialog";
+import { ModuleHeader } from "@/components/ModuleHeader";
 
 const VOICE_TYPES = [
   { value: "neutral", label: "Neutrální", description: "Vyvážený a příjemný hlas" },
@@ -223,390 +224,379 @@ export default function AIInfluencer() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-card sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-xl">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <h1 className="text-lg font-heading font-bold">AI Influencer</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-lg border border-accent/20">
-                  <Coins className="h-4 w-4 text-accent" />
-                  <span className="text-sm font-medium">{credits}</span>
-                  <span className="text-xs text-muted-foreground">kreditů</span>
-                </div>
-                <ThemeSwitch />
-                <Button variant="ghost" onClick={() => router.push("/dashboard")}>
-                  Dashboard
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </div>
+        {/* Header with navigation and credits */}
+        <ModuleHeader credits={credits} />
+
+        {/* Main Content */}
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Page Title */}
+            <div className="text-center space-y-2">
+              <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                AI Influencer Studio
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Vytvořte a spravujte AI avatary pro generování video obsahu
+              </p>
             </div>
-          </div>
-        </header>
 
-        <main className="container mx-auto px-6 py-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-              <TabsTrigger value="influencers">Moji Influenceři</TabsTrigger>
-              <TabsTrigger value="videos">Videa</TabsTrigger>
-            </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+                <TabsTrigger value="influencers">Moji Influenceři</TabsTrigger>
+                <TabsTrigger value="videos">Videa</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="influencers" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="font-heading flex items-center gap-2">
-                        <User className="h-5 w-5 text-primary" />
-                        AI Influenceři
-                      </CardTitle>
-                      <CardDescription>
-                        Vytvořte si vlastního virtuálního influencera pro generování video obsahu
-                      </CardDescription>
-                    </div>
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Vytvořit influencera
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle className="font-heading">
-                            Vytvořit AI influencera
-                          </DialogTitle>
-                          <DialogDescription>
-                            Definujte osobnost a charakteristiky vašeho virtuálního influencera
-                          </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateInfluencer} className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="name">Jméno influencera</Label>
-                            <div className="flex gap-2">
-                              {avatarUrl && (
-                                <Avatar className="h-10 w-10 shrink-0">
-                                  <AvatarImage src={avatarUrl} />
-                                  <AvatarFallback>AI</AvatarFallback>
-                                </Avatar>
-                              )}
-                              <Input
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Např. Sarah Tech Guru"
-                                required
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setAvatarLibraryOpen(true)}
-                                className="shrink-0"
-                              >
-                                <User className="h-4 w-4 mr-2" />
-                                Vybrat z knihovny
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="description">Popis</Label>
-                            <Textarea
-                              id="description"
-                              placeholder="Stručný popis influencera a jeho zaměření..."
-                              value={description}
-                              onChange={(e) => setDescription(e.target.value)}
-                              rows={3}
-                            />
-                          </div>
-
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                              <Label htmlFor="voice">Typ hlasu</Label>
-                              <Select value={voiceType} onValueChange={(v) => setVoiceType(v as VoiceType)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {VOICE_TYPES.map((voice) => (
-                                    <SelectItem key={voice.value} value={voice.value}>
-                                      <div>
-                                        <div className="font-medium">{voice.label}</div>
-                                        <div className="text-xs text-muted-foreground">{voice.description}</div>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="personality">Osobnost</Label>
-                              <Select value={personality} onValueChange={(v) => setPersonality(v as Personality)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {PERSONALITIES.map((p) => (
-                                    <SelectItem key={p.value} value={p.value}>
-                                      <div>
-                                        <div className="font-medium">{p.label}</div>
-                                        <div className="text-xs text-muted-foreground">{p.description}</div>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Vytváření...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Vytvořit influencera
-                              </>
-                            )}
+              <TabsContent value="influencers" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="font-heading flex items-center gap-2">
+                          <User className="h-5 w-5 text-primary" />
+                          AI Influenceři
+                        </CardTitle>
+                        <CardDescription>
+                          Vytvořte si vlastního virtuálního influencera pro generování video obsahu
+                        </CardDescription>
+                      </div>
+                      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Vytvořit influencera
                           </Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {influencers.length === 0 ? (
-                    <div className="text-center py-12">
-                      <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">
-                        Zatím nemáte žádné AI influencery. Vytvořte si prvního!
-                      </p>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle className="font-heading">
+                              Vytvořit AI influencera
+                            </DialogTitle>
+                            <DialogDescription>
+                              Definujte osobnost a charakteristiky vašeho virtuálního influencera
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form onSubmit={handleCreateInfluencer} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Jméno influencera</Label>
+                              <div className="flex gap-2">
+                                {avatarUrl && (
+                                  <Avatar className="h-10 w-10 shrink-0">
+                                    <AvatarImage src={avatarUrl} />
+                                    <AvatarFallback>AI</AvatarFallback>
+                                  </Avatar>
+                                )}
+                                <Input
+                                  id="name"
+                                  value={name}
+                                  onChange={(e) => setName(e.target.value)}
+                                  placeholder="Např. Sarah Tech Guru"
+                                  required
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => setAvatarLibraryOpen(true)}
+                                  className="shrink-0"
+                                >
+                                  <User className="h-4 w-4 mr-2" />
+                                  Vybrat z knihovny
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="description">Popis</Label>
+                              <Textarea
+                                id="description"
+                                placeholder="Stručný popis influencera a jeho zaměření..."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                rows={3}
+                              />
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <Label htmlFor="voice">Typ hlasu</Label>
+                                <Select value={voiceType} onValueChange={(v) => setVoiceType(v as VoiceType)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {VOICE_TYPES.map((voice) => (
+                                      <SelectItem key={voice.value} value={voice.value}>
+                                        <div>
+                                          <div className="font-medium">{voice.label}</div>
+                                          <div className="text-xs text-muted-foreground">{voice.description}</div>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="personality">Osobnost</Label>
+                                <Select value={personality} onValueChange={(v) => setPersonality(v as Personality)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {PERSONALITIES.map((p) => (
+                                      <SelectItem key={p.value} value={p.value}>
+                                        <div>
+                                          <div className="font-medium">{p.label}</div>
+                                          <div className="text-xs text-muted-foreground">{p.description}</div>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <Button type="submit" className="w-full" disabled={loading}>
+                              {loading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Vytváření...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  Vytvořit influencera
+                                </>
+                              )}
+                            </Button>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
                     </div>
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {influencers.map((influencer) => (
-                        <Card key={influencer.id} className="overflow-hidden">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start gap-3">
-                              <Avatar className="h-12 w-12 bg-gradient-to-br from-primary to-accent">
-                                <AvatarFallback className="text-white font-semibold">
-                                  {influencer.name.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-base truncate">{influencer.name}</CardTitle>
-                                <div className="flex gap-1 mt-1">
-                                  <Badge variant="secondary" className="text-xs">
-                                    {VOICE_TYPES.find(v => v.value === influencer.voice_type)?.label}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {PERSONALITIES.find(p => p.value === influencer.personality)?.label}
-                                  </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    {influencers.length === 0 ? (
+                      <div className="text-center py-12">
+                        <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">
+                          Zatím nemáte žádné AI influencery. Vytvořte si prvního!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {influencers.map((influencer) => (
+                          <Card key={influencer.id} className="overflow-hidden">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start gap-3">
+                                <Avatar className="h-12 w-12 bg-gradient-to-br from-primary to-accent">
+                                  <AvatarFallback className="text-white font-semibold">
+                                    {influencer.name.slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="text-base truncate">{influencer.name}</CardTitle>
+                                  <div className="flex gap-1 mt-1">
+                                    <Badge variant="secondary" className="text-xs">
+                                      {VOICE_TYPES.find(v => v.value === influencer.voice_type)?.label}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {PERSONALITIES.find(p => p.value === influencer.personality)?.label}
+                                    </Badge>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-2">
-                            {influencer.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {influencer.description}
-                              </p>
-                            )}
-                            <div className="flex gap-2">
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => {
-                                  setSelectedInfluencer(influencer);
-                                  setVideoDialogOpen(true);
-                                }}
-                              >
-                                <Video className="h-3 w-3 mr-1" />
-                                Vytvořit video
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteInfluencer(influencer.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="videos" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-heading flex items-center gap-2">
-                    <Video className="h-5 w-5 text-primary" />
-                    Vygenerovaná videa
-                  </CardTitle>
-                  <CardDescription>
-                    Historie videí vytvořených vašimi AI influencery
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {videos.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">
-                        Zatím jste nevytvořili žádná videa s AI influencery
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {videos.map((video) => (
-                        <Card 
-                          key={video.id} 
-                          className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                          onClick={() => handleVideoClick(video)}
-                        >
-                          <div className="aspect-video bg-muted relative flex items-center justify-center">
-                            <Play className="h-12 w-12 text-muted-foreground" />
-                            {video.duration && (
-                              <Badge className="absolute bottom-2 right-2">
-                                {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, "0")}
-                              </Badge>
-                            )}
-                          </div>
-                          <CardContent className="pt-4 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6 bg-gradient-to-br from-primary to-accent">
-                                <AvatarFallback className="text-white text-xs">
-                                  AI
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm font-medium truncate">
-                                {video.ai_influencers?.name || "Neznámý influencer"}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {video.script}
-                            </p>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {new Date(video.created_at).toLocaleDateString("cs-CZ")}
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              {influencer.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {influencer.description}
+                                </p>
+                              )}
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => {
+                                    setSelectedInfluencer(influencer);
+                                    setVideoDialogOpen(true);
+                                  }}
+                                >
+                                  <Video className="h-3 w-3 mr-1" />
+                                  Vytvořit video
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteInfluencer(influencer.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteVideo(video.id);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="videos" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-heading flex items-center gap-2">
+                      <Video className="h-5 w-5 text-primary" />
+                      Vygenerovaná videa
+                    </CardTitle>
+                    <CardDescription>
+                      Historie videí vytvořených vašimi AI influencery
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {videos.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">
+                          Zatím jste nevytvořili žádná videa s AI influencery
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {videos.map((video) => (
+                          <Card 
+                            key={video.id} 
+                            className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                            onClick={() => handleVideoClick(video)}
+                          >
+                            <div className="aspect-video bg-muted relative flex items-center justify-center">
+                              <Play className="h-12 w-12 text-muted-foreground" />
+                              {video.duration && (
+                                <Badge className="absolute bottom-2 right-2">
+                                  {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, "0")}
+                                </Badge>
+                              )}
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                            <CardContent className="pt-4 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6 bg-gradient-to-br from-primary to-accent">
+                                  <AvatarFallback className="text-white text-xs">
+                                    AI
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium truncate">
+                                  {video.ai_influencers?.name || "Neznámý influencer"}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {video.script}
+                              </p>
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(video.created_at).toLocaleDateString("cs-CZ")}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteVideo(video.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
 
-          <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="font-heading">
-                  Vytvořit video s {selectedInfluencer?.name}
-                </DialogTitle>
-                <DialogDescription>
-                  Napište scénář a váš AI influencer vytvoří video (10 kreditů)
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleGenerateVideo} className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="script">Scénář videa *</Label>
-                  <Textarea
-                    id="script"
-                    placeholder="Napište o čem má influencer mluvit... např. 'Dnes vám ukážu 5 tipů jak být produktivnější...'"
-                    value={script}
-                    onChange={(e) => setScript(e.target.value)}
-                    rows={6}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Ideální délka: 100-300 slov pro 30-90 sekundové video
-                  </p>
-                </div>
+            <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="font-heading">
+                    Vytvořit video s {selectedInfluencer?.name}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Napište scénář a váš AI influencer vytvoří video (10 kreditů)
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleGenerateVideo} className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="script">Scénář videa *</Label>
+                    <Textarea
+                      id="script"
+                      placeholder="Napište o čem má influencer mluvit... např. 'Dnes vám ukážu 5 tipů jak být produktivnější...'"
+                      value={script}
+                      onChange={(e) => setScript(e.target.value)}
+                      rows={6}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Ideální délka: 100-300 slov pro 30-90 sekundové video
+                    </p>
+                  </div>
 
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-medium text-sm">Detaily influencera:</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Hlas:</span>{" "}
-                      <span className="font-medium">
-                        {VOICE_TYPES.find(v => v.value === selectedInfluencer?.voice_type)?.label}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Osobnost:</span>{" "}
-                      <span className="font-medium">
-                        {PERSONALITIES.find(p => p.value === selectedInfluencer?.personality)?.label}
-                      </span>
+                  <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-medium text-sm">Detaily influencera:</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Hlas:</span>{" "}
+                        <span className="font-medium">
+                          {VOICE_TYPES.find(v => v.value === selectedInfluencer?.voice_type)?.label}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Osobnost:</span>{" "}
+                        <span className="font-medium">
+                          {PERSONALITIES.find(p => p.value === selectedInfluencer?.personality)?.label}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <Button type="submit" className="w-full" disabled={loading || credits < 10}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generování videa...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Vygenerovat video (10 kreditů)
-                    </>
+                  <Button type="submit" className="w-full" disabled={loading || credits < 10}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generování videa...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Vygenerovat video (10 kreditů)
+                      </>
+                    )}
+                  </Button>
+                  {credits < 10 && (
+                    <p className="text-sm text-destructive text-center">
+                      Nemáte dostatek kreditů. Kontaktujte administrátora.
+                    </p>
                   )}
-                </Button>
-                {credits < 10 && (
-                  <p className="text-sm text-destructive text-center">
-                    Nemáte dostatek kreditů. Kontaktujte administrátora.
-                  </p>
-                )}
-              </form>
-            </DialogContent>
-          </Dialog>
+                </form>
+              </DialogContent>
+            </Dialog>
 
-          {/* Video Detail Dialog */}
-          <VideoDetailDialog
-            video={selectedVideo}
-            open={videoDetailOpen}
-            onOpenChange={setVideoDetailOpen}
-            onUseInSocialMedia={handleUseInSocialMedia}
-          />
+            {/* Video Detail Dialog */}
+            <VideoDetailDialog
+              video={selectedVideo}
+              open={videoDetailOpen}
+              onOpenChange={setVideoDetailOpen}
+              onUseInSocialMedia={handleUseInSocialMedia}
+            />
 
-          {/* Avatar Library Dialog */}
-          <InfluencerAvatarLibrary
-            open={avatarLibraryOpen}
-            onOpenChange={setAvatarLibraryOpen}
-            onSelect={handleAvatarSelect}
-          />
+            {/* Avatar Library Dialog */}
+            <InfluencerAvatarLibrary
+              open={avatarLibraryOpen}
+              onOpenChange={setAvatarLibraryOpen}
+              onSelect={handleAvatarSelect}
+            />
+          </div>
         </main>
       </div>
     </AuthGuard>
