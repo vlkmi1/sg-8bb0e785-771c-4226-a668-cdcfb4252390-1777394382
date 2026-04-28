@@ -20,6 +20,7 @@ export const musicService = {
     const user = await authState.getUser();
     if (!user) throw new Error("User not authenticated");
 
+    // Create initial record with processing status
     const { data, error } = await supabase
       .from("music_generations")
       .insert({
@@ -36,18 +37,53 @@ export const musicService = {
 
     if (error) throw error;
 
-    // Simulace generování - v produkci by volalo API
-    setTimeout(async () => {
-      const mockAudioUrl = `https://example.com/music/${data.id}.mp3`;
+    // Call API to generate music in background
+    try {
+      const response = await fetch("/api/generate-music", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          prompt: params.prompt,
+          genre: params.genre,
+          mood: params.mood,
+          duration: params.duration,
+          provider: params.provider,
+          userId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate music");
+      }
+
+      const result = await response.json();
+      
+      // Update record with completed status
       await supabase
         .from("music_generations")
         .update({ 
-          audio_url: mockAudioUrl, 
+          audio_url: result.audioUrl,
           status: "completed",
           updated_at: new Date().toISOString(),
         })
         .eq("id", data.id);
-    }, 3000);
+
+    } catch (error) {
+      console.error("Music generation error:", error);
+      // Update status to failed
+      await supabase
+        .from("music_generations")
+        .update({ 
+          status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+      throw error;
+    }
 
     return data;
   },
