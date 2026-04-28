@@ -162,7 +162,7 @@ export default function Chat() {
         description="Komunikujte s různými AI modely prostřednictvím jednotného rozhraní"
       />
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
-        <ModuleHeader title="AI Chat" credits={credits} />
+        <ModuleHeader credits={credits} />
         
         <div className="container mx-auto px-4 py-6 max-w-6xl">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
