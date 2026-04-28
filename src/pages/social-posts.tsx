@@ -11,13 +11,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Share2, Sparkles, LogOut, Trash2, Calendar, Loader2, ImageIcon, Coins, Settings, Eye, Upload, Video, Wand2 } from "lucide-react";
+import { Share2, Sparkles, LogOut, Trash2, Calendar, Loader2, ImageIcon, Coins, Settings, Eye, Upload, Video, Wand2, Clock } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { SocialPreview } from "@/components/SocialPreview";
 import { socialPostsService, type SocialPlatform, type SocialPost } from "@/services/socialPostsService";
 import { creditsService } from "@/services/creditsService";
 import { supabase } from "@/integrations/supabase/client";
+import { AutoPostWizard } from "@/components/AutoPostWizard";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 const PLATFORMS = [
   { id: "facebook", name: "Facebook", icon: "📘", description: "Standardní příspěvek", maxChars: 63206 },
@@ -54,6 +56,7 @@ export default function SocialPosts() {
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageModel, setImageModel] = useState("dall-e-3");
   const [imageSize, setImageSize] = useState("1024x1024");
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -300,9 +303,10 @@ export default function SocialPosts() {
 
         <main className="container mx-auto px-6 py-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3">
               <TabsTrigger value="create">Vytvořit příspěvek</TabsTrigger>
-              <TabsTrigger value="scheduled">Naplánované ({posts.length})</TabsTrigger>
+              <TabsTrigger value="calendar">Kalendář ({posts.length})</TabsTrigger>
+              <TabsTrigger value="scheduled">Seznam příspěvků</TabsTrigger>
             </TabsList>
 
             <TabsContent value="create" className="space-y-6">
@@ -568,6 +572,139 @@ export default function SocialPosts() {
               </div>
             </TabsContent>
 
+            {/* Calendar Tab */}
+            <TabsContent value="calendar" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-heading font-bold">Kalendář příspěvků</h2>
+                  <p className="text-muted-foreground">
+                    Vizualizace naplánovaných příspěvků na časové ose
+                  </p>
+                </div>
+                <Button onClick={() => setWizardOpen(true)}>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Automatické plánování
+                </Button>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Calendar View */}
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="font-heading flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      Kalendář
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CalendarComponent
+                      mode="single"
+                      className="rounded-md border w-full"
+                      modifiers={{
+                        scheduled: posts
+                          .filter(p => p.scheduled_time)
+                          .map(p => new Date(p.scheduled_time!)),
+                      }}
+                      modifiersStyles={{
+                        scheduled: {
+                          backgroundColor: "hsl(var(--primary) / 0.2)",
+                          fontWeight: "bold",
+                        },
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Upcoming Posts */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-heading">Nadcházející příspěvky</CardTitle>
+                    <CardDescription>
+                      Nejbližší naplánované příspěvky
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {posts
+                      .filter(p => p.scheduled_time && new Date(p.scheduled_time) > new Date())
+                      .sort((a, b) => 
+                        new Date(a.scheduled_time!).getTime() - new Date(b.scheduled_time!).getTime()
+                      )
+                      .slice(0, 10)
+                      .map((post) => (
+                        <div
+                          key={post.id}
+                          className="p-3 rounded-lg border hover:bg-muted cursor-pointer transition-colors"
+                          onClick={() => handlePreview(post)}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">
+                              {PLATFORMS.find(p => p.id === post.platform)?.icon}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">
+                              {PLATFORMS.find(p => p.id === post.platform)?.name}
+                            </Badge>
+                          </div>
+                          <p className="text-sm line-clamp-2 mb-2">{post.content}</p>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {new Date(post.scheduled_time!).toLocaleString("cs-CZ", {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    {posts.filter(p => p.scheduled_time && new Date(p.scheduled_time) > new Date()).length === 0 && (
+                      <div className="text-center text-muted-foreground py-8">
+                        <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Zatím nemáte naplánované žádné příspěvky</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Statistics */}
+              <div className="grid gap-4 md:grid-cols-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">
+                      {posts.filter(p => p.status === "scheduled").length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Naplánováno</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">
+                      {posts.filter(p => p.status === "published").length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Publikováno</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">
+                      {posts.filter(p => p.status === "draft").length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Koncepty</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">
+                      {posts.filter(p => p.status === "failed").length}
+                    </div>
+                    <p className="text-xs text-muted-foreground text-destructive">
+                      Selhalo
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
             <TabsContent value="scheduled" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -745,6 +882,13 @@ export default function SocialPosts() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Auto Post Wizard */}
+          <AutoPostWizard
+            open={wizardOpen}
+            onOpenChange={setWizardOpen}
+            onComplete={loadData}
+          />
         </main>
       </div>
     </AuthGuard>
