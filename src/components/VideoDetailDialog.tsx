@@ -189,9 +189,6 @@ export function VideoDetailDialog({
                       {formatDuration(video.duration)}
                     </Badge>
                   )}
-                  <Badge variant="outline">
-                    {video.ai_influencers?.voice_type || "Neutral"}
-                  </Badge>
                 </div>
               </div>
             </div>
