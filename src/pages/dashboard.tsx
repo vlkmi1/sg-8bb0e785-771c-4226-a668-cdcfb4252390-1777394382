@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot, DollarSign, FileText, Megaphone
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot, DollarSign, FileText, Megaphone, Edit3
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -451,6 +451,31 @@ export default function Dashboard() {
                 <Button className="w-full">
                   <Megaphone className="h-4 w-4 mr-2" />
                   Vytvořit reklamu
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow border-secondary/20 bg-gradient-to-br from-secondary/5 to-accent/5"
+              onClick={() => router.push("/image-editor")}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-secondary/10 rounded-xl">
+                    <Edit3 className="h-8 w-8 text-secondary" />
+                  </div>
+                  <Badge variant="secondary" className="bg-secondary">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Nové
+                  </Badge>
+                </div>
+                <CardTitle className="font-heading">Editor obrázků</CardTitle>
+                <CardDescription>AI editace a úpravy obrázků</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Otevřít editor
                 </Button>
               </CardContent>
             </Card>

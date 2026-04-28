@@ -1,6 +1,6 @@
 ---
 title: AI Image Editor Module
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [ai, image-editing, editor]
@@ -25,9 +25,9 @@ Profesionální modul pro editaci AI vygenerovaných obrázků s podporou inpain
 - [x] RLS policies pro `image_edits`
 - [x] Service `imageEditService.ts`
 - [x] API endpoint `/api/edit-image`
-- [ ] Stránka `/image-editor` s canvas editorem
-- [ ] Propojení s gallery - tlačítko "Edit"
-- [ ] Aktualizovat dashboard - karta "Editor obrázků"
+- [x] Stránka `/image-editor` s canvas editorem
+- [x] Propojení s gallery - tlačítko "Edit"
+- [x] Aktualizovat dashboard - karta "Editor obrázků"
 
 ## Acceptance
 - Uživatel může otevřít vygenerovaný obrázek v editoru

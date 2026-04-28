@@ -6,9 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, Sparkles, LogOut, Loader2, Coins } from "lucide-react";
+import { ImageIcon, Sparkles, LogOut, Loader2, Coins, Wand2, Download, Trash2, ChevronDown, Edit3, Clock } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
-import { ImageGallery } from "@/components/ImageGallery";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { imageGenerationService, type ImageProvider, type GeneratedImage } from "@/services/imageGenerationService";
 import { creditsService } from "@/services/creditsService";
@@ -283,8 +282,76 @@ export default function Generate() {
               )}
             </TabsContent>
 
-            <TabsContent value="gallery">
-              <ImageGallery images={images} onDelete={handleDelete} />
+            <TabsContent value="gallery" className="space-y-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {images.length === 0 ? (
+                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                    <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg">Zatím nemáte žádné vygenerované obrázky</p>
+                    <p className="text-sm">Začněte generováním prvního obrázku</p>
+                  </div>
+                ) : (
+                  images.map((image) => (
+                    <Card key={image.id} className="overflow-hidden group">
+                      <div className="relative aspect-square">
+                        <img
+                          src={image.image_url}
+                          alt={image.prompt}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              router.push({
+                                pathname: "/image-editor",
+                                query: {
+                                  imageUrl: image.image_url,
+                                  imageId: image.id,
+                                },
+                              });
+                            }}
+                          >
+                            <Edit3 className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const link = document.createElement("a");
+                              link.href = image.image_url;
+                              link.download = `image-${image.id}.png`;
+                              link.click();
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(image.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {image.prompt}
+                        </p>
+                        <div className="flex items-center justify-between text-xs">
+                          <Badge variant="outline">{image.provider}</Badge>
+                          <span className="text-muted-foreground">
+                            {new Date(image.created_at).toLocaleDateString("cs-CZ")}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </main>
