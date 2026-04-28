@@ -211,7 +211,7 @@ export default function VideoGenerate() {
             </TabsContent>
 
             <TabsContent value="gallery">
-              <VideoGallery videos={videos.map(v => ({ url: v.video_url }))} onDelete={handleDeleteVideo} />
+              <VideoGallery videos={videos.map(v => ({ id: v.id, url: v.video_url }))} onDelete={handleDeleteVideo} />
             </TabsContent>
           </Tabs>
         </main>

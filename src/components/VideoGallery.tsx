@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, X, Play, Loader2 } from "lucide-react";
+import { Download, X, Play, Loader2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import Image from "next/image";
 
 interface VideoGalleryProps {
-  videos: Array<{ url: string; thumbnail?: string }>;
+  videos: Array<{ id?: string; url: string; thumbnail?: string }>;
   isLoading?: boolean;
+  onDelete?: (id: string) => void;
 }
 
-export function VideoGallery({ videos, isLoading = false }: VideoGalleryProps) {
+export function VideoGallery({ videos, isLoading = false, onDelete }: VideoGalleryProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   const handleDownload = async (videoUrl: string) => {
@@ -80,6 +81,15 @@ export function VideoGallery({ videos, isLoading = false }: VideoGalleryProps) {
               >
                 <Download className="h-4 w-4" />
               </Button>
+              {onDelete && video.id && (
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  onClick={() => onDelete(video.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </Card>
         ))}
