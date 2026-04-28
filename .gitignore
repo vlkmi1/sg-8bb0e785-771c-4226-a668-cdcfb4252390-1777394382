@@ -35,5 +35,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# firebase
-firebase-service-account.json
+# PM2 (process manager - local development only)
+.pm2/
+ecosystem.config.js
+logs/
+
+# Supabase
+supabase/.temp/
