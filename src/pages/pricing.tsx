@@ -56,7 +56,19 @@ export default function Pricing() {
         .order("price", { ascending: true });
 
       if (error) throw error;
-      setPlans(data || []);
+      
+      const formattedPlans: SubscriptionPlan[] = (data || []).map((plan: any) => ({
+        id: plan.id,
+        tier: plan.tier,
+        name: plan.name,
+        price: plan.price,
+        billing_period: plan.billing_period,
+        credits_included: plan.credits_included,
+        is_active: plan.is_active,
+        features: Array.isArray(plan.features) ? plan.features : []
+      }));
+      
+      setPlans(formattedPlans);
     } catch (error) {
       console.error("Error loading plans:", error);
     }
