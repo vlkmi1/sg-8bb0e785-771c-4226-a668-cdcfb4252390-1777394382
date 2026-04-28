@@ -69,6 +69,8 @@ export default function Credits() {
     try {
       const payment = await paymentService.createPayment({
         amount: selectedPackage.price,
+        currency: "USD",
+        description: `Credits purchase: ${selectedPackage.name}`,
         method: "bank_transfer",
         paymentType: "credits",
         metadata: {
@@ -77,7 +79,7 @@ export default function Credits() {
         },
       });
 
-      const qrUrl = paymentService.generateBankTransferQR(payment);
+      const qrUrl = await paymentService.generateBankTransferQR(payment.id);
       setQrCodeUrl(qrUrl);
       setCurrentPayment(payment);
       setPaymentDialogOpen(false);

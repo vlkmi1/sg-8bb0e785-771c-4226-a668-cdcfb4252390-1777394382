@@ -17,10 +17,12 @@ export interface UserStats {
 }
 
 export interface AdminSetting {
-  id: string;
-  setting_key: string;
-  setting_value: any;
-  description: string;
+  id?: string;
+  provider?: string;
+  api_key?: string;
+  setting_key?: string;
+  setting_value?: any;
+  description?: string;
 }
 
 export const adminService = {
@@ -53,7 +55,7 @@ export const adminService = {
       console.error("Error fetching admin settings:", error);
       return [];
     }
-    return data || [];
+    return (data as AdminSetting[]) || [];
   },
 
   async saveAdminSetting(key: string, value: any): Promise<void> {

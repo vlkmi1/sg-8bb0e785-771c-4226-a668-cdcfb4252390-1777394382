@@ -11,12 +11,15 @@ export interface PaymentIntent {
   currency: string;
   description: string;
   method: PaymentMethod;
+  paymentType?: string;
+  metadata?: any;
 }
 
 export interface CreditPackage {
   id: string;
   name: string;
   credits: number;
+  bonus_credits: number;
   price: number;
   currency: string;
   description: string;
@@ -134,12 +137,13 @@ export const paymentService = {
     }
   },
 
-  getCreditPackages() {
+  getCreditPackages(): CreditPackage[] {
     return [
       {
         id: "starter",
         name: "Starter Pack",
         credits: 50,
+        bonus_credits: 0,
         price: 4.99,
         currency: "USD",
         description: "Pro začátečníky",
@@ -148,6 +152,7 @@ export const paymentService = {
         id: "popular",
         name: "Popular Pack",
         credits: 150,
+        bonus_credits: 50,
         price: 12.99,
         currency: "USD",
         description: "Nejoblíbenější",
@@ -157,6 +162,7 @@ export const paymentService = {
         id: "pro",
         name: "Pro Pack",
         credits: 500,
+        bonus_credits: 200,
         price: 39.99,
         currency: "USD",
         description: "Pro pokročilé uživatele",
@@ -165,6 +171,7 @@ export const paymentService = {
         id: "enterprise",
         name: "Enterprise Pack",
         credits: 2000,
+        bonus_credits: 1000,
         price: 149.99,
         currency: "USD",
         description: "Pro firemní použití",
