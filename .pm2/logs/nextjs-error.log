@@ -1,7 +1,0 @@
- ⚠ The config property `experimental.turbo` is deprecated. Move this setting to `config.turbopack` or run `npx @next/codemod@latest next-experimental-turbo-to-turbopack .`
-[Test Admin] Error: {
-  message: 'Invalid API key',
-  hint: 'Double check your Supabase `anon` or `service_role` API key.'
-}
- ⚠ Blocked cross-origin request from 3000-8bb0e785-771c-4226-a668-cdcfb4252390.proxy.daytona.work to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
-Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
