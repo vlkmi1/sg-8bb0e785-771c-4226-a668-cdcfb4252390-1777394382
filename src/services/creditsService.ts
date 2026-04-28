@@ -1,59 +1,58 @@
 import { supabase } from "@/integrations/supabase/client";
-import { authState } from "./authStateService";
 
 export const creditsService = {
   async getCredits(): Promise<number> {
-    const user = await authState.getUser();
-    if (!user) throw new Error("Not authenticated");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-    const { data, error } = await supabase.rpc("get_user_credits", {
-      user_id: user.id,
-    } as any);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("credits")
+        .eq("id", user.id)
+        .single();
 
-    if (error) {
-      console.error("Error getting credits:", error);
+      if (error) throw error;
+      return data?.credits || 0;
+    } catch (error: any) {
+      console.error("Error loading credits:", error);
       throw error;
     }
-
-    return data || 0;
   },
 
-  async deductCredits(
-    amount: number,
-    description: string = "Service usage"
-  ): Promise<number> {
-    const user = await authState.getUser();
-    if (!user) throw new Error("Not authenticated");
+  async deductCredits(amount: number): Promise<number> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-    const { data, error } = await supabase.rpc("deduct_credits", {
-      user_id: user.id,
-      amount: amount,
-      description: description,
-    } as any);
+      // Get current credits
+      const { data: profile, error: fetchError } = await supabase
+        .from("profiles")
+        .select("credits")
+        .eq("id", user.id)
+        .single();
 
-    if (error) {
+      if (fetchError) throw fetchError;
+
+      const currentCredits = profile?.credits || 0;
+      const newCredits = currentCredits - amount;
+
+      if (newCredits < 0) {
+        throw new Error("Insufficient credits");
+      }
+
+      // Update credits
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ credits: newCredits })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      return newCredits;
+    } catch (error: any) {
       console.error("Error deducting credits:", error);
       throw error;
     }
-
-    return data || 0;
-  },
-
-  async getCreditTransactions() {
-    const user = await authState.getUser();
-    if (!user) throw new Error("Not authenticated");
-
-    const { data, error } = await supabase
-      .from("credit_transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error getting transactions:", error);
-      throw error;
-    }
-
-    return data || [];
   },
 };
