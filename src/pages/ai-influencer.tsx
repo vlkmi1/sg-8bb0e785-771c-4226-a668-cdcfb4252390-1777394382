@@ -16,6 +16,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { creditsService } from "@/services/creditsService";
 import { aiInfluencerService, type AIInfluencer, type InfluencerVideo, type VoiceType, type Personality } from "@/services/aiInfluencerService";
 import { supabase } from "@/integrations/supabase/client";
+import { InfluencerAvatarLibrary } from "@/components/InfluencerAvatarLibrary";
 
 const VOICE_TYPES = [
   { value: "neutral", label: "Neutrální", description: "Vyvážený a příjemný hlas" },
@@ -43,6 +44,7 @@ export default function AIInfluencer() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [avatarLibraryOpen, setAvatarLibraryOpen] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -183,6 +185,15 @@ export default function AIInfluencer() {
     router.push("/auth/login");
   };
 
+  const handleAvatarSelect = (template: any) => {
+    setName(template.name);
+    setDescription(template.description);
+    setAvatarUrl(template.imageUrl);
+    setVoiceType(template.voiceType);
+    setPersonality(template.personality);
+    setLanguage("cs");
+  };
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background">
@@ -249,16 +260,26 @@ export default function AIInfluencer() {
                             Definujte osobnost a charakteristiky vašeho virtuálního influencera
                           </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={handleCreateInfluencer} className="space-y-4 py-4">
+                        <form onSubmit={handleCreateInfluencer} className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="name">Jméno influencera *</Label>
-                            <Input
-                              id="name"
-                              placeholder="např. TechGuru AI, FitCoach Sarah..."
-                              value={name}
-                              onChange={(e) => setName(e.target.value)}
-                              required
-                            />
+                            <Label htmlFor="name">Jméno influencera</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Např. Sarah Tech Guru"
+                                required
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setAvatarLibraryOpen(true)}
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                Vybrat z knihovny
+                              </Button>
+                            </div>
                           </div>
 
                           <div className="space-y-2">
@@ -531,6 +552,13 @@ export default function AIInfluencer() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Avatar Library Dialog */}
+          <InfluencerAvatarLibrary
+            open={avatarLibraryOpen}
+            onOpenChange={setAvatarLibraryOpen}
+            onSelect={handleAvatarSelect}
+          />
         </main>
       </div>
     </AuthGuard>

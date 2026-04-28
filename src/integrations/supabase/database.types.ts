@@ -628,6 +628,7 @@ export type Database = {
       }
       influencer_videos: {
         Row: {
+          audio_url: string | null
           created_at: string | null
           duration: number | null
           id: string
@@ -638,6 +639,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          audio_url?: string | null
           created_at?: string | null
           duration?: number | null
           id?: string
@@ -648,6 +650,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          audio_url?: string | null
           created_at?: string | null
           duration?: number | null
           id?: string

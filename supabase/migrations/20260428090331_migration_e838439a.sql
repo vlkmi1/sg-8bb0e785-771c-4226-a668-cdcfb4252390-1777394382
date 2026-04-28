@@ -1,0 +1,1 @@
+ALTER TABLE influencer_videos ADD COLUMN IF NOT EXISTS audio_url TEXT;
