@@ -40,6 +40,11 @@ const AI_PROVIDERS = [
   { id: "midjourney", name: "Midjourney", icon: "✨", description: "AI Art Generation", url: "https://www.midjourney.com/account", supportsBalance: false },
   { id: "fal", name: "Fal AI", icon: "🎯", description: "Fast Image & Video Generation", url: "https://fal.ai/dashboard/keys", supportsBalance: false },
   { id: "runwayml", name: "RunwayML", icon: "🎬", description: "Gen-2 Video Generation", url: "https://app.runwayml.com/settings", supportsBalance: false },
+  { id: "suno", name: "Suno AI", icon: "🎵", description: "AI Music Generation", url: "https://suno.ai/account", supportsBalance: false },
+  { id: "musicgen", name: "MusicGen", icon: "🎼", description: "Meta's Music Generation", url: "https://replicate.com/meta/musicgen", supportsBalance: false },
+  { id: "mubert", name: "Mubert", icon: "🎧", description: "Royalty-Free Music Generation", url: "https://mubert.com/render/api", supportsBalance: false },
+  { id: "aiva", name: "AIVA", icon: "🎹", description: "AI Music Composition", url: "https://www.aiva.ai/", supportsBalance: false },
+  { id: "soundraw", name: "Soundraw", icon: "🎶", description: "AI Music Creator", url: "https://soundraw.io/", supportsBalance: false },
 ];
 
 // Provider to modules mapping
@@ -57,6 +62,21 @@ const PROVIDER_MODULES = {
   ],
   stability: [
     { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Vytvářet obrázky s Stable Diffusion" },
+  ],
+  suno: [
+    { name: "Music Generator", path: "/music-generate", icon: "🎵", description: "Generovat AI hudbu" },
+  ],
+  musicgen: [
+    { name: "Music Generator", path: "/music-generate", icon: "🎼", description: "Generovat hudbu s MusicGen" },
+  ],
+  mubert: [
+    { name: "Music Generator", path: "/music-generate", icon: "🎧", description: "Generovat royalty-free hudbu" },
+  ],
+  aiva: [
+    { name: "Music Generator", path: "/music-generate", icon: "🎹", description: "Komponovat AI hudbu" },
+  ],
+  soundraw: [
+    { name: "Music Generator", path: "/music-generate", icon: "🎶", description: "Vytvářet AI skladby" },
   ],
 };
 
