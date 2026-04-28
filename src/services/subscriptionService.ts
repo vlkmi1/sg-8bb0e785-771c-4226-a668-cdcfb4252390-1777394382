@@ -64,7 +64,13 @@ export const subscriptionService = {
       return [];
     }
 
-    return data || [];
+    // Parse string numeric values to actual numbers for React rendering
+    return (data || []).map(plan => ({
+      ...plan,
+      price: Number(plan.price),
+      credits_included: Number(plan.credits_included),
+      features: Array.isArray(plan.features) ? plan.features : []
+    })) as unknown as SubscriptionPlan[];
   },
 
   async createSubscription(planId: string): Promise<Subscription> {
