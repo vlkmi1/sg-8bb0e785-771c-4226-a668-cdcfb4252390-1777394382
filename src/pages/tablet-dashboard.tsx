@@ -6,6 +6,7 @@ import { TabletCreditsWidget, TabletQuickActionsWidget, TabletRecentActivityWidg
 import { UserMenu } from "@/components/UserMenu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function TabletDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,21 +36,21 @@ export default function TabletDashboard() {
                     </SheetTitle>
                   </SheetHeader>
                   <nav className="mt-6 space-y-2">
-                    <a href="/dashboard" className="block px-4 py-3 rounded-lg hover:bg-muted font-medium">
+                    <Link href="/dashboard" className="block px-4 py-3 rounded-lg hover:bg-muted font-medium">
                       Dashboard
-                    </a>
-                    <a href="/chat" className="block px-4 py-3 rounded-lg hover:bg-muted">
+                    </Link>
+                    <Link href="/chat" className="block px-4 py-3 rounded-lg hover:bg-muted">
                       AI Chat
-                    </a>
-                    <a href="/generate" className="block px-4 py-3 rounded-lg hover:bg-muted">
+                    </Link>
+                    <Link href="/generate" className="block px-4 py-3 rounded-lg hover:bg-muted">
                       Generování obrázků
-                    </a>
-                    <a href="/video-generate" className="block px-4 py-3 rounded-lg hover:bg-muted">
+                    </Link>
+                    <Link href="/video-generate" className="block px-4 py-3 rounded-lg hover:bg-muted">
                       Video generátor
-                    </a>
-                    <a href="/settings" className="block px-4 py-3 rounded-lg hover:bg-muted">
+                    </Link>
+                    <Link href="/settings" className="block px-4 py-3 rounded-lg hover:bg-muted">
                       Nastavení
-                    </a>
+                    </Link>
                   </nav>
                 </SheetContent>
               </Sheet>
@@ -60,18 +61,18 @@ export default function TabletDashboard() {
             </div>
 
             <nav className="hidden md:flex items-center gap-6">
-              <a href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
                 Dashboard
-              </a>
-              <a href="/chat" className="text-sm font-medium hover:text-primary transition-colors">
+              </Link>
+              <Link href="/chat" className="text-sm font-medium hover:text-primary transition-colors">
                 Chat
-              </a>
-              <a href="/generate" className="text-sm font-medium hover:text-primary transition-colors">
+              </Link>
+              <Link href="/generate" className="text-sm font-medium hover:text-primary transition-colors">
                 Generování
-              </a>
-              <a href="/settings" className="text-sm font-medium hover:text-primary transition-colors">
+              </Link>
+              <Link href="/settings" className="text-sm font-medium hover:text-primary transition-colors">
                 Nastavení
-              </a>
+              </Link>
             </nav>
 
             <div className="flex items-center gap-3">

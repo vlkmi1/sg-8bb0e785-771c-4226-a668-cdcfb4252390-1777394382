@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Menu, Bell, Settings } from "lucide-react";
 import { CreditsWidget, QuickActionsWidget, RecentActivityWidget, StatsCardsWidget } from "@/components/dashboard/MobileWidgets";
 import { UserMenu } from "@/components/UserMenu";
+import Link from "next/link";
 
 export default function MobileDashboard() {
   const [open, setOpen] = useState(false);
@@ -34,18 +35,18 @@ export default function MobileDashboard() {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="mt-6 space-y-2">
-                  <a href="/dashboard" className="block px-3 py-2 rounded-lg hover:bg-muted">
+                  <Link href="/dashboard" className="block px-3 py-2 rounded-lg hover:bg-muted">
                     Dashboard
-                  </a>
-                  <a href="/chat" className="block px-3 py-2 rounded-lg hover:bg-muted">
+                  </Link>
+                  <Link href="/chat" className="block px-3 py-2 rounded-lg hover:bg-muted">
                     Chat
-                  </a>
-                  <a href="/generate" className="block px-3 py-2 rounded-lg hover:bg-muted">
+                  </Link>
+                  <Link href="/generate" className="block px-3 py-2 rounded-lg hover:bg-muted">
                     Generování obrázků
-                  </a>
-                  <a href="/settings" className="block px-3 py-2 rounded-lg hover:bg-muted">
+                  </Link>
+                  <Link href="/settings" className="block px-3 py-2 rounded-lg hover:bg-muted">
                     Nastavení
-                  </a>
+                  </Link>
                 </nav>
               </SheetContent>
             </Sheet>
