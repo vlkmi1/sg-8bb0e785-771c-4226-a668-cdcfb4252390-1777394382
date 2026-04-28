@@ -1,139 +1,127 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
-export type AdminSetting = Tables<"admin_settings">;
+export type Profile = Tables<"profiles">;
 
-export interface CreateAdminSettingParams {
-  provider: string;
-  api_key: string;
-  model_name?: string;
-  is_active?: boolean;
+export interface CreditUpdate {
+  user_id: string;
+  amount: number;
+  description: string;
 }
 
-export interface UpdateAdminSettingParams {
-  api_key?: string;
-  model_name?: string;
-  is_active?: boolean;
+export interface UserStats {
+  total_users: number;
+  active_users: number;
+  total_credits_distributed: number;
 }
 
 export const adminService = {
   async isAdmin(): Promise<boolean> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    try {
+      const user = await authState.getUser();
+      if (!user) return false;
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
 
-    if (error) {
-      console.error("Error checking admin status:", error);
+      if (error) {
+        console.error("Error checking admin status:", error);
+        return false;
+      }
+
+      return data?.is_admin || false;
+    } catch (error) {
+      console.error("Error in isAdmin:", error);
       return false;
     }
-
-    return data?.is_admin || false;
   },
 
-  async getAdminSettings(): Promise<AdminSetting[]> {
+  async getAllUsers(): Promise<Profile[]> {
     const { data, error } = await supabase
-      .from("admin_settings")
+      .from("profiles")
       .select("*")
-      .order("provider");
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching admin settings:", error);
+      console.error("Error fetching users:", error);
       throw error;
     }
 
     return data || [];
   },
 
-  async getAdminSetting(provider: string): Promise<AdminSetting | null> {
-    const { data, error } = await supabase
-      .from("admin_settings")
-      .select("*")
-      .eq("provider", provider)
-      .single();
+  async updateUserCredits(update: CreditUpdate): Promise<void> {
+    const { error } = await supabase.rpc("admin_update_credits", {
+      p_user_id: update.user_id,
+      p_amount: update.amount,
+      p_description: update.description,
+    });
 
     if (error) {
-      if (error.code === "PGRST116") return null;
-      console.error("Error fetching admin setting:", error);
+      console.error("Error updating credits:", error);
       throw error;
     }
-
-    return data;
   },
 
-  async saveAdminSetting(provider: string, apiKey: string): Promise<AdminSetting> {
-    const existing = await this.getAdminSetting(provider);
-    if (existing) {
-      return this.updateAdminSetting(provider, { api_key: apiKey });
-    } else {
-      return this.createAdminSetting({ provider, api_key: apiKey });
-    }
+  async getUserStats(): Promise<UserStats> {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, credits, last_sign_in_at");
+
+    const totalUsers = profiles?.length || 0;
+    const activeUsers =
+      profiles?.filter((p) => {
+        if (!p.last_sign_in_at) return false;
+        const lastSignIn = new Date(p.last_sign_in_at);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return lastSignIn > thirtyDaysAgo;
+      }).length || 0;
+
+    const totalCreditsDistributed =
+      profiles?.reduce((sum, p) => sum + (p.credits || 0), 0) || 0;
+
+    return {
+      total_users: totalUsers,
+      active_users: activeUsers,
+      total_credits_distributed: totalCreditsDistributed,
+    };
   },
 
-  async createAdminSetting(params: CreateAdminSettingParams): Promise<AdminSetting> {
-    const { data, error } = await supabase
-      .from("admin_settings")
-      .insert({
-        provider: params.provider,
-        api_key: params.api_key,
-        model_name: params.model_name,
-        is_active: params.is_active ?? true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating admin setting:", error);
-      throw error;
-    }
-
-    return data;
-  },
-
-  async updateAdminSetting(provider: string, params: UpdateAdminSettingParams): Promise<AdminSetting> {
-    const { data, error } = await supabase
-      .from("admin_settings")
-      .update({
-        ...params,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("provider", provider)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating admin setting:", error);
-      throw error;
-    }
-
-    return data;
-  },
-
-  async deleteAdminSetting(provider: string): Promise<void> {
+  async toggleAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
     const { error } = await supabase
-      .from("admin_settings")
-      .delete()
-      .eq("provider", provider);
+      .from("profiles")
+      .update({ is_admin: isAdmin })
+      .eq("id", userId);
 
     if (error) {
-      console.error("Error deleting admin setting:", error);
+      console.error("Error toggling admin status:", error);
       throw error;
     }
   },
 
-  async toggleAdminSetting(provider: string, isActive: boolean): Promise<void> {
-    const { error } = await supabase
-      .from("admin_settings")
-      .update({ is_active: isActive, updated_at: new Date().toISOString() })
-      .eq("provider", provider);
+  async getCreditTransactions() {
+    const { data, error } = await supabase
+      .from("credit_transactions")
+      .select(`
+        *,
+        profiles:user_id (
+          email,
+          full_name
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (error) {
-      console.error("Error toggling admin setting:", error);
+      console.error("Error fetching credit transactions:", error);
       throw error;
     }
+
+    return data || [];
   },
 };

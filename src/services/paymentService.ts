@@ -1,86 +1,71 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
-export type CreditPackage = Tables<"credit_packages">;
 export type Payment = Tables<"payments">;
-export type PaymentMethod = "paypal" | "bank_transfer" | "card" | "crypto";
+export type PaymentMethod = "stripe" | "paypal" | "crypto";
+export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
+
+export interface PaymentIntent {
+  amount: number;
+  currency: string;
+  description: string;
+  method: PaymentMethod;
+}
 
 export const paymentService = {
-  async getCreditPackages(): Promise<CreditPackage[]> {
-    const { data, error } = await supabase
-      .from("credit_packages")
-      .select("*")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  async createPayment(params: {
-    amount: number;
-    method: PaymentMethod;
-    paymentType: "subscription" | "credits";
-    metadata?: any;
-  }): Promise<Payment> {
-    const { data: { user } } = await supabase.auth.getUser();
+  async createPayment(intent: PaymentIntent): Promise<Payment> {
+    const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
       .from("payments")
       .insert({
         user_id: user.id,
-        amount: params.amount,
-        method: params.method,
-        payment_type: params.paymentType,
+        amount: intent.amount,
+        currency: intent.currency,
+        payment_method: intent.method,
         status: "pending",
-        metadata: params.metadata,
+        description: intent.description,
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error creating payment:", error);
+      throw error;
+    }
+
     return data;
   },
 
-  async updatePaymentStatus(paymentId: string, status: "completed" | "failed" | "refunded"): Promise<void> {
+  async updatePaymentStatus(
+    paymentId: string,
+    status: PaymentStatus,
+    transactionId?: string
+  ): Promise<void> {
+    const updates: any = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (transactionId) {
+      updates.transaction_id = transactionId;
+    }
+
     const { error } = await supabase
       .from("payments")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq("id", paymentId);
 
-    if (error) throw error;
-
-    // If payment completed and it was for credits, add them
-    if (status === "completed") {
-      const { data: payment } = await supabase
-        .from("payments")
-        .select("*, metadata")
-        .eq("id", paymentId)
-        .single();
-
-      if (payment && payment.payment_type === "credits" && payment.metadata) {
-        const credits = (payment.metadata as any).credits || 0;
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user && credits > 0) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("credits")
-            .eq("id", user.id)
-            .single();
-
-          await supabase
-            .from("profiles")
-            .update({ credits: (profile?.credits || 0) + credits })
-            .eq("id", user.id);
-        }
-      }
+    if (error) {
+      console.error("Error updating payment status:", error);
+      throw error;
     }
   },
 
-  async getUserPayments(): Promise<Payment[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+  async getPaymentHistory(): Promise<Payment[]> {
+    const user = await authState.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -89,43 +74,83 @@ export const paymentService = {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching payment history:", error);
+      return [];
+    }
+
     return data || [];
   },
 
-  generateBankTransferQR(payment: Payment): string {
-    // Generate SPAYD QR code for Czech bank transfer
-    const accountNumber = "123456789/0100"; // TODO: Get from admin settings
-    const amount = payment.amount.toFixed(2);
-    const variableSymbol = payment.id.substring(0, 10);
-    const message = `kAIkus - ${payment.payment_type === "credits" ? "Kredity" : "Předplatné"}`;
+  async getPayment(paymentId: string): Promise<Payment | null> {
+    const user = await authState.getUser();
+    if (!user) return null;
 
-    const spayd = `SPD*1.0*ACC:${accountNumber}*AM:${amount}*CC:CZK*X-VS:${variableSymbol}*MSG:${message}`;
-    
-    // Return QR code data (in real app, use QR code library)
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(spayd)}`;
+    const { data, error } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("id", paymentId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching payment:", error);
+      return null;
+    }
+
+    return data;
   },
 
-  async initPayPalPayment(packageId: string): Promise<string> {
-    // TODO: Integrate with PayPal API
-    // This is a placeholder - real implementation would call PayPal API
-    const pkg = await this.getCreditPackages();
-    const selectedPkg = pkg.find(p => p.id === packageId);
-    
-    if (!selectedPkg) throw new Error("Package not found");
+  async refundPayment(paymentId: string): Promise<void> {
+    const { error } = await supabase
+      .from("payments")
+      .update({
+        status: "refunded",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", paymentId);
 
-    // Create payment record
-    const payment = await this.createPayment({
-      amount: selectedPkg.price,
-      method: "paypal",
-      paymentType: "credits",
-      metadata: {
-        package_id: packageId,
-        credits: selectedPkg.credits + selectedPkg.bonus_credits,
+    if (error) {
+      console.error("Error refunding payment:", error);
+      throw error;
+    }
+  },
+
+  getCreditPackages() {
+    return [
+      {
+        id: "starter",
+        name: "Starter Pack",
+        credits: 50,
+        price: 4.99,
+        currency: "USD",
+        description: "Pro začátečníky",
       },
-    });
-
-    // In real app, return PayPal redirect URL
-    return `https://paypal.com/checkout?payment_id=${payment.id}`;
+      {
+        id: "popular",
+        name: "Popular Pack",
+        credits: 150,
+        price: 12.99,
+        currency: "USD",
+        description: "Nejoblíbenější",
+        badge: "Nejprodávanější",
+      },
+      {
+        id: "pro",
+        name: "Pro Pack",
+        credits: 500,
+        price: 39.99,
+        currency: "USD",
+        description: "Pro pokročilé uživatele",
+      },
+      {
+        id: "enterprise",
+        name: "Enterprise Pack",
+        credits: 2000,
+        price: 149.99,
+        currency: "USD",
+        description: "Pro firemní použití",
+      },
+    ];
   },
 };

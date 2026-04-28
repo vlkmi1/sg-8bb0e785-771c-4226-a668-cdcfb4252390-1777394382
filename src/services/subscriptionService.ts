@@ -1,121 +1,145 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { authState } from "./authStateService";
 
-export type SubscriptionPlan = Tables<"subscription_plans">;
-export type UserSubscription = Tables<"user_subscriptions"> & {
-  subscription_plans?: SubscriptionPlan;
-};
-export type SubscriptionTier = "free" | "basic" | "pro" | "enterprise";
+export type Subscription = Tables<"user_subscriptions">;
+export type SubscriptionPlan = "free" | "basic" | "pro" | "enterprise";
 
 export const subscriptionService = {
-  async getPlans(): Promise<SubscriptionPlan[]> {
-    const { data, error } = await supabase
-      .from("subscription_plans")
-      .select("*")
-      .eq("is_active", true)
-      .order("price", { ascending: true });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  async getCurrentSubscription(): Promise<UserSubscription | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+  async getCurrentSubscription(): Promise<Subscription | null> {
+    const user = await authState.getUser();
     if (!user) return null;
 
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .select("*, subscription_plans(*)")
+      .select("*")
       .eq("user_id", user.id)
       .eq("status", "active")
       .single();
 
-    if (error && error.code !== "PGRST116") throw error;
-    return data as UserSubscription | null;
-  },
-
-  async subscribeToPlan(planId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
-
-    // Check if user already has active subscription
-    const current = await this.getCurrentSubscription();
-    if (current) {
-      // Cancel current subscription
-      await supabase
-        .from("user_subscriptions")
-        .update({ 
-          status: "cancelled", 
-          cancelled_at: new Date().toISOString(),
-          auto_renew: false 
-        })
-        .eq("id", current.id);
+    if (error && error.code !== "PGRST116") {
+      console.error("Error fetching subscription:", error);
+      return null;
     }
 
-    // Create new subscription
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + 1);
+    return data;
+  },
 
-    const { error } = await supabase
+  async createSubscription(plan: SubscriptionPlan): Promise<Subscription> {
+    const user = await authState.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const { data, error } = await supabase
       .from("user_subscriptions")
       .insert({
         user_id: user.id,
-        plan_id: planId,
+        plan_type: plan,
         status: "active",
-        expires_at: expiresAt.toISOString(),
-      });
-
-    if (error) throw error;
-
-    // Add included credits
-    const { data: plan } = await supabase
-      .from("subscription_plans")
-      .select("credits_included")
-      .eq("id", planId)
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+      })
+      .select()
       .single();
 
-    if (plan && plan.credits_included > 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("credits")
-          .eq("id", user.id)
-          .single();
+    if (error) {
+      console.error("Error creating subscription:", error);
+      throw error;
+    }
 
-        await supabase
-          .from("profiles")
-          .update({ credits: (profile?.credits || 0) + plan.credits_included })
-          .eq("id", user.id);
-      }
+    return data;
+  },
+
+  async upgradeSubscription(
+    subscriptionId: string,
+    newPlan: SubscriptionPlan
+  ): Promise<void> {
+    const { error } = await supabase
+      .from("user_subscriptions")
+      .update({
+        plan_type: newPlan,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", subscriptionId);
+
+    if (error) {
+      console.error("Error upgrading subscription:", error);
+      throw error;
     }
   },
 
-  async cancelSubscription(): Promise<void> {
-    const current = await this.getCurrentSubscription();
-    if (!current) throw new Error("No active subscription");
+  async cancelSubscription(subscriptionId: string): Promise<void> {
+    const user = await authState.getUser();
+    if (!user) throw new Error("Not authenticated");
 
     const { error } = await supabase
       .from("user_subscriptions")
-      .update({ 
+      .update({
         status: "cancelled",
-        cancelled_at: new Date().toISOString(),
-        auto_renew: false
+        updated_at: new Date().toISOString(),
       })
-      .eq("id", current.id);
+      .eq("id", subscriptionId)
+      .eq("user_id", user.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error cancelling subscription:", error);
+      throw error;
+    }
   },
 
-  async hasModuleAccess(moduleName: string): Promise<boolean> {
-    const subscription = await this.getCurrentSubscription();
-    
-    // No subscription = free tier (only chat)
-    if (!subscription || !subscription.subscription_plans) {
-      return moduleName === "chat";
+  async getSubscriptionHistory(): Promise<Subscription[]> {
+    const user = await authState.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from("user_subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching subscription history:", error);
+      return [];
     }
 
-    const modules = subscription.subscription_plans.modules as string[] || [];
-    return modules.includes(moduleName);
+    return data || [];
+  },
+
+  getPlanLimits(plan: SubscriptionPlan) {
+    const limits = {
+      free: {
+        credits_per_month: 10,
+        max_conversations: 5,
+        max_images: 3,
+        max_videos: 0,
+        support: "community",
+      },
+      basic: {
+        credits_per_month: 100,
+        max_conversations: 50,
+        max_images: 30,
+        max_videos: 5,
+        support: "email",
+      },
+      pro: {
+        credits_per_month: 500,
+        max_conversations: -1,
+        max_images: -1,
+        max_videos: 50,
+        support: "priority",
+      },
+      enterprise: {
+        credits_per_month: -1,
+        max_conversations: -1,
+        max_images: -1,
+        max_videos: -1,
+        support: "dedicated",
+      },
+    };
+
+    return limits[plan];
   },
 };

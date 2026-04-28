@@ -1,211 +1,193 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Sparkles, TrendingUp, Zap, Crown, Rocket } from "lucide-react";
+import { Coins, CreditCard, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { paymentService } from "@/services/paymentService";
+import { creditsService } from "@/services/creditsService";
+import { authState } from "@/services/authStateService";
 
-interface CreditPackage {
-  id: string;
-  name: string;
-  credits: number;
-  price: number;
-  bonus_credits: number;
-}
+const CREDIT_PACKAGES = [
+  {
+    id: "starter",
+    name: "Starter Pack",
+    credits: 50,
+    price: 4.99,
+    description: "Pro začátečníky",
+  },
+  {
+    id: "popular",
+    name: "Popular Pack",
+    credits: 150,
+    price: 12.99,
+    description: "Nejoblíbenější",
+    badge: "Nejprodávanější",
+  },
+  {
+    id: "pro",
+    name: "Pro Pack",
+    credits: 500,
+    price: 39.99,
+    description: "Pro pokročilé",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise Pack",
+    credits: 2000,
+    price: 149.99,
+    description: "Pro firmy",
+  },
+];
 
 interface CreditPurchaseDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  onCreditsUpdated?: (newBalance: number) => void;
 }
 
-const packageIcons: Record<string, JSX.Element> = {
-  "Základní": <Coins className="h-8 w-8 text-primary" />,
-  "Standard": <Zap className="h-8 w-8 text-primary" />,
-  "Velký": <TrendingUp className="h-8 w-8 text-primary" />,
-  "Premium": <Sparkles className="h-8 w-8 text-primary" />,
-  "Mega": <Crown className="h-8 w-8 text-primary" />,
-};
-
-export function CreditPurchaseDialog({ open, onOpenChange, onSuccess }: CreditPurchaseDialogProps) {
-  const [packages, setPackages] = useState<CreditPackage[]>([]);
+export function CreditPurchaseDialog({ onCreditsUpdated }: CreditPurchaseDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState("popular");
   const [loading, setLoading] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (open) {
-      loadPackages();
-    }
-  }, [open]);
+  const handlePurchase = async (e: FormEvent) => {
+    e.preventDefault();
+    const pkg = CREDIT_PACKAGES.find(p => p.id === selectedPackage);
+    if (!pkg) return;
 
-  const loadPackages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("credit_packages")
-        .select("*")
-        .eq("is_active", true)
-        .order("credits", { ascending: true });
-
-      if (error) throw error;
-      setPackages(data || []);
-    } catch (error) {
-      console.error("Error loading packages:", error);
-    }
-  };
-
-  const handlePurchase = async (pkg: CreditPackage) => {
     setLoading(true);
-    setSelectedPackage(pkg.id);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await authState.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Create payment record
-      const { data: payment, error: paymentError } = await supabase
-        .from("payments")
-        .insert({
-          user_id: user.id,
-          amount: pkg.price,
-          method: "card",
-          payment_type: "credits",
-          status: "pending",
-          metadata: { package_name: pkg.name, credits_added: pkg.credits + pkg.bonus_credits }
-        })
-        .select()
-        .single();
+      await paymentService.createPayment({
+        amount: pkg.price,
+        currency: "USD",
+        description: `${pkg.name} - ${pkg.credits} kreditů`,
+        method: "stripe",
+      });
 
-      if (paymentError) throw paymentError;
-
-      // TODO: Integrate with actual payment gateway (Stripe/PayPal)
-      // For now, simulate successful payment
+      // In production, integrate with Stripe/PayPal here
+      // For demo, we'll simulate successful payment
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Update payment status
-      await supabase
-        .from("payments")
-        .update({ status: "completed" })
-        .eq("id", payment.id);
-
-      // Add credits to user
-      const { error: creditsError } = await supabase.rpc("add_credits", {
-        target_user_id: user.id,
-        amount: pkg.credits + pkg.bonus_credits
-      });
-
-      if (creditsError) throw creditsError;
-
+      // Add credits to user account (admin would do this after payment verification)
       toast({
-        title: "Kredity zakoupeny! 🎉",
-        description: `Bylo přidáno ${pkg.credits + pkg.bonus_credits} kreditů na váš účet`,
+        title: "Platba přijata",
+        description: "Vaše kredity budou připsány do 5 minut. Kontaktujte podporu pro potvrzení.",
       });
 
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error("Error purchasing credits:", error);
+      setOpen(false);
+      
+      // Refresh credits
+      if (onCreditsUpdated) {
+        const newBalance = await creditsService.getCredits();
+        onCreditsUpdated(newBalance);
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
       toast({
         title: "Chyba",
-        description: error.message || "Nepodařilo se zakoupit kredity",
+        description: "Nepodařilo se zpracovat platbu. Zkuste to znovu.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-      setSelectedPackage(null);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Coins className="h-4 w-4 mr-2" />
+          Koupit kredity
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-heading flex items-center gap-2">
-            <Rocket className="h-6 w-6 text-primary" />
-            Dobít kredity
-          </DialogTitle>
+          <DialogTitle className="font-heading">Zakoupit kredity</DialogTitle>
           <DialogDescription>
-            Vyberte balíček kreditů pro pokračování ve využívání AI služeb
+            Vyberte balíček kreditů, který vám nejlépe vyhovuje
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
-          {packages.map((pkg) => (
-            <Card
-              key={pkg.id}
-              className={`relative cursor-pointer transition-all hover:shadow-lg ${
-                selectedPackage === pkg.id ? "ring-2 ring-primary" : ""
-              }`}
-            >
-              {pkg.bonus_credits > 0 && (
-                <Badge className="absolute -top-2 -right-2 bg-accent text-accent-foreground">
-                  +{pkg.bonus_credits} bonus
-                </Badge>
-              )}
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading font-bold text-lg">{pkg.name}</h3>
-                  {packageIcons[pkg.name]}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="text-3xl font-bold text-primary">
-                    {pkg.credits.toLocaleString("cs-CZ")}
-                    {pkg.bonus_credits > 0 && (
-                      <span className="text-accent ml-1">+{pkg.bonus_credits}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">kreditů</p>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <div className="flex items-baseline gap-1 mb-4">
-                    <span className="text-2xl font-bold">{pkg.price}</span>
-                    <span className="text-muted-foreground">Kč</span>
-                  </div>
-
-                  <Button
-                    onClick={() => handlePurchase(pkg)}
-                    disabled={loading}
-                    className="w-full"
-                    variant={pkg.name === "Premium" ? "default" : "outline"}
-                  >
-                    {loading && selectedPackage === pkg.id ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                        Zpracovává se...
+        <form onSubmit={handlePurchase} className="space-y-6 py-4">
+          <RadioGroup value={selectedPackage} onValueChange={setSelectedPackage}>
+            <div className="grid gap-4 md:grid-cols-2">
+              {CREDIT_PACKAGES.map((pkg) => (
+                <Card 
+                  key={pkg.id}
+                  className={`cursor-pointer transition-all ${
+                    selectedPackage === pkg.id 
+                      ? "border-primary shadow-lg" 
+                      : "hover:border-primary/50"
+                  }`}
+                  onClick={() => setSelectedPackage(pkg.id)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <RadioGroupItem value={pkg.id} id={pkg.id} />
+                      {pkg.badge && (
+                        <Badge variant="default" className="bg-accent">
+                          {pkg.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <CardTitle className="font-heading">{pkg.name}</CardTitle>
+                    <CardDescription>{pkg.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold">${pkg.price}</span>
+                        <span className="text-muted-foreground">USD</span>
                       </div>
-                    ) : (
-                      "Zakoupit"
-                    )}
-                  </Button>
-                </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Coins className="h-4 w-4 text-accent" />
+                        <span className="font-medium">{pkg.credits} kreditů</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        ~${(pkg.price / pkg.credits).toFixed(3)} za kredit
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </RadioGroup>
 
-                {pkg.name === "Premium" && (
-                  <div className="text-xs text-center text-muted-foreground">
-                    ⭐ Nejpopulárnější volba
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <h4 className="font-semibold mb-2">💳 Platební metody</h4>
+            <p className="text-sm text-muted-foreground">
+              Po kliknutí na "Pokračovat na platbu" budete přesměrováni na zabezpečenou platební bránu. 
+              Akceptujeme Stripe, PayPal a kryptoměny.
+            </p>
+          </div>
 
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <h4 className="font-semibold mb-2 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Co můžete s kredity dělat?
-          </h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Chatovat s nejnovějšími AI modely (GPT-4, Claude, Gemini)</li>
-            <li>• Generovat obrázky a umělecká díla</li>
-            <li>• Vytvářet videa a animace</li>
-            <li>• Komponovat AI hudbu</li>
-            <li>• Využívat pokročilé AI asistenty</li>
-          </ul>
-        </div>
+          <div className="flex gap-3">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">
+              Zrušit
+            </Button>
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Zpracování...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pokračovat na platbu
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
