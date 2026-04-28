@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
-  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot, DollarSign, FileText, Megaphone, Edit3, Star, Crown, ArrowUpCircle
+  Brain, MessageSquare, ImageIcon, Play, Mic, TrendingUp, LogOut, Activity, Sparkles, Clock, Settings, Share2, User, Coins, Video, Music, Zap, Bot, DollarSign, FileText, Megaphone, Edit3, Star, Crown, ArrowUpCircle, Check
 } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -710,6 +710,88 @@ export default function Dashboard() {
         onOpenChange={setShowCreditDialog}
         onSuccess={loadCredits}
       />
+
+      {/* Plan Change Dialog */}
+      <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-2xl">Změnit předplatné</DialogTitle>
+            <DialogDescription>
+              Vyberte nový plán - změna se projeví okamžitě
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-3 py-4">
+            {availablePlans.map((plan) => {
+              const isCurrentPlan = subscription?.plan_id === plan.id;
+              const isBetter = plan.price > (currentPlan?.price || 0);
+              
+              return (
+                <Card 
+                  key={plan.id}
+                  className={`relative ${isCurrentPlan ? "border-primary border-2" : ""} ${isBetter ? "border-accent" : ""}`}
+                >
+                  {isCurrentPlan && (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+                      Aktuální plán
+                    </Badge>
+                  )}
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <Crown className="h-6 w-6 text-primary" />
+                      <Badge className={subscriptionService.getPlanBadgeColor(plan.tier)}>
+                        {subscriptionService.getPlanDisplayName(plan.tier)}
+                      </Badge>
+                    </div>
+                    <CardTitle className="font-heading">{plan.name}</CardTitle>
+                    <CardDescription>
+                      {plan.credits_included.toLocaleString("cs-CZ")} kreditů/{plan.billing_period === "monthly" ? "měsíc" : "rok"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold">
+                        {plan.price.toLocaleString("cs-CZ")} Kč
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        /{plan.billing_period === "monthly" ? "měsíc" : "rok"}
+                      </p>
+                    </div>
+                    
+                    <ul className="space-y-2 text-sm">
+                      {Array.isArray(plan.features) && plan.features.slice(0, 4).map((feature: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <Check className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Button
+                      onClick={() => handleUpgradePlan(plan.id)}
+                      disabled={isCurrentPlan || upgradingPlan}
+                      className="w-full"
+                      variant={isBetter ? "default" : "outline"}
+                    >
+                      {upgradingPlan ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                          Zpracovává se...
+                        </div>
+                      ) : isCurrentPlan ? (
+                        "Aktuální plán"
+                      ) : isBetter ? (
+                        "Upgradovat"
+                      ) : (
+                        "Vybrat plán"
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AuthGuard>
   );
 }

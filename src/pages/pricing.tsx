@@ -48,6 +48,8 @@ export default function Pricing() {
 
   const loadPlans = async () => {
     try {
+      console.log("Loading subscription plans...");
+      
       const { data, error } = await supabase
         .from("subscription_plans")
         .select("*")
@@ -55,7 +57,12 @@ export default function Pricing() {
         .neq("tier", "free")
         .order("price", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading plans:", error);
+        throw error;
+      }
+      
+      console.log("Plans loaded from DB:", data);
       
       const formattedPlans: SubscriptionPlan[] = (data || []).map((plan: any) => ({
         id: plan.id,
@@ -68,9 +75,11 @@ export default function Pricing() {
         features: Array.isArray(plan.features) ? plan.features : []
       }));
       
+      console.log("Formatted plans:", formattedPlans);
       setPlans(formattedPlans);
     } catch (error) {
       console.error("Error loading plans:", error);
+      alert("Chyba při načítání cenových plánů. Zkuste obnovit stránku.");
     }
   };
 

@@ -33,18 +33,31 @@ export default function Credits() {
 
   const loadData = async () => {
     try {
+      console.log("Loading credit packages and user credits...");
+      
       const [packagesData, userCredits] = await Promise.all([
         paymentService.getCreditPackages(),
         creditsService.getCredits(),
       ]);
+      
+      console.log("Packages loaded:", packagesData);
+      console.log("User credits:", userCredits);
+      
       setPackages(packagesData);
       setCredits(userCredits);
 
+      // Check available payment methods
       const [paypalAvailable, stripeAvailable, bankAvailable] = await Promise.all([
         paymentService.isPaymentMethodAvailable("paypal"),
         paymentService.isPaymentMethodAvailable("stripe"),
         paymentService.isPaymentMethodAvailable("bank_transfer"),
       ]);
+
+      console.log("Payment methods available:", {
+        paypal: paypalAvailable,
+        stripe: stripeAvailable,
+        bank: bankAvailable,
+      });
 
       setAvailablePaymentMethods({
         paypal: paypalAvailable,
@@ -53,6 +66,7 @@ export default function Credits() {
       });
     } catch (error) {
       console.error("Error loading data:", error);
+      alert("Chyba při načítání dat. Zkuste obnovit stránku.");
     }
   };
 
