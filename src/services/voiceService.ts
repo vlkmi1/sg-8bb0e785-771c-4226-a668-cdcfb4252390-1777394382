@@ -8,6 +8,8 @@ export interface CreateVoiceConversationParams {
   provider: VoiceProvider;
   audio_url?: string;
   transcript?: string;
+  response_text?: string;
+  response_audio_url?: string;
   duration?: number;
 }
 
@@ -15,7 +17,7 @@ export type VoiceConversation = Tables<"voice_conversations">;
 
 export const voiceService = {
   async createVoiceConversation(params: CreateVoiceConversationParams): Promise<VoiceConversation> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -25,6 +27,8 @@ export const voiceService = {
         provider: params.provider,
         audio_url: params.audio_url,
         transcript: params.transcript,
+        response_text: params.response_text,
+        response_audio_url: params.response_audio_url,
         duration: params.duration,
       })
       .select()
@@ -39,7 +43,7 @@ export const voiceService = {
   },
 
   async getVoiceConversations(): Promise<VoiceConversation[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -68,8 +72,40 @@ export const voiceService = {
     }
   },
 
+  async processVoiceMessage(audioData: string, provider: VoiceProvider): Promise<{
+    transcript: string;
+    response: string;
+    audioUrl: string;
+  }> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    try {
+      const response = await fetch("/api/voice-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audioData,
+          provider,
+          userId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to process voice message");
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error: any) {
+      console.error("Error processing voice message:", error);
+      throw new Error(error.message || "Failed to process voice message");
+    }
+  },
+
   async uploadAudio(file: File): Promise<string> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const fileExt = file.name.split(".").pop();
