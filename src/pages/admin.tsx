@@ -142,11 +142,11 @@ export default function Admin() {
       setApiKey("");
       setDialogOpen(false);
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving API key:", error);
       toast({
-        title: "Chyba",
-        description: "Nepodařilo se uložit API klíč",
+        title: "Chyba při ukládání API klíče",
+        description: error?.message || "Nepodařilo se uložit API klíč",
         variant: "destructive",
       });
     } finally {
