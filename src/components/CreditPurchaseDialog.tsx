@@ -70,37 +70,41 @@ export function CreditPurchaseDialog({ onCreditsUpdated, open: externalOpen, onO
       const user = await authState.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Create payment record
-      await paymentService.createPayment({
+      // Create payment record with pending status
+      const paymentRecord = await paymentService.createPayment({
         amount: pkg.price,
-        currency: "USD",
+        currency: "CZK",
         description: `${pkg.name} - ${pkg.credits} kreditů`,
-        method: "stripe",
+        method: "online", // or "qr" based on user choice
+        payment_type: "credits",
+        metadata: { 
+          package_id: pkg.id,
+          credits_amount: pkg.credits 
+        }
       });
 
-      // In production, integrate with Stripe/PayPal here
-      // For demo, we'll simulate successful payment
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Add credits to user account (admin would do this after payment verification)
       toast({
-        title: "Platba přijata",
-        description: "Vaše kredity budou připsány do 5 minut. Kontaktujte podporu pro potvrzení.",
+        title: "Přesměrování na platbu",
+        description: "Budete přesměrováni na platební bránu...",
+      });
+
+      // TODO: Integrate with real payment gateway (Stripe/GoPay/etc)
+      // For now, redirect to payment confirmation page
+      // window.location.href = `/payment/confirm?id=${paymentRecord.id}`;
+      
+      // DEMO: Show info that payment integration is needed
+      toast({
+        title: "Platební brána vyžaduje konfiguraci",
+        description: "Kontaktujte administrátora pro aktivaci platební brány (Stripe/GoPay).",
+        variant: "destructive",
       });
 
       setOpen(false);
-      onSuccess?.();
-      
-      // Refresh credits
-      if (onCreditsUpdated) {
-        const newBalance = await creditsService.getCredits();
-        onCreditsUpdated(newBalance);
-      }
     } catch (error) {
       console.error("Payment error:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se zpracovat platbu. Zkuste to znovu.",
+        description: "Nepodařilo se vytvořit platbu. Zkuste to znovu.",
         variant: "destructive",
       });
     } finally {

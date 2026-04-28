@@ -97,51 +97,42 @@ export default function Pricing() {
       const plan = plans.find(p => p.id === planId);
       if (!plan) throw new Error("Invalid plan");
 
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-      const { data: subscription, error: subError } = await supabase
-        .from("user_subscriptions")
-        .insert({
-          user_id: user.id,
-          plan_id: plan.id,
-          status: "active",
-          expires_at: periodEnd.toISOString(),
-        })
-        .select()
-        .single();
-
-      if (subError) throw subError;
-
+      // Create payment record with pending status
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           user_id: user.id,
           amount: plan.price,
-          method: "card",
+          method: "online",
           payment_type: "subscription",
-          status: "completed",
-          metadata: { plan_name: plan.name, subscription_id: subscription.id }
+          status: "pending",
+          metadata: { 
+            plan_id: plan.id,
+            plan_name: plan.name,
+            credits_amount: plan.credits_included 
+          }
         });
 
       if (paymentError) throw paymentError;
 
-      await supabase.rpc("add_credits", {
-        target_user_id: user.id,
-        amount: plan.credits_included
-      });
-
       toast({
-        title: "Předplatné aktivováno! 🎉",
-        description: `Bylo přidáno ${plan.credits_included.toLocaleString("cs-CZ")} kreditů`,
+        title: "Přesměrování na platbu",
+        description: "Budete přesměrováni na platební bránu...",
       });
 
-      router.push("/dashboard");
+      // TODO: Integrate with real payment gateway (Stripe/GoPay/etc)
+      // For now, show info message
+      toast({
+        title: "Platební brána vyžaduje konfiguraci",
+        description: "Kontaktujte administrátora pro aktivaci platební brány (Stripe/GoPay).",
+        variant: "destructive",
+      });
+
     } catch (error: any) {
-      console.error("Error subscribing:", error);
+      console.error("Error creating payment:", error);
       toast({
         title: "Chyba",
-        description: error.message || "Nepodařilo se aktivovat předplatné",
+        description: error.message || "Nepodařilo se vytvořit platbu",
         variant: "destructive",
       });
     } finally {
