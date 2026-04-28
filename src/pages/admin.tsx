@@ -2,13 +2,26 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Users,
@@ -23,6 +36,17 @@ import {
   RefreshCw,
   Plus,
   X,
+  LogOut,
+  CheckCircle2,
+  XCircle,
+  Calendar,
+  TestTube2,
+  Edit,
+  ExternalLink,
+  Crown,
+  Coins,
+  CreditCard,
+  TrendingUp,
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { toast } from "@/hooks/use-toast";
@@ -30,6 +54,8 @@ import { authService } from "@/services/authService";
 import { UsersManagement } from "@/components/admin/UsersManagement";
 import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 import { SystemLogs } from "@/components/admin/SystemLogs";
+import { AdminGuard } from "@/components/AdminGuard";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo", url: "https://platform.openai.com/api-keys", supportsBalance: true },

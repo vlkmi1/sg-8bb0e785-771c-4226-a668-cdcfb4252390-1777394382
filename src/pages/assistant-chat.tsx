@@ -1,16 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, FormEvent } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Send, Loader2 } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { UserMenu } from "@/components/UserMenu";
 import { authService } from "@/services/authService";
-import { assistantService } from "@/services/assistantService";
+import { assistantService, Assistant, AssistantConversation, Message } from "@/services/assistantService";
 import { toast } from "@/hooks/use-toast";
 import { creditsService } from "@/services/creditsService";
 import { ModuleHeader } from "@/components/ModuleHeader";
+import { AuthGuard } from "@/components/AuthGuard";
 
 export default function AssistantChat() {
   const router = useRouter();
@@ -24,8 +26,21 @@ export default function AssistantChat() {
   const [loading, setLoading] = useState(false);
   const [credits, setCredits] = useState(0);
 
+  const loadAssistant = useCallback(async (assistantId: string) => {
+    try {
+      const data = await assistantService.getAssistant(assistantId);
+      setAssistant(data);
+      loadConversation(assistantId);
+    } catch (error) {
+      console.error("Error loading assistant:", error);
+      router.push("/assistants");
+    }
+  }, [router]);
+
   useEffect(() => {
-    loadAssistant();
+    if (typeof id === "string") {
+      loadAssistant(id);
+    }
   }, [id, loadAssistant]);
 
   useEffect(() => {
@@ -38,16 +53,6 @@ export default function AssistantChat() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const loadAssistant = async (assistantId: string) => {
-    try {
-      const data = await assistantService.getAssistant(assistantId);
-      setAssistant(data);
-    } catch (error) {
-      console.error("Error loading assistant:", error);
-      router.push("/assistants");
-    }
   };
 
   const loadConversation = async (assistantId: string) => {

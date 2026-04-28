@@ -16,7 +16,7 @@ import { authService } from "@/services/authService";
 export default function Chat() {
   const router = useRouter();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gpt-4");
   const [conversations, setConversations] = useState<any[]>([]);
@@ -38,12 +38,12 @@ export default function Chat() {
       return;
     }
 
-    const { data, error } = await conversationsService.getConversations(user.id);
-    if (error) {
+    try {
+      const data = await conversationsService.getConversations();
+      setConversations(data || []);
+    } catch (error) {
       console.error("Error loading conversations:", error);
-      return;
     }
-    setConversations(data || []);
   }, [router]);
 
   useEffect(() => {
@@ -58,42 +58,40 @@ export default function Chat() {
     const user = await authService.getCurrentUser();
     if (!user) return;
 
-    const { data, error } = await conversationsService.createConversation({
-      user_id: user.id,
-      title: "Nová konverzace",
-      model: selectedModel,
-    });
+    try {
+      const data = await conversationsService.createConversation({
+        title: "Nová konverzace",
+        model_provider: "openai",
+        model_name: selectedModel,
+      });
 
-    if (error) {
+      setSelectedConversation(data);
+      setMessages([]);
+      await loadConversations();
+    } catch (error) {
       toast({
         title: "Chyba",
         description: "Nepodařilo se vytvořit konverzaci",
         variant: "destructive",
       });
-      return;
     }
-
-    setSelectedConversation(data);
-    setMessages([]);
-    await loadConversations();
   };
 
   const handleDeleteConversation = async (id: string) => {
-    const { error } = await conversationsService.deleteConversation(id);
-    if (error) {
+    try {
+      await conversationsService.deleteConversation(id);
+      if (selectedConversation?.id === id) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+      await loadConversations();
+    } catch (error) {
       toast({
         title: "Chyba",
         description: "Nepodařilo se smazat konverzaci",
         variant: "destructive",
       });
-      return;
     }
-
-    if (selectedConversation?.id === id) {
-      setSelectedConversation(null);
-      setMessages([]);
-    }
-    await loadConversations();
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -111,10 +109,10 @@ export default function Chat() {
       return;
     }
 
-    const userMessage: Message = {
+    const userMessage = {
       role: "user",
       content: input,
-      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -137,10 +135,10 @@ export default function Chat() {
       }
 
       const data = await response.json();
-      const assistantMessage: Message = {
+      const assistantMessage = {
         role: "assistant",
         content: data.message,
-        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -170,11 +168,12 @@ export default function Chat() {
             {/* Sidebar s konverzacemi */}
             <div className="lg:col-span-1">
               <ConversationSidebar
-                conversations={conversations}
-                selectedConversation={selectedConversation}
-                onSelectConversation={setSelectedConversation}
+                selectedId={selectedConversation?.id}
+                onSelectConversation={(id) => {
+                  const conv = conversations.find(c => c.id === id);
+                  if (conv) setSelectedConversation(conv);
+                }}
                 onNewConversation={handleNewConversation}
-                onDeleteConversation={handleDeleteConversation}
               />
             </div>
 
@@ -183,6 +182,7 @@ export default function Chat() {
               <Card className="h-[calc(100vh-10rem)] flex flex-col">
                 <CardHeader className="border-b">
                   <CardTitle className="flex items-center gap-2">
+                    <MessageSquarePlus className="h-5 w-5 text-primary" />
                     {selectedConversation?.title || "Nová konverzace"}
                   </CardTitle>
                 </CardHeader>
@@ -195,7 +195,7 @@ export default function Chat() {
                     </div>
                   ) : (
                     messages.map((msg, idx) => (
-                      <ChatMessage key={idx} message={msg} />
+                      <ChatMessage key={idx} role={msg.role as any} content={msg.content} />
                     ))
                   )}
                   {loading && (
