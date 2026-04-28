@@ -67,11 +67,25 @@ export default function Credits() {
     setLoading(true);
     try {
       const paypalUrl = await paymentService.initPayPalPayment(selectedPackage.id);
-      alert(`Budete přesměrováni na PayPal pro platbu ${selectedPackage.price} Kč`);
       window.location.href = paypalUrl;
     } catch (error) {
       console.error("Error initiating PayPal:", error);
       alert("Chyba při inicializaci PayPal platby.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStripe = async () => {
+    if (!selectedPackage) return;
+    
+    setLoading(true);
+    try {
+      const stripeUrl = await paymentService.initStripePayment(selectedPackage.id);
+      window.location.href = stripeUrl;
+    } catch (error) {
+      console.error("Error initiating Stripe:", error);
+      alert("Chyba při inicializaci Stripe platby.");
     } finally {
       setLoading(false);
     }
@@ -82,21 +96,16 @@ export default function Credits() {
 
     setLoading(true);
     try {
-      const payment = await paymentService.createPayment({
-        amount: selectedPackage.price,
-        currency: selectedPackage.currency,
-        description: `Credits purchase: ${selectedPackage.name}`,
-        method: "bank_transfer",
-        paymentType: "credits",
-        metadata: {
-          package_id: selectedPackage.id,
-          credits: selectedPackage.credits + selectedPackage.bonus_credits,
-        },
-      });
-
-      const qrUrl = await paymentService.generateBankTransferQR(payment.id);
-      setQrCodeUrl(qrUrl);
-      setCurrentPayment(payment);
+      const bankDetails = await paymentService.generateBankTransferQR(selectedPackage.id);
+      
+      setQrCodeUrl(bankDetails.qrCodeUrl);
+      setCurrentPayment({
+        accountNumber: bankDetails.accountNumber,
+        amount: bankDetails.amount,
+        variableSymbol: bankDetails.variableSymbol,
+        message: bankDetails.message,
+      } as any);
+      
       setPaymentDialogOpen(false);
       setQrDialogOpen(true);
     } catch (error) {
@@ -250,6 +259,19 @@ export default function Credits() {
                   </div>
                 )}
 
+                {availablePaymentMethods.stripe && (
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    size="lg"
+                    onClick={handleStripe}
+                    disabled={loading}
+                  >
+                    <CreditCard className="h-5 w-5 mr-3" />
+                    Kreditní karta (Stripe)
+                  </Button>
+                )}
+
                 {availablePaymentMethods.paypal && (
                   <Button
                     className="w-full justify-start"
@@ -288,30 +310,48 @@ export default function Credits() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6 py-4">
-                <div className="flex justify-center">
-                  <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-sm text-muted-foreground">QR kód bude vygenerován</p>
-                  </div>
-                </div>
-                {currentPayment && (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Částka:</span>
-                      <span className="font-semibold">{currentPayment.amount.toLocaleString("cs-CZ")} Kč</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Variabilní symbol:</span>
-                      <span className="font-mono">{currentPayment.id.substring(0, 10)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Účet:</span>
-                      <span className="font-mono">123456789/0100</span>
+                {qrCodeUrl && (
+                  <div className="flex justify-center">
+                    <div className="bg-white p-4 rounded-lg border-2 border-muted">
+                      <img src={qrCodeUrl} alt="QR kód pro platbu" className="w-64 h-64" />
                     </div>
                   </div>
                 )}
-                <div className="bg-muted/50 p-4 rounded-lg">
+                {currentPayment && (
+                  <div className="space-y-3 text-sm">
+                    <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Částka:</span>
+                        <span className="font-semibold text-lg">{currentPayment.amount?.toLocaleString("cs-CZ")} Kč</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Číslo účtu:</span>
+                        <span className="font-mono font-semibold">{currentPayment.accountNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Variabilní symbol:</span>
+                        <span className="font-mono font-semibold">{currentPayment.variableSymbol}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Zpráva pro příjemce:</span>
+                        <span className="font-semibold">{currentPayment.message}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t pt-3">
+                      <h4 className="font-semibold mb-2">📱 Jak zaplatit pomocí QR kódu:</h4>
+                      <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                        <li>Otevřete mobilní bankovnictví</li>
+                        <li>Zvolte "Platba QR kódem"</li>
+                        <li>Naskenujte QR kód výše</li>
+                        <li>Potvrďte platbu</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+                <div className="bg-accent/10 p-4 rounded-lg border border-accent/20">
                   <p className="text-sm text-muted-foreground">
-                    💡 Po provedení platby kredity obdržíte do 24 hodin. Status platby můžete sledovat v historii plateb.
+                    💡 <strong>Kredity obdržíte automaticky</strong> po připsání platby na účet (obvykle do 24 hodin). O zpracování platby vás informujeme emailem.
                   </p>
                 </div>
               </div>

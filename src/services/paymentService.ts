@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { authState } from "./authStateService";
+import QRCode from "qrcode";
 
 export type Payment = Tables<"payments">;
 export type PaymentMethod = "stripe" | "paypal" | "crypto" | "bank_transfer";
@@ -24,6 +25,16 @@ export interface CreditPackage {
   currency: string;
   description: string;
   badge?: string;
+}
+
+export interface BankTransferDetails {
+  accountNumber: string;
+  amount: number;
+  currency: string;
+  variableSymbol: string;
+  specificSymbol?: string;
+  message: string;
+  qrCodeUrl: string;
 }
 
 export const paymentService = {
@@ -61,24 +72,133 @@ export const paymentService = {
     }
   },
 
-  async initPayPalPayment(packageId: string) {
+  async initPayPalPayment(packageId: string): Promise<string> {
     const settings = await this.getPaymentSettings();
     if (!settings.paypal_client_id) {
       throw new Error("PayPal není nakonfigurován");
     }
-    
+
+    const pkg = await this.getCreditPackage(packageId);
+    if (!pkg) throw new Error("Balíček nenalezen");
+
+    // Create payment record
+    const payment = await this.createPayment({
+      amount: pkg.price,
+      currency: pkg.currency,
+      description: `Nákup kreditů: ${pkg.name}`,
+      method: "paypal",
+      metadata: {
+        package_id: packageId,
+        credits: pkg.credits + pkg.bonus_credits,
+      },
+    });
+
     // TODO: Implement PayPal SDK integration
-    return "https://paypal.com";
+    // For now return PayPal URL with payment details
+    return `https://www.paypal.com/checkoutnow?token=${payment.id}`;
   },
 
-  async generateBankTransferQR(packageId: string) {
+  async initStripePayment(packageId: string): Promise<string> {
+    const settings = await this.getPaymentSettings();
+    if (!settings.stripe_publishable_key) {
+      throw new Error("Stripe není nakonfigurován");
+    }
+
+    const pkg = await this.getCreditPackage(packageId);
+    if (!pkg) throw new Error("Balíček nenalezen");
+
+    // Create payment record
+    const payment = await this.createPayment({
+      amount: pkg.price,
+      currency: pkg.currency,
+      description: `Nákup kreditů: ${pkg.name}`,
+      method: "stripe",
+      metadata: {
+        package_id: packageId,
+        credits: pkg.credits + pkg.bonus_credits,
+      },
+    });
+
+    // TODO: Implement Stripe Checkout Session
+    // For now return Stripe URL
+    return `https://checkout.stripe.com/pay/${payment.id}`;
+  },
+
+  async generateBankTransferQR(packageId: string): Promise<BankTransferDetails> {
     const settings = await this.getPaymentSettings();
     if (!settings.bank_account_number) {
       throw new Error("Bankovní převod není nakonfigurován");
     }
+
+    const user = await authState.getUser();
+    if (!user) throw new Error("Uživatel není přihlášen");
+
+    const pkg = await this.getCreditPackage(packageId);
+    if (!pkg) throw new Error("Balíček nenalezen");
+
+    // Create payment record
+    const payment = await this.createPayment({
+      amount: pkg.price,
+      currency: pkg.currency,
+      description: `Nákup kreditů: ${pkg.name}`,
+      method: "bank_transfer",
+      metadata: {
+        package_id: packageId,
+        credits: pkg.credits + pkg.bonus_credits,
+      },
+    });
+
+    // Use user ID as variable symbol (last 10 digits)
+    const variableSymbol = user.id.replace(/-/g, "").substring(0, 10);
+
+    // Generate Czech bank QR code (SPAYD format)
+    const amount = pkg.price.toFixed(2);
+    const accountNumber = settings.bank_account_number;
     
-    // TODO: Generate QR code with bank details
-    return "qr_code_data";
+    // SPAYD format for Czech banking QR codes
+    const spaydString = `SPD*1.0*ACC:${accountNumber}*AM:${amount}*CC:CZK*MSG:Platba kaikus.cz*X-VS:${variableSymbol}`;
+    
+    // Generate QR code
+    const qrCodeUrl = await QRCode.toDataURL(spaydString, {
+      width: 300,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+
+    return {
+      accountNumber,
+      amount: pkg.price,
+      currency: pkg.currency,
+      variableSymbol,
+      message: "Platba kaikus.cz",
+      qrCodeUrl,
+    };
+  },
+
+  async getCreditPackage(packageId: string): Promise<CreditPackage | null> {
+    const { data, error } = await supabase
+      .from("credit_packages")
+      .select("*")
+      .eq("id", packageId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching package:", error);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      credits: data.credits,
+      bonus_credits: data.bonus_credits,
+      price: Number(data.price),
+      currency: data.currency,
+      description: data.name,
+    };
   },
 
   async createPayment(intent: PaymentIntent): Promise<Payment> {
@@ -94,6 +214,7 @@ export const paymentService = {
         method: intent.method,
         payment_type: intent.method,
         status: "pending",
+        metadata: intent.metadata,
       } as any)
       .select()
       .single();
