@@ -83,7 +83,7 @@ export const adminService = {
   async saveAdminSetting(key: string, value: any): Promise<void> {
     console.log("Saving admin setting:", { provider: key, api_key_length: value?.length });
     
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("admin_settings" as any)
       .upsert({ 
         provider: key, 
@@ -91,15 +91,14 @@ export const adminService = {
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'provider'
-      })
-      .select();
+      });
     
     if (error) {
       console.error("Error saving admin setting:", error);
       throw new Error(`Databázová chyba: ${error.message} (code: ${error.code})`);
     }
     
-    console.log("Admin setting saved successfully:", data);
+    console.log("Admin setting saved successfully");
   },
 
   async getAPIUsageStats(provider?: string): Promise<APIUsageStats[]> {
