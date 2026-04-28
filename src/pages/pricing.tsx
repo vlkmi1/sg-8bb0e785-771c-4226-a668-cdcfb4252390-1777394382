@@ -71,15 +71,32 @@ export default function Pricing() {
   const [loading, setLoading] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
+  const [dbPlans, setDbPlans] = useState<any[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     checkAuth();
+    loadPlans();
   }, []);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setIsAuthenticated(!!user);
+  };
+
+  const loadPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("price", { ascending: true });
+
+      if (error) throw error;
+      setDbPlans(data || []);
+    } catch (error) {
+      console.error("Error loading plans:", error);
+    }
   };
 
   const handleSubscribe = async (planId: string) => {

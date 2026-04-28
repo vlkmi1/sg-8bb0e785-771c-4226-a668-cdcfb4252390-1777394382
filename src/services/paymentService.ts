@@ -27,11 +27,57 @@ export interface CreditPackage {
 }
 
 export const paymentService = {
+  async getPaymentSettings(): Promise<Record<string, string>> {
+    const { data, error } = await supabase
+      .from("payment_settings")
+      .select("*")
+      .eq("is_active", true);
+
+    if (error) {
+      console.error("Error fetching payment settings:", error);
+      return {};
+    }
+
+    const settings: Record<string, string> = {};
+    (data || []).forEach((setting: any) => {
+      settings[setting.setting_key] = setting.setting_value;
+    });
+
+    return settings;
+  },
+
+  async isPaymentMethodAvailable(method: PaymentMethod): Promise<boolean> {
+    const settings = await this.getPaymentSettings();
+    
+    switch (method) {
+      case "paypal":
+        return !!(settings.paypal_client_id && settings.paypal_secret);
+      case "stripe":
+        return !!(settings.stripe_publishable_key && settings.stripe_secret_key);
+      case "bank_transfer":
+        return !!settings.bank_account_number;
+      default:
+        return false;
+    }
+  },
+
   async initPayPalPayment(packageId: string) {
+    const settings = await this.getPaymentSettings();
+    if (!settings.paypal_client_id) {
+      throw new Error("PayPal není nakonfigurován");
+    }
+    
+    // TODO: Implement PayPal SDK integration
     return "https://paypal.com";
   },
 
   async generateBankTransferQR(packageId: string) {
+    const settings = await this.getPaymentSettings();
+    if (!settings.bank_account_number) {
+      throw new Error("Bankovní převod není nakonfigurován");
+    }
+    
+    // TODO: Generate QR code with bank details
     return "qr_code_data";
   },
 
@@ -137,45 +183,26 @@ export const paymentService = {
     }
   },
 
-  getCreditPackages(): CreditPackage[] {
-    return [
-      {
-        id: "starter",
-        name: "Starter Pack",
-        credits: 50,
-        bonus_credits: 0,
-        price: 4.99,
-        currency: "USD",
-        description: "Pro začátečníky",
-      },
-      {
-        id: "popular",
-        name: "Popular Pack",
-        credits: 150,
-        bonus_credits: 50,
-        price: 12.99,
-        currency: "USD",
-        description: "Nejoblíbenější",
-        badge: "Nejprodávanější",
-      },
-      {
-        id: "pro",
-        name: "Pro Pack",
-        credits: 500,
-        bonus_credits: 200,
-        price: 39.99,
-        currency: "USD",
-        description: "Pro pokročilé uživatele",
-      },
-      {
-        id: "enterprise",
-        name: "Enterprise Pack",
-        credits: 2000,
-        bonus_credits: 1000,
-        price: 149.99,
-        currency: "USD",
-        description: "Pro firemní použití",
-      },
-    ];
+  async getCreditPackages(): Promise<CreditPackage[]> {
+    const { data, error } = await supabase
+      .from("credit_packages")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching credit packages:", error);
+      return [];
+    }
+
+    return (data || []).map(pkg => ({
+      id: pkg.id,
+      name: pkg.name,
+      credits: pkg.credits,
+      bonus_credits: pkg.bonus_credits,
+      price: Number(pkg.price),
+      currency: pkg.currency,
+      description: pkg.name,
+    }));
   },
 };

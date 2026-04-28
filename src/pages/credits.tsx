@@ -22,6 +22,11 @@ export default function Credits() {
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(false);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState({
+    paypal: false,
+    stripe: false,
+    bank_transfer: false,
+  });
 
   useEffect(() => {
     loadData();
@@ -35,6 +40,19 @@ export default function Credits() {
       ]);
       setPackages(packagesData);
       setCredits(userCredits);
+
+      // Check available payment methods
+      const [paypalAvailable, stripeAvailable, bankAvailable] = await Promise.all([
+        paymentService.isPaymentMethodAvailable("paypal"),
+        paymentService.isPaymentMethodAvailable("stripe"),
+        paymentService.isPaymentMethodAvailable("bank_transfer"),
+      ]);
+
+      setAvailablePaymentMethods({
+        paypal: paypalAvailable,
+        stripe: stripeAvailable,
+        bank_transfer: bankAvailable,
+      });
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -220,26 +238,38 @@ export default function Credits() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 py-4">
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                  size="lg"
-                  onClick={handlePayPal}
-                  disabled={loading}
-                >
-                  <CreditCard className="h-5 w-5 mr-3" />
-                  PayPal
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant="outline"
-                  size="lg"
-                  onClick={handleBankTransfer}
-                  disabled={loading}
-                >
-                  <QrCode className="h-5 w-5 mr-3" />
-                  Bankovní převod (QR kód)
-                </Button>
+                {!availablePaymentMethods.paypal && !availablePaymentMethods.stripe && !availablePaymentMethods.bank_transfer && (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <p className="mb-2">Platební metody nejsou nakonfigurované</p>
+                    <p className="text-sm">Kontaktujte správce systému</p>
+                  </div>
+                )}
+
+                {availablePaymentMethods.paypal && (
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    size="lg"
+                    onClick={handlePayPal}
+                    disabled={loading}
+                  >
+                    <CreditCard className="h-5 w-5 mr-3" />
+                    PayPal
+                  </Button>
+                )}
+
+                {availablePaymentMethods.bank_transfer && (
+                  <Button
+                    className="w-full justify-start"
+                    variant="outline"
+                    size="lg"
+                    onClick={handleBankTransfer}
+                    disabled={loading}
+                  >
+                    <QrCode className="h-5 w-5 mr-3" />
+                    Bankovní převod (QR kód)
+                  </Button>
+                )}
               </div>
             </DialogContent>
           </Dialog>
