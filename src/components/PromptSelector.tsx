@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -24,11 +24,7 @@ export function PromptSelector({ category, onSelect }: PromptSelectorProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadPrompts();
-  }, [loadPrompts]);
-
-  const loadPrompts = async () => {
+  const loadPrompts = useCallback(async () => {
     setLoading(true);
     try {
       const data = await favoritePromptsService.getPromptsByCategory(category);
@@ -38,7 +34,11 @@ export function PromptSelector({ category, onSelect }: PromptSelectorProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [category]);
+
+  useEffect(() => {
+    loadPrompts();
+  }, [loadPrompts]);
 
   const handleSelect = async (prompt: FavoritePrompt) => {
     try {

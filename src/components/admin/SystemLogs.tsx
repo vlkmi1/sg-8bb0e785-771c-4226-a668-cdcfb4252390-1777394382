@@ -72,12 +72,7 @@ export function SystemLogs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [daysFilter, setDaysFilter] = useState(7);
 
-  useEffect(() => {
-    loadLogs();
-    loadStatistics();
-  }, [loadLogs, loadStatistics]);
-
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
       const startDate = new Date();
@@ -101,16 +96,21 @@ export function SystemLogs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [daysFilter, levelFilter, categoryFilter, searchTerm, toast]);
 
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
       const stats = await loggingService.getStatistics(daysFilter);
       setStatistics(stats);
     } catch (error) {
       console.error("Error loading statistics:", error);
     }
-  };
+  }, [daysFilter]);
+
+  useEffect(() => {
+    loadLogs();
+    loadStatistics();
+  }, [loadLogs, loadStatistics]);
 
   const handleCleanOldLogs = async () => {
     if (!confirm("Opravdu chcete smazat všechny logy starší než 30 dní?")) return;

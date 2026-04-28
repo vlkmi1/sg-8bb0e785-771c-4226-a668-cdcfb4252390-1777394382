@@ -77,7 +77,8 @@ export function UsersManagement() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<Profile[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "admin" | "blocked">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "admin" | "blocked">("all");
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -89,15 +90,7 @@ export function UsersManagement() {
   const [changingPlan, setChangingPlan] = useState(false);
   const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
-
-  useEffect(() => {
-    filterUsers();
-  }, [searchTerm, roleFilter, statusFilter, filterUsers]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       const data = await adminService.getAllUsers();
       setUsers(data);
@@ -109,21 +102,11 @@ export function UsersManagement() {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const loadPlans = async () => {
-    try {
-      const plans = await subscriptionService.getAllPlans();
-      setAvailablePlans(plans);
-    } catch (error) {
-      console.error("Error loading plans:", error);
-    }
-  };
-
-  const filterUsers = () => {
+  const filterUsers = useCallback(() => {
     let filtered = users;
 
-    // Search filter
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
       filtered = filtered.filter(u => 
@@ -132,11 +115,10 @@ export function UsersManagement() {
       );
     }
 
-    // Status filter
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    switch (filterStatus) {
+    switch (statusFilter) {
       case "active":
         filtered = filtered.filter(u => 
           u.last_sign_in_at && new Date(u.last_sign_in_at) > thirtyDaysAgo
@@ -156,6 +138,23 @@ export function UsersManagement() {
     }
 
     setFilteredUsers(filtered);
+  }, [users, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  useEffect(() => {
+    filterUsers();
+  }, [filterUsers]);
+
+  const loadPlans = async () => {
+    try {
+      const plans = await subscriptionService.getAllPlans();
+      setAvailablePlans(plans);
+    } catch (error) {
+      console.error("Error loading plans:", error);
+    }
   };
 
   const handleViewUser = async (user: Profile) => {
@@ -334,7 +333,7 @@ export function UsersManagement() {
             />
           </div>
         </div>
-        <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>
+        <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
           <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue placeholder="Filtrovat podle statusu" />
           </SelectTrigger>

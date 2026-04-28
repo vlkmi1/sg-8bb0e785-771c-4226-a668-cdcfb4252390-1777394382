@@ -51,11 +51,27 @@ import {
 import { SEO } from "@/components/SEO";
 import { toast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
+import { adminService } from "@/services/adminService";
 import { UsersManagement } from "@/components/admin/UsersManagement";
 import { CreditAnalytics } from "@/components/admin/CreditAnalytics";
 import { SystemLogs } from "@/components/admin/SystemLogs";
 import { AdminGuard } from "@/components/AdminGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
+
+interface AdminSetting {
+  provider: string;
+  api_key: string;
+  balance?: number;
+  balance_updated_at?: string;
+  last_used_at?: string;
+}
+
+interface APIUsageStats {
+  provider: string;
+  total_requests: number;
+  requests_today: number;
+  total_cost: number;
+}
 
 const AI_PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "🤖", description: "GPT-4, GPT-3.5 Turbo", url: "https://platform.openai.com/api-keys", supportsBalance: true },
@@ -127,11 +143,7 @@ export default function Admin() {
   const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [settingsData, statsData, plansData, packagesData, paymentSettingsData] = await Promise.all([
         adminService.getAdminSettings(),
@@ -148,7 +160,11 @@ export default function Admin() {
     } catch (error) {
       console.error("Error loading data:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const loadPlans = async () => {
     const { data, error } = await supabase

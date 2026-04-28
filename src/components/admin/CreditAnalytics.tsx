@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -35,18 +35,13 @@ export function CreditAnalytics() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
 
-  useEffect(() => {
-    loadAnalytics();
-  }, [loadAnalytics]);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
       const daysAgo = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
       const fromDate = new Date();
       fromDate.setDate(fromDate.getDate() - daysAgo);
 
-      // Load credit analytics
       const { data: creditAnalytics, error: creditError } = await supabase
         .from("admin_credit_analytics")
         .select("*")
@@ -55,7 +50,6 @@ export function CreditAnalytics() {
 
       if (creditError) throw creditError;
 
-      // Load usage by feature
       const { data: usageAnalytics, error: usageError } = await supabase
         .from("admin_usage_by_feature")
         .select("*")
@@ -63,7 +57,6 @@ export function CreditAnalytics() {
 
       if (usageError) throw usageError;
 
-      // Aggregate usage data
       const aggregated = usageAnalytics?.reduce((acc: Record<string, UsageData>, curr) => {
         const key = curr.description || "Unknown";
         if (!acc[key]) {
@@ -85,7 +78,11 @@ export function CreditAnalytics() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [loadAnalytics]);
 
   const stats: StatsCard[] = [
     {

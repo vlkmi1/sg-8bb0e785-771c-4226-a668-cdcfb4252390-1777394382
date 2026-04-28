@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,19 @@ export default function ConfirmEmail() {
     }
   }, []);
 
-  const confirmEmail = async (token: string) => {
+  const confirmEmail = useCallback(async (token?: string) => {
+    if (!token) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get("access_token");
+      const type = hashParams.get("type");
+
+      if (!accessToken || type !== "signup") {
+        setConfirming(false);
+        return;
+      }
+      token = accessToken;
+    }
+
     try {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: token,
@@ -42,7 +54,7 @@ export default function ConfirmEmail() {
     } finally {
       setConfirming(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     confirmEmail();

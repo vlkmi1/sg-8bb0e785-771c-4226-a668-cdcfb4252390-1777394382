@@ -55,24 +55,7 @@ export default function Dashboard() {
     }
   };
 
-  const loadSubscription = async () => {
-    try {
-      const [currentSub, plans] = await Promise.all([
-        subscriptionService.getCurrentSubscription(),
-        subscriptionService.getAllPlans(),
-      ]);
-      setSubscription(currentSub);
-      setAvailablePlans(plans);
-    } catch (error) {
-      console.error("Error loading subscription:", error);
-    }
-  };
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const [userCredits, adminStatus] = await Promise.all([
         creditsService.getCredits(),
@@ -119,6 +102,23 @@ export default function Dashboard() {
       setRecentActivities(activities);
     } catch (error) {
       console.error("Error loading dashboard data:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const loadSubscription = async () => {
+    try {
+      const [currentSub, plans] = await Promise.all([
+        subscriptionService.getCurrentSubscription(),
+        subscriptionService.getAllPlans(),
+      ]);
+      setSubscription(currentSub);
+      setAvailablePlans(plans);
+    } catch (error) {
+      console.error("Error loading subscription:", error);
     }
   };
 

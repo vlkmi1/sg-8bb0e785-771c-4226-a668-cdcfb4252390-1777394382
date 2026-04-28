@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +82,21 @@ export function AutoPostWizard({ open, onOpenChange, onComplete }: AutoPostWizar
   const [totalCost, setTotalCost] = useState(0);
   const [hasEnoughCredits, setHasEnoughCredits] = useState(true);
 
+  const calculateCost = useCallback(() => {
+    if (!dateRange?.from || !dateRange?.to) {
+      setTotalCost(0);
+      setHasEnoughCredits(true);
+      return;
+    }
+
+    const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const totalPosts = days * postsPerDay * selectedPlatforms.length;
+    const cost = totalPosts;
+    
+    setTotalCost(cost);
+    setHasEnoughCredits(credits >= cost);
+  }, [dateRange, postsPerDay, selectedPlatforms.length, credits]);
+
   useEffect(() => {
     if (open) {
       loadCredits();
@@ -91,7 +106,7 @@ export function AutoPostWizard({ open, onOpenChange, onComplete }: AutoPostWizar
 
   useEffect(() => {
     calculateCost();
-  }, [selectedPlatforms, calculateCost]);
+  }, [selectedPlatforms, dateRange, postsPerDay, calculateCost]);
 
   const loadCredits = async () => {
     try {
@@ -111,21 +126,6 @@ export function AutoPostWizard({ open, onOpenChange, onComplete }: AutoPostWizar
     setPostsPerDay(1);
     setDateRange(undefined);
     setSelectedTimes(["morning"]);
-  };
-
-  const calculateCost = () => {
-    if (!dateRange?.from || !dateRange?.to) {
-      setTotalCost(0);
-      setHasEnoughCredits(true);
-      return;
-    }
-
-    const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const totalPosts = days * postsPerDay * selectedPlatforms.length;
-    const cost = totalPosts; // 1 credit per post
-    
-    setTotalCost(cost);
-    setHasEnoughCredits(credits >= cost);
   };
 
   const togglePlatform = (platformId: SocialPlatform) => {
