@@ -6,9 +6,11 @@ import type { SocialPlatform } from "@/services/socialPostsService";
 interface SocialPreviewProps {
   platform: SocialPlatform;
   content: string;
+  imageUrl?: string;
+  videoUrl?: string;
 }
 
-export function SocialPreview({ platform, content }: SocialPreviewProps) {
+export function SocialPreview({ platform, content, imageUrl, videoUrl }: SocialPreviewProps) {
   const renderFacebookPreview = () => (
     <Card className="max-w-lg border-2">
       <CardHeader className="pb-3">
@@ -26,6 +28,33 @@ export function SocialPreview({ platform, content }: SocialPreviewProps) {
         </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
+        {/* Media */}
+        {imageUrl && (
+          <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-muted">
+            <img 
+              src={imageUrl} 
+              alt="Post media" 
+              className="w-full object-cover max-h-96"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+        {videoUrl && !imageUrl && (
+          <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-black">
+            <video 
+              src={videoUrl} 
+              controls 
+              className="w-full max-h-96"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+
+        {/* Content */}
         <p className="text-sm whitespace-pre-wrap">{content}</p>
         <div className="flex items-center gap-6 pt-2 border-t text-muted-foreground">
           <button className="flex items-center gap-2 text-sm hover:text-primary">
@@ -95,6 +124,33 @@ export function SocialPreview({ platform, content }: SocialPreviewProps) {
         </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
+        {/* Media */}
+        {imageUrl && (
+          <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-muted">
+            <img 
+              src={imageUrl} 
+              alt="Post media" 
+              className="w-full object-cover max-h-96"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+        {videoUrl && !imageUrl && (
+          <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-black">
+            <video 
+              src={videoUrl} 
+              controls 
+              className="w-full max-h-96"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+
+        {/* Content */}
         <p className="text-sm whitespace-pre-wrap">{content}</p>
         <div className="flex items-center gap-1 pt-2 border-t text-muted-foreground text-xs">
           <ThumbsUp className="h-3 w-3 text-blue-600" />
@@ -133,6 +189,33 @@ export function SocialPreview({ platform, content }: SocialPreviewProps) {
               <span className="font-semibold">Váš účet</span>
               <span className="text-gray-500">@username · Právě teď</span>
             </div>
+            {/* Media */}
+            {imageUrl && (
+              <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-muted">
+                <img 
+                  src={imageUrl} 
+                  alt="Post media" 
+                  className="w-full object-cover max-h-96"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            )}
+            {videoUrl && !imageUrl && (
+              <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-black">
+                <video 
+                  src={videoUrl} 
+                  controls 
+                  className="w-full max-h-96"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Content */}
             <p className="text-sm whitespace-pre-wrap">{content.slice(0, 280)}</p>
             {content.length > 280 && (
               <p className="text-xs text-gray-500">... zkráceno na 280 znaků</p>
@@ -182,6 +265,33 @@ export function SocialPreview({ platform, content }: SocialPreviewProps) {
           </div>
           <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
         </div>
+        {/* Media */}
+        {imageUrl && (
+          <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-muted">
+            <img 
+              src={imageUrl} 
+              alt="Post media" 
+              className="w-full object-cover max-h-96"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+        {videoUrl && !imageUrl && (
+          <div className="mb-3 -mx-4 sm:mx-0 sm:rounded-lg overflow-hidden bg-black">
+            <video 
+              src={videoUrl} 
+              controls 
+              className="w-full max-h-96"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+
+        {/* Content */}
         <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">
           {content}
         </p>
