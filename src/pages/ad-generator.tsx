@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Sparkles, LogOut, Loader2, Coins, Copy, Trash2, Download, Star } from "lucide-react";
+import { Megaphone, Sparkles, LogOut, Loader2, Coins, Copy, Trash2, Download, Star, Check } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { adGeneratorService, type AdGeneration } from "@/services/adGeneratorService";
@@ -152,8 +152,8 @@ export default function AdGenerator() {
       await adGeneratorService.createAd({
         productDescription: productDescription.trim(),
         targetAudience: targetAudience.trim(),
-        platform,
-        adFormat,
+        platform: platform as any,
+        adFormat: adFormat as any,
         headline: adContent.headline,
         description: adContent.description,
         cta: adContent.cta,

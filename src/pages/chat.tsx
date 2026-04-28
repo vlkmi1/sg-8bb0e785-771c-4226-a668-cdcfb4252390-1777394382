@@ -9,7 +9,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { Send, LogOut, MessageSquare, Sparkles, Edit2, Check, X, Star } from "lucide-react";
-import { conversationsService, type Conversation, type Message } from "@/services/conversationsService";
+import { conversationsService } from "@/services/conversationsService";
 import { favoritePromptsService } from "@/services/favoritePromptsService";
 import { PromptSelector } from "@/components/PromptSelector";
 import { supabase } from "@/integrations/supabase/client";

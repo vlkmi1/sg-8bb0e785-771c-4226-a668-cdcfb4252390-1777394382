@@ -104,7 +104,7 @@ export default function DocumentSummary() {
       await documentSummaryService.createSummary({
         originalText: text.trim(),
         summaryText: summary,
-        summaryLevel,
+        summaryLevel: summaryLevel as any,
         modelUsed: model,
       });
 
