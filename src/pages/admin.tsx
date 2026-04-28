@@ -120,8 +120,10 @@ export default function Admin() {
     return data || [];
   };
 
-  const handleSaveApiKey = async () => {
-    if (!selectedProvider || !apiKey.trim()) {
+  const handleSaveApiKey = async (providerId?: string) => {
+    const provider = providerId || selectedProvider;
+    
+    if (!provider || !apiKey.trim()) {
       toast({
         title: "Chyba",
         description: "Vyberte poskytovatele a zadejte API klíč",
@@ -132,7 +134,7 @@ export default function Admin() {
 
     setLoading(true);
     try {
-      await adminService.saveAdminSetting(selectedProvider, apiKey.trim());
+      await adminService.saveAdminSetting(provider, apiKey.trim());
       toast({
         title: "Úspěch",
         description: "API klíč byl uložen",
@@ -901,7 +903,7 @@ export default function Admin() {
               />
             </div>
             <Button 
-              onClick={handleSaveApiKey} 
+              onClick={() => handleSaveApiKey(selectedProvider)} 
               className="w-full" 
               disabled={loading}
             >
