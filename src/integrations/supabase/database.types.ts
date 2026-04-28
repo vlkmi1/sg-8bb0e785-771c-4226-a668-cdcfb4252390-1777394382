@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -491,6 +491,53 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      image_edits: {
+        Row: {
+          created_at: string | null
+          edit_type: string
+          edited_image_url: string
+          id: string
+          mask_data: string | null
+          model_used: string
+          original_image_id: string | null
+          original_image_url: string
+          prompt: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          edit_type: string
+          edited_image_url: string
+          id?: string
+          mask_data?: string | null
+          model_used: string
+          original_image_id?: string | null
+          original_image_url: string
+          prompt?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          edit_type?: string
+          edited_image_url?: string
+          id?: string
+          mask_data?: string | null
+          model_used?: string
+          original_image_id?: string | null
+          original_image_url?: string
+          prompt?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "image_edits_original_image_id_fkey"
+            columns: ["original_image_id"]
+            isOneToOne: false
+            referencedRelation: "generated_images"
             referencedColumns: ["id"]
           },
         ]
