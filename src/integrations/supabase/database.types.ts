@@ -661,6 +661,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean | null
+          last_sign_in_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -671,6 +672,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          last_sign_in_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -681,6 +683,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          last_sign_in_at?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1215,6 +1218,10 @@ export type Database = {
             }
             Returns: number
           }
+      admin_update_credits: {
+        Args: { p_amount: number; p_description: string; p_user_id: string }
+        Returns: undefined
+      }
       deduct_credits:
         | { Args: { amount: number; user_id: string }; Returns: number }
         | {
@@ -1222,6 +1229,7 @@ export type Database = {
             Returns: number
           }
       generate_referral_code: { Args: never; Returns: string }
+      get_user_credits: { Args: { p_user_id: string }; Returns: number }
       increment_referral_click: {
         Args: { code_val: string }
         Returns: undefined

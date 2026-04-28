@@ -7,8 +7,8 @@ export const creditsService = {
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase.rpc("get_user_credits", {
-      p_user_id: user.id,
-    });
+      user_id: user.id,
+    } as any);
 
     if (error) {
       console.error("Error getting credits:", error);
@@ -26,10 +26,10 @@ export const creditsService = {
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase.rpc("deduct_credits", {
-      p_user_id: user.id,
-      p_amount: amount,
-      p_description: description,
-    });
+      user_id: user.id,
+      amount: amount,
+      description: description,
+    } as any);
 
     if (error) {
       console.error("Error deducting credits:", error);

@@ -16,6 +16,13 @@ export interface UserStats {
   total_credits_distributed: number;
 }
 
+export interface AdminSetting {
+  id: string;
+  setting_key: string;
+  setting_value: any;
+  description: string;
+}
+
 export const adminService = {
   async isAdmin(): Promise<boolean> {
     try {
@@ -37,6 +44,23 @@ export const adminService = {
     } catch (error) {
       console.error("Error in isAdmin:", error);
       return false;
+    }
+  },
+
+  async getAdminSettings(): Promise<AdminSetting[]> {
+    const { data, error } = await supabase.from("admin_settings" as any).select("*");
+    if (error) {
+      console.error("Error fetching admin settings:", error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async saveAdminSetting(key: string, value: any): Promise<void> {
+    const { error } = await supabase.from("admin_settings" as any).upsert({ setting_key: key, setting_value: value });
+    if (error) {
+      console.error("Error saving admin setting:", error);
+      throw error;
     }
   },
 

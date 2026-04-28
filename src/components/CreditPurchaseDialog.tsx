@@ -45,10 +45,17 @@ const CREDIT_PACKAGES = [
 
 interface CreditPurchaseDialogProps {
   onCreditsUpdated?: (newBalance: number) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export function CreditPurchaseDialog({ onCreditsUpdated }: CreditPurchaseDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreditPurchaseDialog({ onCreditsUpdated, open: externalOpen, onOpenChange, onSuccess }: CreditPurchaseDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = externalOpen !== undefined;
+  const open = isControlled ? externalOpen : internalOpen;
+  const setOpen = isControlled ? onOpenChange! : setInternalOpen;
+  
   const [selectedPackage, setSelectedPackage] = useState("popular");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -82,6 +89,7 @@ export function CreditPurchaseDialog({ onCreditsUpdated }: CreditPurchaseDialogP
       });
 
       setOpen(false);
+      onSuccess?.();
       
       // Refresh credits
       if (onCreditsUpdated) {

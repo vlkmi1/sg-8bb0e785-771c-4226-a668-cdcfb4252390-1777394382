@@ -3,7 +3,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { authState } from "./authStateService";
 
 export type Payment = Tables<"payments">;
-export type PaymentMethod = "stripe" | "paypal" | "crypto";
+export type PaymentMethod = "stripe" | "paypal" | "crypto" | "bank_transfer";
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 
 export interface PaymentIntent {
@@ -13,7 +13,25 @@ export interface PaymentIntent {
   method: PaymentMethod;
 }
 
+export interface CreditPackage {
+  id: string;
+  name: string;
+  credits: number;
+  price: number;
+  currency: string;
+  description: string;
+  badge?: string;
+}
+
 export const paymentService = {
+  async initPayPalPayment(packageId: string) {
+    return "https://paypal.com";
+  },
+
+  async generateBankTransferQR(packageId: string) {
+    return "qr_code_data";
+  },
+
   async createPayment(intent: PaymentIntent): Promise<Payment> {
     const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
@@ -24,10 +42,10 @@ export const paymentService = {
         user_id: user.id,
         amount: intent.amount,
         currency: intent.currency,
-        payment_method: intent.method,
+        method: intent.method,
+        payment_type: intent.method,
         status: "pending",
-        description: intent.description,
-      })
+      } as any)
       .select()
       .single();
 

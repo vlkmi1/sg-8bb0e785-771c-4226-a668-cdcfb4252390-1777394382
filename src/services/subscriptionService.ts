@@ -37,11 +37,11 @@ export const subscriptionService = {
       .from("user_subscriptions")
       .insert({
         user_id: user.id,
-        plan_type: plan,
+        plan_id: plan,
         status: "active",
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
-      })
+      } as any)
       .select()
       .single();
 
@@ -60,9 +60,9 @@ export const subscriptionService = {
     const { error } = await supabase
       .from("user_subscriptions")
       .update({
-        plan_type: newPlan,
+        plan_id: newPlan,
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq("id", subscriptionId);
 
     if (error) {
