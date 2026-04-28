@@ -13,8 +13,7 @@ export function SEOElements({
   description = "Platforma spojující nejpoužívanější AI modely (OpenAI, Anthropic, Google, Mistral) prostřednictvím jednotného rozhraní",
   image = "/og-image.png",
   url,
-) {
-  return (
+urn (
     <>
       <title>{title}</title>
       <meta name="description" content={description} />
