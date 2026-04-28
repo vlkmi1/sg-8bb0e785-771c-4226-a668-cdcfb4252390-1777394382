@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, Loader2 } from "lucide-react";
 import { SEO } from "@/components/SEO";
+import Link from "next/link";
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -86,12 +87,12 @@ export default function AuthCallback() {
               <CardDescription>{error}</CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <a 
+              <Link 
                 href="/auth/login" 
                 className="text-primary hover:underline font-medium"
               >
                 Zpět na přihlášení
-              </a>
+              </Link>
             </CardContent>
           </Card>
         </div>
