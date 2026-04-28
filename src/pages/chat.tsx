@@ -8,7 +8,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
-import { Send, LogOut, MessageSquare, Sparkles, Edit2, Check, X, Star } from "lucide-react";
+import { Send, LogOut, MessageSquare, Sparkles, Edit2, Check, X, Star, MessageSquarePlus, Loader2 } from "lucide-react";
 import { conversationsService } from "@/services/conversationsService";
 import { favoritePromptsService } from "@/services/favoritePromptsService";
 import { PromptSelector } from "@/components/PromptSelector";
