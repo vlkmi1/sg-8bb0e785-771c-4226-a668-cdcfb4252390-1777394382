@@ -37,6 +37,16 @@ export interface APIUsageStats {
   total_cost: number;
 }
 
+export interface PaymentSetting {
+  id: string;
+  setting_key: string;
+  setting_value: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const adminService = {
   async isAdmin(): Promise<boolean> {
     try {
@@ -335,5 +345,59 @@ export const adminService = {
     }
 
     return data || [];
+  },
+
+  async getPaymentSettings(): Promise<Record<string, string>> {
+    const { data, error } = await supabase
+      .from("payment_settings")
+      .select("*")
+      .eq("is_active", true);
+
+    if (error) {
+      console.error("Error fetching payment settings:", error);
+      return {};
+    }
+
+    const settings: Record<string, string> = {};
+    (data || []).forEach((setting: any) => {
+      settings[setting.setting_key] = setting.setting_value;
+    });
+
+    return settings;
+  },
+
+  async updatePaymentSetting(key: string, value: string): Promise<void> {
+    const { error } = await supabase
+      .from("payment_settings")
+      .update({ 
+        setting_value: value,
+        updated_at: new Date().toISOString()
+      })
+      .eq("setting_key", key);
+
+    if (error) {
+      console.error("Error updating payment setting:", error);
+      throw error;
+    }
+  },
+
+  async updatePaymentSettings(settings: Record<string, string>): Promise<void> {
+    const updates = Object.entries(settings).map(([key, value]) => 
+      supabase
+        .from("payment_settings")
+        .update({ 
+          setting_value: value,
+          updated_at: new Date().toISOString()
+        })
+        .eq("setting_key", key)
+    );
+
+    const results = await Promise.all(updates);
+    const errors = results.filter(r => r.error);
+    
+    if (errors.length > 0) {
+      console.error("Errors updating payment settings:", errors);
+      throw new Error("Failed to update some payment settings");
+    }
   },
 };
