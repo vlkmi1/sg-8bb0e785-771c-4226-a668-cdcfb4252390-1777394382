@@ -8,8 +8,8 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { UserMenu } from "@/components/UserMenu";
 import { ChatMessage } from "@/components/ChatMessage";
 import { creditsService } from "@/services/creditsService";
-import { assistantService } from "@/services/assistantService";
-import { toast } from "@/hooks/use-toast";
+import { assistantService, type Message } from "@/services/assistantService";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AssistantChat() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function AssistantChat() {
   const [credits, setCredits] = useState(0);
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [assistant, setAssistant] = useState<any>(null);
@@ -116,7 +116,7 @@ export default function AssistantChat() {
       return;
     }
 
-    const userMessage = {
+    const userMessage: Message = {
       role: "user",
       content: input,
       timestamp: new Date().toISOString(),
@@ -130,7 +130,7 @@ export default function AssistantChat() {
       // Použití assistantService místo přímého fetch
       const responseText = await assistantService.generateResponse(assistantId, input);
 
-      const assistantMessage = {
+      const assistantMessage: Message = {
         role: "assistant",
         content: responseText,
         timestamp: new Date().toISOString(),
