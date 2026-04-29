@@ -155,6 +155,7 @@ export default function Assistants() {
   };
 
   const handleChatClick = (assistantId: string) => {
+    console.log("[assistants] Opening chat with assistant:", assistantId);
     router.push(`/assistant-chat?id=${assistantId}`);
   };
 

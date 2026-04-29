@@ -15,6 +15,8 @@ export default function AssistantChat() {
   const router = useRouter();
   const { id: assistantId } = router.query;
   
+  console.log("[assistant-chat] Page loaded with assistantId:", assistantId, "type:", typeof assistantId);
+  
   const [credits, setCredits] = useState(0);
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState("");
@@ -38,7 +40,12 @@ export default function AssistantChat() {
   }, [messages]);
 
   const loadData = async () => {
-    if (!assistantId || typeof assistantId !== "string") return;
+    if (!assistantId || typeof assistantId !== "string") {
+      console.log("[assistant-chat] Skipping loadData - invalid assistantId:", assistantId);
+      return;
+    }
+
+    console.log("[assistant-chat] Loading data for assistantId:", assistantId);
 
     try {
       const [userCredits, assistantData, convData] = await Promise.all([
@@ -46,6 +53,12 @@ export default function AssistantChat() {
         assistantService.getAssistant(assistantId),
         assistantService.getConversation(assistantId),
       ]);
+
+      console.log("[assistant-chat] Data loaded:", {
+        credits: userCredits,
+        assistant: assistantData?.name,
+        conversationExists: !!convData,
+      });
 
       setCredits(userCredits);
       setAssistant(assistantData);

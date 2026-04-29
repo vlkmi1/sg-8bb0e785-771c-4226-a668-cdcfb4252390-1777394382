@@ -222,6 +222,12 @@ export const assistantService = {
     const user = await authState.getUser();
     if (!user) throw new Error("Not authenticated");
 
+    console.log("[assistantService] generateResponse called with:", {
+      assistantId,
+      userMessageLength: userMessage?.length,
+      userId: user.id,
+    });
+
     try {
       const response = await fetch("/api/assistant-chat", {
         method: "POST",
@@ -233,15 +239,19 @@ export const assistantService = {
         }),
       });
 
+      console.log("[assistantService] API response status:", response.status);
+
       if (!response.ok) {
         const error = await response.json();
+        console.error("[assistantService] API error response:", error);
         throw new Error(error.error || "Failed to generate response");
       }
 
       const data = await response.json();
+      console.log("[assistantService] API success, response length:", data.response?.length);
       return data.response;
     } catch (error: any) {
-      console.error("Error generating response:", error);
+      console.error("[assistantService] generateResponse error:", error);
       throw new Error(error.message || "Failed to generate response");
     }
   },
