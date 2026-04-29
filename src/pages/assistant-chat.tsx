@@ -25,6 +25,7 @@ export default function AssistantChat() {
   const [menuOpen, setMenuOpen] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (assistantId) {
@@ -107,17 +108,18 @@ export default function AssistantChat() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading || !assistantId) return;
+    if (!input.trim() || loading || !assistantId || typeof assistantId !== "string") return;
 
     if (!selectedConversation) {
       await handleNewConversation();
+      // Po vytvoření konverzace zkusíme znovu
       return;
     }
 
     const userMessage = {
       role: "user",
       content: input,
-      created_at: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -125,35 +127,35 @@ export default function AssistantChat() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/assistant-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assistantId,
-          conversationId: selectedConversation.id,
-          message: input,
-        }),
-      });
+      // Použití assistantService místo přímého fetch
+      const responseText = await assistantService.generateResponse(assistantId, input);
 
-      if (!response.ok) {
-        throw new Error("Chyba při komunikaci s API");
-      }
-
-      const data = await response.json();
       const assistantMessage = {
         role: "assistant",
-        content: data.response,
-        created_at: new Date().toISOString(),
+        content: responseText,
+        timestamp: new Date().toISOString(),
       };
 
+      // Přidáme zprávu do UI
       setMessages(prev => [...prev, assistantMessage]);
-      setCredits(data.remainingCredits || credits);
+
+      // Uložíme obě zprávy do konverzace
+      await assistantService.addMessage(selectedConversation.id, userMessage);
+      await assistantService.addMessage(selectedConversation.id, assistantMessage);
+
+      // Aktualizujeme kredity
+      const newCredits = await creditsService.getCredits();
+      setCredits(newCredits);
+
     } catch (error: any) {
+      console.error("Error sending message:", error);
       toast({
         title: "Chyba",
         description: error.message || "Nepodařilo se odeslat zprávu",
         variant: "destructive",
       });
+      // Odstraníme user message při chybě
+      setMessages(prev => prev.filter(m => m !== userMessage));
     } finally {
       setLoading(false);
     }
