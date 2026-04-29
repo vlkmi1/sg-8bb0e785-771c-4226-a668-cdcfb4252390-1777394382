@@ -23,26 +23,42 @@ export function UserMenu({ credits, showCredits = true }: UserMenuProps) {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadUserData();
   }, []);
 
   const loadUserData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUser(user);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      // Load profile data
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
-      if (profileData) {
-        setProfile(profileData);
+      if (userError) {
+        console.error("Error getting user:", userError);
+        return;
       }
+
+      if (user) {
+        setUser(user);
+        
+        // Load profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        
+        if (profileError) {
+          console.error("Error loading profile:", profileError);
+          // Don't fail if profile doesn't exist, just use user data
+        } else if (profileData) {
+          setProfile(profileData);
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error in UserMenu:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,6 +91,14 @@ export function UserMenu({ credits, showCredits = true }: UserMenuProps) {
     if (user?.email) return user.email.split("@")[0];
     return "Uživatel";
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div>
+      </div>
+    );
+  }
 
   return (
     <DropdownMenu>
