@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type AIProvider = 
   | "openai" 
@@ -22,7 +21,7 @@ export interface CreateApiKeyData {
 
 export const apiKeysService = {
   async getApiKeys(): Promise<ApiKey[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -56,7 +55,7 @@ export const apiKeysService = {
   },
 
   async createOrUpdateApiKey(keyData: CreateApiKeyData): Promise<ApiKey> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
@@ -84,7 +83,7 @@ export const apiKeysService = {
   },
 
   async deleteApiKey(id: string): Promise<boolean> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error("User not authenticated");
     }

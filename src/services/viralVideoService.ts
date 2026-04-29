@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type ViralVideo = Tables<"viral_videos">;
 export type Platform = "tiktok" | "reels" | "shorts";
@@ -30,7 +29,7 @@ export const viralVideoService = {
   },
 
   async createVideo(params: CreateViralVideoParams): Promise<ViralVideo> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -82,7 +81,7 @@ export const viralVideoService = {
   },
 
   async uploadVideo(file: File): Promise<string> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const fileName = `${user.id}/${Date.now()}-${file.name}`;

@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type ImageProvider = "openai" | "stability" | "midjourney";
 
@@ -15,7 +14,7 @@ export type GeneratedImage = Tables<"generated_images">;
 
 export const imageGenerationService = {
   async generateImage(params: GenerateImageParams): Promise<GeneratedImage> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     // Get session token for API call
@@ -47,7 +46,7 @@ export const imageGenerationService = {
   },
 
   async getGeneratedImages(): Promise<GeneratedImage[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase

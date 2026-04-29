@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -8,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Coins, CreditCard, QrCode, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { paymentService, type CreditPackage, type PaymentMethod } from "@/services/paymentService";
-import { authState } from "@/services/authStateService";
 
 interface CreditPurchaseDialogProps {
   onCreditsUpdated?: (newBalance: number) => void;
@@ -60,7 +60,7 @@ export function CreditPurchaseDialog({ onCreditsUpdated, open: externalOpen, onO
 
     setLoading(true);
     try {
-      const user = await authState.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       if (paymentMethod === "bank_transfer") {

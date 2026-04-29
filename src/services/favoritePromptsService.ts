@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type FavoritePrompt = Tables<"favorite_prompts">;
 export type PromptCategory = "chat" | "image" | "video" | "voice" | "ad" | "summary" | "general";
@@ -15,7 +14,7 @@ export interface CreatePromptData {
 
 export const favoritePromptsService = {
   async getAllPrompts(): Promise<FavoritePrompt[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -33,7 +32,7 @@ export const favoritePromptsService = {
   },
 
   async getPromptsByCategory(category: PromptCategory): Promise<FavoritePrompt[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -52,7 +51,7 @@ export const favoritePromptsService = {
   },
 
   async getFavorites(): Promise<FavoritePrompt[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -71,7 +70,7 @@ export const favoritePromptsService = {
   },
 
   async createPrompt(promptData: CreatePromptData): Promise<FavoritePrompt> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -151,7 +150,7 @@ export const favoritePromptsService = {
   },
 
   async searchPrompts(query: string): Promise<FavoritePrompt[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase

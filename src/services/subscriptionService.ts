@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type Subscription = Tables<"user_subscriptions">;
 export type SubscriptionPlan = Tables<"subscription_plans">;
@@ -12,7 +11,7 @@ export interface SubscriptionWithPlan extends Subscription {
 
 export const subscriptionService = {
   async getCurrentSubscription(): Promise<SubscriptionWithPlan | null> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
     const { data, error } = await supabase
@@ -74,7 +73,7 @@ export const subscriptionService = {
   },
 
   async createSubscription(planId: string): Promise<Subscription> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const startDate = new Date();
@@ -134,14 +133,14 @@ export const subscriptionService = {
   },
 
   async upgradeSubscription(newPlanId: string): Promise<void> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     await this.updateUserSubscription(user.id, newPlanId);
   },
 
   async cancelSubscription(subscriptionId: string): Promise<void> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { error } = await supabase
@@ -161,7 +160,7 @@ export const subscriptionService = {
   },
 
   async getSubscriptionHistory(): Promise<SubscriptionWithPlan[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase

@@ -14,7 +14,6 @@ import { adGeneratorService, type AdGeneration } from "@/services/adGeneratorSer
 import { creditsService } from "@/services/creditsService";
 import { favoritePromptsService } from "@/services/favoritePromptsService";
 import { PromptSelector } from "@/components/PromptSelector";
-import { authState } from "@/services/authStateService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ModuleHeader } from "@/components/ModuleHeader";
@@ -127,7 +126,7 @@ export default function AdGenerator() {
 
     setLoading(true);
     try {
-      const user = await authState.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const response = await fetch("/api/generate-ad", {

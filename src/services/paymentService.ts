@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 import QRCode from "qrcode";
 
 export type Payment = Tables<"payments">;
@@ -131,7 +130,7 @@ export const paymentService = {
       throw new Error("Bankovní převod není nakonfigurován");
     }
 
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Uživatel není přihlášen");
 
     const pkg = await this.getCreditPackage(packageId);
@@ -203,7 +202,7 @@ export const paymentService = {
   },
 
   async createPayment(intent: PaymentIntent): Promise<Payment> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -254,7 +253,7 @@ export const paymentService = {
   },
 
   async getPaymentHistory(): Promise<Payment[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -272,7 +271,7 @@ export const paymentService = {
   },
 
   async getPayment(paymentId: string): Promise<Payment | null> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
     const { data, error } = await supabase

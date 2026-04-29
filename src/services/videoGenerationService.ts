@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type GeneratedVideo = Tables<"generated_videos">;
 export type VideoProvider = "runway" | "runwayml" | "pika" | "sora" | "kling" | "stability-video";
@@ -11,7 +10,7 @@ export const videoGenerationService = {
     provider: VideoProvider | string;
     duration?: number;
   }): Promise<GeneratedVideo | null> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
@@ -41,7 +40,7 @@ export const videoGenerationService = {
   },
 
   async getGeneratedVideos(): Promise<GeneratedVideo[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -59,7 +58,7 @@ export const videoGenerationService = {
   },
 
   async deleteVideo(id: string): Promise<boolean> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error("User not authenticated");
     }

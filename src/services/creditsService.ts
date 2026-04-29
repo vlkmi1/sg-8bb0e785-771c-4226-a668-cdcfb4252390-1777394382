@@ -1,10 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import { authState } from "./authStateService";
 
 export const creditsService = {
   async getCredits(): Promise<number> {
     try {
-      const user = await authState.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -29,7 +28,7 @@ export const creditsService = {
     amount: number,
     description: string = "Service usage"
   ): Promise<number> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     // Fetch current credits
@@ -78,7 +77,7 @@ export const creditsService = {
 
   async getCreditTransactions() {
     try {
-      const user = await authState.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase

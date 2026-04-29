@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type ImageEdit = Tables<"image_edits">;
 export type EditType = "inpaint" | "outpaint" | "variation" | "remove" | "upscale";
@@ -16,7 +15,7 @@ export interface EditImageParams {
 
 export const imageEditService = {
   async editImage(params: EditImageParams): Promise<ImageEdit> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const response = await fetch("/api/edit-image", {
@@ -37,7 +36,7 @@ export const imageEditService = {
   },
 
   async getEdits(): Promise<ImageEdit[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -55,7 +54,7 @@ export const imageEditService = {
   },
 
   async getEditsByOriginalImage(originalImageId: string): Promise<ImageEdit[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase

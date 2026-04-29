@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type AdGeneration = Tables<"ad_generations">;
 export type AdPlatform = "facebook" | "instagram" | "linkedin" | "google" | "tiktok";
@@ -8,7 +7,7 @@ export type AdFormat = "carousel" | "single_image" | "video" | "story";
 
 export const adGeneratorService = {
   async getAds(): Promise<AdGeneration[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -37,7 +36,7 @@ export const adGeneratorService = {
     imageSuggestions: string;
     modelUsed: string;
   }): Promise<AdGeneration> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase

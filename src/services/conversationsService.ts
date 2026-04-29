@@ -1,13 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type Conversation = Tables<"conversations">;
 export type Message = Tables<"messages">;
 
 export const conversationsService = {
   async getConversations(): Promise<Conversation[]> {
-    const session = await authState.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       // Don't log this as error - it's expected when not logged in
       return [];
@@ -47,7 +46,7 @@ export const conversationsService = {
     model_provider: string;
     model_name: string;
   }): Promise<Conversation> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase

@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type ReferralCode = Tables<"referral_codes">;
 export type Referral = Tables<"referrals">;
@@ -29,7 +28,7 @@ export interface CreatePayoutParams {
 export const affiliateService = {
   // Get user's referral code
   async getReferralCode(): Promise<ReferralCode | null> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
     const { data, error } = await supabase
@@ -44,7 +43,7 @@ export const affiliateService = {
 
   // Create referral code if doesn't exist
   async createReferralCode(): Promise<ReferralCode | null> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
@@ -80,7 +79,7 @@ export const affiliateService = {
 
   // Get affiliate statistics
   async getStats(): Promise<AffiliateStats> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const [codeData, referralsData, earningsData] = await Promise.all([
@@ -124,7 +123,7 @@ export const affiliateService = {
 
   // Get referred users
   async getReferrals(): Promise<Referral[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -139,7 +138,7 @@ export const affiliateService = {
 
   // Get earnings history
   async getEarnings(): Promise<ReferralEarning[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -154,7 +153,7 @@ export const affiliateService = {
 
   // Get payout history
   async getPayouts(): Promise<ReferralPayout[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -169,7 +168,7 @@ export const affiliateService = {
 
   // Request payout
   async requestPayout(params: CreatePayoutParams): Promise<ReferralPayout> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { data, error } = await supabase
@@ -217,7 +216,7 @@ export const affiliateService = {
     status: "processing" | "completed" | "rejected",
     notes?: string
   ): Promise<void> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
     const { error } = await supabase

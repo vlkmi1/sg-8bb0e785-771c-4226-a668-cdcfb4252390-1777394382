@@ -1,13 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type DocumentSummary = Tables<"document_summaries">;
 export type SummaryLevel = "short" | "medium" | "detailed";
 
 export const documentSummaryService = {
   async getSummaries(): Promise<DocumentSummary[]> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
@@ -31,7 +30,7 @@ export const documentSummaryService = {
     modelUsed: string;
     fileName?: string;
   }): Promise<DocumentSummary> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
