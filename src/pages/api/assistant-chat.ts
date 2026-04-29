@@ -3,6 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+console.log("[assistant-chat] Environment check:", {
+  supabaseUrl: supabaseUrl ? "SET" : "MISSING",
+  supabaseServiceKey: supabaseServiceKey ? `${supabaseServiceKey.substring(0, 20)}...` : "MISSING",
+});
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
