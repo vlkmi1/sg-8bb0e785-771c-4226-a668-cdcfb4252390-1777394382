@@ -26,41 +26,46 @@ export function UserMenu({ credits, showCredits = true }: UserMenuProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadUserData();
-  }, []);
+    let mounted = true;
+    let userDataLoaded = false;
 
-  const loadUserData = async () => {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error("Error getting user:", userError);
-        return;
-      }
+    const loadUserData = async () => {
+      if (userDataLoaded) return;
+      userDataLoaded = true;
 
-      if (user) {
-        setUser(user);
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        // Load profile data
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        
-        if (profileError) {
-          console.error("Error loading profile:", profileError);
-          // Don't fail if profile doesn't exist, just use user data
-        } else if (profileData) {
-          setProfile(profileData);
+        if (userError || !mounted) return;
+
+        if (user) {
+          setUser(user);
+          
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+          
+          if (mounted && profileData) {
+            setProfile(profileData);
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error in UserMenu:", error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
         }
       }
-    } catch (error) {
-      console.error("Unexpected error in UserMenu:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadUserData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []); // Prázdný dependency array - spustí se jen jednou
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

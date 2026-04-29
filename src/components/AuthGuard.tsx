@@ -9,40 +9,38 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let authCheckDone = false;
 
     const checkAuth = async () => {
+      if (authCheckDone) return;
+      authCheckDone = true;
+
       try {
-        // Používáme getSession místo getUser - je rychlejší a nekontroluje validitu na serveru
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
         if (session) {
           setAuthenticated(true);
+          setLoading(false);
         } else {
-          // Redirect pouze pokud opravdu není session
           router.push("/auth/login");
           setAuthenticated(false);
+          setLoading(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);
-        // Při chybě neodhlašujeme - může jít o dočasný problém sítě
         if (!mounted) return;
         setAuthenticated(false);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     checkAuth();
 
-    // Listen for auth state changes - ale pouze pro sign out
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       
-      // Reagujeme pouze na explicitní sign out
       if (event === "SIGNED_OUT") {
         setAuthenticated(false);
         router.push("/auth/login");
@@ -55,7 +53,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, []); // Prázdný dependency array - spustí se jen jednou
 
   if (loading) {
     return (

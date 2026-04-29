@@ -15,7 +15,7 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    autoRefreshToken: false, // Vypnuto - manuální refresh pouze když je potřeba
+    autoRefreshToken: true,   // Vráceno na default - Supabase má vlastní rate limiting
     persistSession: true,    // Zachovat session v localStorage
     detectSessionInUrl: true, // Detekovat session z URL (pro email confirmation)
   },
