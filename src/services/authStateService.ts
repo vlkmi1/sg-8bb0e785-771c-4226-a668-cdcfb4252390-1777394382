@@ -86,20 +86,23 @@ class AuthStateService {
           if (error.message !== 'Auth session missing!') {
             console.error('[AuthState] Get user error:', error);
           }
-          this.clearCache();
-          return null;
+          // Don't clear cache on network errors - keep existing cache
+          return this.userCache;
         }
 
         if (user) {
           this.userCache = user;
           this.cacheTimestamp = Date.now();
+        } else {
+          // Only clear cache if we're sure there's no user
+          this.clearCache();
         }
         
         return user;
       } catch (error) {
         console.error('[AuthState] Get user exception:', error);
-        this.clearCache();
-        return null;
+        // Keep existing cache on network errors
+        return this.userCache;
       } finally {
         // Clear promise reference after completion
         this.userPromise = null;

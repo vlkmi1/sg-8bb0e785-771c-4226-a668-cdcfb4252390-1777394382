@@ -8,46 +8,51 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Používáme getSession místo getUser - je rychlejší a nekontroluje validitu na serveru
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error("Auth check error:", error);
-          router.push("/auth/login");
-          setAuthenticated(false);
-        } else if (!session) {
-          console.log("No session found, redirecting to login");
-          router.push("/auth/login");
-          setAuthenticated(false);
-        } else {
-          console.log("User authenticated:", session.user.email);
+        if (!mounted) return;
+
+        if (session) {
           setAuthenticated(true);
+        } else {
+          // Redirect pouze pokud opravdu není session
+          router.push("/auth/login");
+          setAuthenticated(false);
         }
       } catch (error) {
-        console.error("Unexpected auth error:", error);
-        router.push("/auth/login");
+        console.error("Auth check error:", error);
+        // Při chybě neodhlašujeme - může jít o dočasný problém sítě
+        if (!mounted) return;
         setAuthenticated(false);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     checkAuth();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        console.log("Auth state changed: no session");
-        router.push("/auth/login");
+    // Listen for auth state changes - ale pouze pro sign out
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      
+      // Reagujeme pouze na explicitní sign out
+      if (event === "SIGNED_OUT") {
         setAuthenticated(false);
-      } else {
-        console.log("Auth state changed: session active");
+        router.push("/auth/login");
+      } else if (event === "SIGNED_IN" && session) {
         setAuthenticated(true);
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [router]);
