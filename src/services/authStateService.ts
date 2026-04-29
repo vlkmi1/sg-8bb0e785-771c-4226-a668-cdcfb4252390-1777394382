@@ -2,8 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 /**
- * Centralized auth state service with caching and session refresh
- * Prevents duplicate auth requests and handles token refresh gracefully
+ * Centralized auth state service with long-lived caching
+ * Prevents rate limiting by minimizing auth requests to Supabase
  */
 class AuthStateService {
   private static instance: AuthStateService;
@@ -11,10 +11,12 @@ class AuthStateService {
   private sessionCache: Session | null = null;
   private userPromise: Promise<User | null> | null = null;
   private cacheTimestamp: number = 0;
-  private readonly CACHE_DURATION = 5000; // 5 seconds
+  private readonly CACHE_DURATION = 300000; // 5 minutes (300s) to prevent rate limiting
+  private refreshInProgress: boolean = false;
 
   private constructor() {
     this.initSession();
+    this.setupAutoRefresh();
   }
 
   public static getInstance(): AuthStateService {
@@ -31,9 +33,58 @@ class AuthStateService {
         this.sessionCache = session;
         this.userCache = session.user;
         this.cacheTimestamp = Date.now();
+        console.log('[AuthState] Session initialized, expires at:', new Date(session.expires_at! * 1000));
       }
     } catch (error) {
       console.error('[AuthState] Init session error:', error);
+    }
+  }
+
+  /**
+   * Setup auto-refresh before token expires (not on every call)
+   */
+  private setupAutoRefresh() {
+    // Check session expiry every 5 minutes
+    setInterval(async () => {
+      if (this.sessionCache && !this.refreshInProgress) {
+        const expiresAt = this.sessionCache.expires_at! * 1000;
+        const now = Date.now();
+        const timeUntilExpiry = expiresAt - now;
+        
+        // Refresh 2 minutes before expiry
+        if (timeUntilExpiry < 120000) {
+          console.log('[AuthState] Proactively refreshing session');
+          await this.refreshSession();
+        }
+      }
+    }, 300000); // Check every 5 minutes
+  }
+
+  private async refreshSession(): Promise<void> {
+    if (this.refreshInProgress) {
+      console.log('[AuthState] Refresh already in progress, skipping');
+      return;
+    }
+
+    this.refreshInProgress = true;
+    try {
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('[AuthState] Refresh session error:', error);
+        return;
+      }
+
+      if (session) {
+        this.sessionCache = session;
+        this.userCache = session.user;
+        this.cacheTimestamp = Date.now();
+        console.log('[AuthState] Session refreshed, new expiry:', new Date(session.expires_at! * 1000));
+      }
+    } catch (error) {
+      console.error('[AuthState] Refresh session exception:', error);
+    } finally {
+      this.refreshInProgress = false;
     }
   }
 
@@ -51,11 +102,11 @@ class AuthStateService {
   }
 
   /**
-   * Get current user with caching to prevent concurrent auth requests
-   * This is the main method services should use instead of supabase.auth.getUser()
+   * Get current user with long-lived caching
+   * Cache is valid for 5 minutes to prevent rate limiting
    */
   public async getUser(): Promise<User | null> {
-    // Return cached user if valid
+    // Return cached user if valid (5 minute cache)
     if (this.isCacheValid() && this.userCache) {
       return this.userCache;
     }
@@ -68,7 +119,7 @@ class AuthStateService {
     // Create new promise and cache it
     this.userPromise = (async () => {
       try {
-        // First try to get from session (faster, no validation)
+        // Use getSession (doesn't trigger refresh, just reads local storage)
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -78,27 +129,9 @@ class AuthStateService {
           return session.user;
         }
 
-        // If no session, try getUser (validates and refreshes token)
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (error) {
-          // Don't log session missing errors - they're expected when logged out
-          if (error.message !== 'Auth session missing!') {
-            console.error('[AuthState] Get user error:', error);
-          }
-          // Don't clear cache on network errors - keep existing cache
-          return this.userCache;
-        }
-
-        if (user) {
-          this.userCache = user;
-          this.cacheTimestamp = Date.now();
-        } else {
-          // Only clear cache if we're sure there's no user
-          this.clearCache();
-        }
-        
-        return user;
+        // No session found
+        this.clearCache();
+        return null;
       } catch (error) {
         console.error('[AuthState] Get user exception:', error);
         // Keep existing cache on network errors
@@ -113,10 +146,9 @@ class AuthStateService {
   }
 
   /**
-   * Get current session (lighter than getUser, no validation)
-   * Use this when you just need to check if user is logged in
+   * Get current session (always uses cache if valid)
    */
-  public async getSession() {
+  public async getSession(): Promise<Session | null> {
     // Return cached session if valid
     if (this.isCacheValid() && this.sessionCache) {
       return this.sessionCache;
@@ -134,7 +166,7 @@ class AuthStateService {
   }
 
   /**
-   * Force cache invalidation - use after manual auth operations
+   * Force cache invalidation - use sparingly!
    */
   public invalidateCache(): void {
     this.cacheTimestamp = 0;
@@ -142,10 +174,11 @@ class AuthStateService {
   }
 
   /**
-   * Clear all cached data - use on sign out
+   * Clear all cached data - use on sign out only
    */
   public clearAll(): void {
     this.clearCache();
+    this.refreshInProgress = false;
   }
 }
 
