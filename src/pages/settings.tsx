@@ -54,10 +54,30 @@ export default function Settings() {
   const [upgradingPlan, setUpgradingPlan] = useState(false);
 
   useEffect(() => {
-    loadConnectedProviders();
-    loadSocialAccounts();
-    loadSubscription();
-  }, []);
+    let mounted = true;
+    let dataLoaded = false;
+
+    const loadInitialData = async () => {
+      if (dataLoaded) return;
+      dataLoaded = true;
+
+      try {
+        await Promise.all([
+          loadConnectedProviders(),
+          loadSocialAccounts(),
+          loadSubscription(),
+        ]);
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []); // Prázdný dependency array - spustí se jen jednou
 
   const loadConnectedProviders = async () => {
     try {
@@ -75,7 +95,6 @@ export default function Settings() {
       setSocialAccounts(accounts);
     } catch (error) {
       console.error("Error loading social accounts:", error);
-      // Don't crash the page, just show empty list
       setSocialAccounts([]);
     }
   };

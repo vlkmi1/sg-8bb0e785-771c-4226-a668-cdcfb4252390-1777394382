@@ -28,8 +28,26 @@ export default function Credits() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    let mounted = true;
+    let dataLoaded = false;
+
+    const loadInitialData = async () => {
+      if (dataLoaded) return;
+      dataLoaded = true;
+
+      try {
+        await loadData();
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []); // Prázdný dependency array - spustí se jen jednou
 
   const loadData = async () => {
     try {

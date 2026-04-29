@@ -103,11 +103,29 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     }
-  }, []);
+  }, []); // Prázdný dependency array pro useCallback
 
   useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+    let mounted = true;
+    let dataLoaded = false;
+
+    const loadInitialData = async () => {
+      if (dataLoaded) return;
+      dataLoaded = true;
+
+      try {
+        await loadDashboardData();
+      } catch (error) {
+        console.error("Error in initial load:", error);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadDashboardData]); // Dependency na loadDashboardData
 
   const loadSubscription = async () => {
     try {
