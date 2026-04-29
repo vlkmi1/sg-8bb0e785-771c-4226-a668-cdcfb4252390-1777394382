@@ -13,22 +13,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { assistantId, userMessage, userId } = req.body;
 
-    console.log("[assistant-chat] Request:", { assistantId, userMessage: userMessage?.substring(0, 50), userId });
+    console.log("[assistant-chat] Request received:", { 
+      assistantId, 
+      assistantIdType: typeof assistantId,
+      userMessage: userMessage?.substring(0, 50), 
+      userId 
+    });
 
     if (!assistantId || !userMessage || !userId) {
-      console.error("[assistant-chat] Missing parameters:", { assistantId: !!assistantId, userMessage: !!userMessage, userId: !!userId });
+      console.error("[assistant-chat] Missing parameters:", { 
+        assistantId: !!assistantId, 
+        userMessage: !!userMessage, 
+        userId: !!userId 
+      });
       return res.status(400).json({ error: "Missing required parameters" });
     }
 
-    // Get assistant details
+    // Get assistant details - using service role key to bypass RLS
+    console.log("[assistant-chat] Fetching assistant with ID:", assistantId);
+    
     const { data: assistant, error: assistantError } = await supabase
       .from("assistants")
       .select("*")
       .eq("id", assistantId)
       .single();
 
-    if (assistantError || !assistant) {
-      console.error("[assistant-chat] Assistant not found:", assistantError);
+    console.log("[assistant-chat] Assistant query result:", { 
+      found: !!assistant, 
+      error: assistantError,
+      assistantName: assistant?.name 
+    });
+
+    if (assistantError) {
+      console.error("[assistant-chat] Assistant query error:", assistantError);
+      return res.status(404).json({ 
+        error: "Assistant not found", 
+        details: assistantError.message 
+      });
+    }
+
+    if (!assistant) {
+      console.error("[assistant-chat] Assistant not found in database");
       return res.status(404).json({ error: "Assistant not found" });
     }
 
