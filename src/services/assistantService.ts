@@ -101,13 +101,20 @@ export const assistantService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
+    console.log("[assistantService] Getting assistants for user:", user.id);
+
     const { data, error } = await supabase
       .from("assistants")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("[assistantService] Get assistants error:", error);
+      throw error;
+    }
+
+    console.log("[assistantService] Found assistants:", data?.length || 0);
     return data || [];
   },
 
@@ -126,6 +133,8 @@ export const assistantService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
+    console.log("[assistantService] Creating assistant for user:", user.id);
+
     const { data, error } = await supabase
       .from("assistants")
       .insert({
@@ -135,7 +144,12 @@ export const assistantService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("[assistantService] Create error:", error);
+      throw error;
+    }
+
+    console.log("[assistantService] Assistant created:", data.id);
     return data;
   },
 

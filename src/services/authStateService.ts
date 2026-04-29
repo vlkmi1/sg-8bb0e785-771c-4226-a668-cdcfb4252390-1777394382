@@ -11,7 +11,7 @@ class AuthStateService {
   private sessionCache: Session | null = null;
   private userPromise: Promise<User | null> | null = null;
   private cacheTimestamp: number = 0;
-  private readonly CACHE_DURATION = 300000; // 5 minutes (300s) to prevent rate limiting
+  private readonly CACHE_DURATION = 600000; // 10 minut (600s) - zvýšeno z 5 min
   private refreshInProgress: boolean = false;
 
   private constructor() {
