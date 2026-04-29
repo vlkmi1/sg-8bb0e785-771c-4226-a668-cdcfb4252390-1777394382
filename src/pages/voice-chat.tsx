@@ -44,7 +44,7 @@ export default function VoiceChat() {
     try {
       const [userCredits, chats] = await Promise.all([
         creditsService.getCredits(),
-        voiceService.getChats(),
+        voiceService.getVoiceConversations(),
       ]);
       setCredits(userCredits);
       setConversations(chats);
@@ -55,20 +55,12 @@ export default function VoiceChat() {
 
   const handleNewConversation = async () => {
     try {
-      const newChat = await voiceService.createChat({
-        title: "Nová konverzace",
-      });
-      setSelectedConversation(newChat);
+      // V aktuálním flow pro voice chat spíše tvoříme nové konverzace přímo při processAudio
+      setSelectedConversation(null);
       setMessages([]);
-      await loadData();
       setMenuOpen(false);
     } catch (error) {
-      console.error("Error creating conversation:", error);
-      toast({
-        title: "Chyba",
-        description: "Nepodařilo se vytvořit konverzaci",
-        variant: "destructive",
-      });
+      console.error("Error setting new conversation:", error);
     }
   };
 
@@ -78,9 +70,12 @@ export default function VoiceChat() {
       setSelectedConversation(conv);
       setMenuOpen(false);
       
+      // Pro zjednodušení si ukážeme pouze historii dané jedné vybrané hlasové konverzace
       try {
-        const msgs = await voiceService.getMessages(id);
-        setMessages(msgs || []);
+        const msgs = [];
+        if (conv.transcript) msgs.push({ role: "user", content: conv.transcript });
+        if (conv.response_text) msgs.push({ role: "assistant", content: conv.response_text });
+        setMessages(msgs);
       } catch (error) {
         console.error("Error loading messages:", error);
       }
@@ -90,7 +85,7 @@ export default function VoiceChat() {
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await voiceService.deleteChat(id);
+      await voiceService.deleteVoiceConversation(id);
       if (selectedConversation?.id === id) {
         setSelectedConversation(null);
         setMessages([]);
@@ -144,32 +139,15 @@ export default function VoiceChat() {
   };
 
   const processAudio = async (audioBlob: Blob) => {
-    if (!selectedConversation) {
-      await handleNewConversation();
-      return;
-    }
-
     setLoading(true);
     try {
-      const response = await fetch("/api/voice-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chatId: selectedConversation.id,
-          audioData: await blobToBase64(audioBlob),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Chyba při komunikaci s API");
-      }
-
-      const data = await response.json();
+      const base64Audio = await blobToBase64(audioBlob);
+      const data = await voiceService.processVoiceMessage(base64Audio, "openai");
 
       // Add user message
       const userMessage = {
         role: "user",
-        content: data.transcription,
+        content: data.transcript,
         created_at: new Date().toISOString(),
       };
       setMessages(prev => [...prev, userMessage]);
@@ -187,7 +165,8 @@ export default function VoiceChat() {
         await playAudio(data.audioUrl);
       }
 
-      setCredits(data.remainingCredits || credits);
+      await loadData();
+      
     } catch (error: any) {
       toast({
         title: "Chyba",

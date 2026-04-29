@@ -40,15 +40,25 @@ export default function AssistantChat() {
     if (!assistantId || typeof assistantId !== "string") return;
 
     try {
-      const [userCredits, assistantData, convs] = await Promise.all([
+      const [userCredits, assistantData, convData] = await Promise.all([
         creditsService.getCredits(),
         assistantService.getAssistant(assistantId),
-        assistantService.getConversations(assistantId),
+        assistantService.getConversation(assistantId),
       ]);
 
       setCredits(userCredits);
       setAssistant(assistantData);
-      setConversations(convs);
+      
+      // Pro Assistant API máme jednu konverzaci per asistent per uživatel
+      if (convData) {
+        setConversations([convData]);
+        setSelectedConversation(convData);
+        setMessages((convData.messages as any[]) || []);
+      } else {
+        setConversations([]);
+        setSelectedConversation(null);
+        setMessages([]);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -58,13 +68,13 @@ export default function AssistantChat() {
     if (!assistantId || typeof assistantId !== "string") return;
 
     try {
-      const newConv = await assistantService.createConversation({
-        assistant_id: assistantId,
-        title: "Nová konverzace",
-      });
+      // Pokud už konverzace existuje, pouze ji promažeme
+      if (selectedConversation) {
+        await assistantService.clearConversation(selectedConversation.id);
+      } else {
+        await assistantService.createConversation(assistantId);
+      }
 
-      setSelectedConversation(newConv);
-      setMessages([]);
       await loadData();
       setMenuOpen(false);
     } catch (error) {
@@ -77,28 +87,14 @@ export default function AssistantChat() {
   };
 
   const handleSelectConversation = async (id: string) => {
-    const conv = conversations.find(c => c.id === id);
-    if (conv) {
-      setSelectedConversation(conv);
-      setMenuOpen(false);
-      
-      try {
-        const msgs = await assistantService.getMessages(id);
-        setMessages(msgs || []);
-      } catch (error) {
-        console.error("Error loading messages:", error);
-      }
-    }
+    // V aktuálním schématu máme jen jednu konverzaci
+    setMenuOpen(false);
   };
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await assistantService.deleteConversation(id);
-      if (selectedConversation?.id === id) {
-        setSelectedConversation(null);
-        setMessages([]);
-      }
+      await assistantService.clearConversation(id);
       await loadData();
     } catch (error) {
       toast({
