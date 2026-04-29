@@ -8,7 +8,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { UserMenu } from "@/components/UserMenu";
 import { ChatMessage } from "@/components/ChatMessage";
 import { creditsService } from "@/services/creditsService";
-import { voiceService, type VoiceChat } from "@/services/voiceService";
+import { voiceService, type VoiceConversation } from "@/services/voiceService";
 import { toast } from "@/hooks/use-toast";
 
 export default function VoiceChat() {
@@ -18,8 +18,8 @@ export default function VoiceChat() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
-  const [conversations, setConversations] = useState<VoiceChat[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<VoiceChat | null>(null);
+  const [conversations, setConversations] = useState<VoiceConversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<VoiceConversation | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
