@@ -2,14 +2,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-console.log("[assistant-chat] Environment check:", {
-  supabaseUrl: supabaseUrl ? "SET" : "MISSING",
-  supabaseServiceKey: supabaseServiceKey ? `${supabaseServiceKey.substring(0, 20)}...` : "MISSING",
-});
+console.log("[assistant-chat] Using anon key for API calls");
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
@@ -40,13 +37,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Missing required parameters" });
     }
 
-    // Get assistant details - using service role key to bypass RLS
+    // Get assistant details - using user_id filter instead of service role
     console.log("[assistant-chat] Fetching assistant with ID:", assistantId);
     
     const { data: assistant, error: assistantError } = await supabase
       .from("assistants")
       .select("*")
       .eq("id", assistantId)
+      .eq("user_id", userId)
       .single();
 
     console.log("[assistant-chat] Assistant query result:", { 
@@ -79,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single();
 
     const messages = (conversation?.messages as any[]) || [];
-    const conversationHistory = messages.slice(-10); // Last 10 messages for context
+    const conversationHistory = messages.slice(-10);
 
     console.log("[assistant-chat] Conversation history length:", conversationHistory.length);
 
