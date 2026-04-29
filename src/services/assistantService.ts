@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { authState } from "./authStateService";
 
 export type Assistant = Tables<"assistants">;
 export type AssistantConversation = Tables<"assistant_conversations">;
@@ -101,8 +100,6 @@ export const assistantService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    console.log("[assistantService] Getting assistants for user:", user.id);
-
     const { data, error } = await supabase
       .from("assistants")
       .select("*")
@@ -114,7 +111,6 @@ export const assistantService = {
       throw error;
     }
 
-    console.log("[assistantService] Found assistants:", data?.length || 0);
     return data || [];
   },
 
@@ -133,8 +129,6 @@ export const assistantService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
-    console.log("[assistantService] Creating assistant for user:", user.id);
-
     const { data, error } = await supabase
       .from("assistants")
       .insert({
@@ -149,7 +143,6 @@ export const assistantService = {
       throw error;
     }
 
-    console.log("[assistantService] Assistant created:", data.id);
     return data;
   },
 
@@ -233,14 +226,10 @@ export const assistantService = {
   },
 
   async generateResponse(assistantId: string, userMessage: string): Promise<string> {
-    const user = await authState.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    console.log("[assistantService] generateResponse called with:", {
-      assistantId,
-      userMessageLength: userMessage?.length,
-      userId: user.id,
-    });
+    console.log("[assistantService] Generating response for user:", user.id);
 
     try {
       const response = await fetch("/api/assistant-chat", {
@@ -257,15 +246,14 @@ export const assistantService = {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error("[assistantService] API error response:", error);
+        console.error("[assistantService] API error:", error);
         throw new Error(error.error || "Failed to generate response");
       }
 
       const data = await response.json();
-      console.log("[assistantService] API success, response length:", data.response?.length);
       return data.response;
     } catch (error: any) {
-      console.error("[assistantService] generateResponse error:", error);
+      console.error("[assistantService] Error:", error);
       throw new Error(error.message || "Failed to generate response");
     }
   },
