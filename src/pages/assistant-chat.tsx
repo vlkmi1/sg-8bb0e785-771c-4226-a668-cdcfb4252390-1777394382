@@ -1,97 +1,127 @@
-import { useState, useEffect, useCallback, useRef, FormEvent } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Send, Loader2 } from "lucide-react";
-import { SEO } from "@/components/SEO";
-import { UserMenu } from "@/components/UserMenu";
-import { authService } from "@/services/authService";
-import { assistantService, Assistant, AssistantConversation, Message } from "@/services/assistantService";
-import { toast } from "@/hooks/use-toast";
-import { creditsService } from "@/services/creditsService";
-import { ModuleHeader } from "@/components/ModuleHeader";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Send, Loader2, Menu, Home, Plus, Trash2, Bot } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
+import { UserMenu } from "@/components/UserMenu";
+import { ChatMessage } from "@/components/ChatMessage";
+import { creditsService } from "@/services/creditsService";
+import { assistantService } from "@/services/assistantService";
+import { toast } from "@/hooks/use-toast";
 
 export default function AssistantChat() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id: assistantId } = router.query;
+  
+  const [credits, setCredits] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [assistant, setAssistant] = useState<any>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [assistant, setAssistant] = useState<Assistant | null>(null);
-  const [conversation, setConversation] = useState<AssistantConversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [credits, setCredits] = useState(0);
-
-  const loadAssistant = useCallback(async (assistantId: string) => {
-    try {
-      const data = await assistantService.getAssistant(assistantId);
-      setAssistant(data);
-      loadConversation(assistantId);
-    } catch (error) {
-      console.error("Error loading assistant:", error);
-      router.push("/assistants");
+  useEffect(() => {
+    if (assistantId) {
+      loadData();
     }
-  }, [router]);
+  }, [assistantId]);
 
   useEffect(() => {
-    if (typeof id === "string") {
-      loadAssistant(id);
-    }
-  }, [id, loadAssistant]);
-
-  useEffect(() => {
-    loadCredits();
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const loadData = async () => {
+    if (!assistantId || typeof assistantId !== "string") return;
 
-  const loadConversation = async (assistantId: string) => {
     try {
-      let conv = await assistantService.getConversation(assistantId);
-      
-      if (!conv) {
-        conv = await assistantService.createConversation(assistantId);
-      }
+      const [userCredits, assistantData, convs] = await Promise.all([
+        creditsService.getCredits(),
+        assistantService.getAssistant(assistantId),
+        assistantService.getConversations(assistantId),
+      ]);
 
-      setConversation(conv);
-      setMessages((conv.messages as unknown as Message[]) || []);
-    } catch (error) {
-      console.error("Error loading conversation:", error);
-    }
-  };
-
-  const loadCredits = async () => {
-    try {
-      const userCredits = await creditsService.getCredits();
       setCredits(userCredits);
+      setAssistant(assistantData);
+      setConversations(convs);
     } catch (error) {
-      console.error("Error loading credits:", error);
+      console.error("Error loading data:", error);
     }
   };
 
-  const handleSendMessage = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !conversation || !assistant) return;
+  const handleNewConversation = async () => {
+    if (!assistantId || typeof assistantId !== "string") return;
 
-    if (credits < 1) {
-      alert("Nemáte dostatek kreditů. Potřebujete alespoň 1 kredit.");
+    try {
+      const newConv = await assistantService.createConversation({
+        assistant_id: assistantId,
+        title: "Nová konverzace",
+      });
+
+      setSelectedConversation(newConv);
+      setMessages([]);
+      await loadData();
+      setMenuOpen(false);
+    } catch (error) {
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se vytvořit konverzaci",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSelectConversation = async (id: string) => {
+    const conv = conversations.find(c => c.id === id);
+    if (conv) {
+      setSelectedConversation(conv);
+      setMenuOpen(false);
+      
+      try {
+        const msgs = await assistantService.getMessages(id);
+        setMessages(msgs || []);
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      }
+    }
+  };
+
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await assistantService.deleteConversation(id);
+      if (selectedConversation?.id === id) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+      await loadData();
+    } catch (error) {
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se smazat konverzaci",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || loading || !assistantId) return;
+
+    if (!selectedConversation) {
+      await handleNewConversation();
       return;
     }
 
-    const userMessage: Message = {
+    const userMessage = {
       role: "user",
-      content: input.trim(),
-      timestamp: new Date().toISOString(),
+      content: input,
+      created_at: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -99,142 +129,201 @@ export default function AssistantChat() {
     setLoading(true);
 
     try {
-      await assistantService.addMessage(conversation.id, userMessage);
+      const response = await fetch("/api/assistant-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistantId,
+          conversationId: selectedConversation.id,
+          message: input,
+        }),
+      });
 
-      const response = await assistantService.generateResponse(assistant.id, userMessage.content);
+      if (!response.ok) {
+        throw new Error("Chyba při komunikaci s API");
+      }
 
-      const assistantMessage: Message = {
+      const data = await response.json();
+      const assistantMessage = {
         role: "assistant",
-        content: response,
-        timestamp: new Date().toISOString(),
+        content: data.response,
+        created_at: new Date().toISOString(),
       };
 
-      await assistantService.addMessage(conversation.id, assistantMessage);
       setMessages(prev => [...prev, assistantMessage]);
-
-      const newCredits = await creditsService.deductCredits(1);
-      setCredits(newCredits);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      alert("Chyba při odesílání zprávy.");
+      setCredits(data.remainingCredits || credits);
+    } catch (error: any) {
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se odeslat zprávu",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClearConversation = async () => {
-    if (!conversation) return;
-    if (!confirm("Opravdu chcete smazat celou konverzaci? Tato akce je nevratná.")) return;
-
-    try {
-      await assistantService.clearConversation(conversation.id);
-      setMessages([]);
-    } catch (error) {
-      console.error("Error clearing conversation:", error);
-    }
-  };
-
-  if (!assistant) {
+  if (!assistantId) {
     return (
-      <AuthGuard>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AuthGuard>
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background flex flex-col">
-        <ModuleHeader credits={credits} />
+      {/* Mobile/PWA Fullscreen Layout */}
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-card shrink-0">
+          <div className="flex items-center gap-2">
+            {/* Menu Button */}
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0 flex flex-col">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="font-heading flex items-center gap-2">
+                    <Bot className="h-5 w-5" />
+                    {assistant?.name || "AI Asistent"}
+                  </SheetTitle>
+                </SheetHeader>
+                
+                {/* New Chat Button */}
+                <div className="p-3 border-b">
+                  <Button onClick={handleNewConversation} className="w-full" size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nová konverzace
+                  </Button>
+                </div>
 
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 overflow-y-auto space-y-4 mb-6">
-            {messages.length === 0 ? (
-              <Card className="bg-muted/50">
-                <CardContent className="py-12">
-                  <div className="text-center space-y-4">
-                    <div className="text-5xl">{assistant.avatar_emoji}</div>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Začněte konverzaci</h3>
-                      <p className="text-muted-foreground max-w-md mx-auto">
-                        {assistant.description || "Zeptejte se mě na cokoliv a já vám rád pomohu."}
-                      </p>
-                      <div className="mt-4">
-                        <Badge variant="secondary">
-                          {assistant.personality || "AI Asistent"}
-                        </Badge>
-                      </div>
+                {/* Conversations List */}
+                <div className="flex-1 overflow-y-auto p-2">
+                  {conversations.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Žádné konverzace
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
+                  ) : (
+                    <div className="space-y-1">
+                      {conversations.map((conv) => (
+                        <div
+                          key={conv.id}
+                          onClick={() => handleSelectConversation(conv.id)}
+                          className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                            selectedConversation?.id === conv.id ? "bg-muted" : ""
+                          }`}
+                        >
+                          <Bot className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{conv.title}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteConversation(conv.id, e)}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom Close Button */}
+                <div className="p-4 border-t bg-muted/30">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setMenuOpen(false)}
                   >
-                    <div className="flex items-start gap-2">
-                      {message.role === "assistant" && (
-                        <span className="text-xl">{assistant.avatar_emoji}</span>
-                      )}
-                      <div className="flex-1">
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        <p className="text-xs opacity-70 mt-1">
-                          {new Date(message.timestamp).toLocaleTimeString("cs-CZ", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    Zavřít a pokračovat v chatu
+                  </Button>
                 </div>
-              ))
-            )}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-muted">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{assistant.avatar_emoji}</span>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Přemýšlím...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
+              </SheetContent>
+            </Sheet>
+
+            {/* Dashboard Button */}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => router.push("/dashboard")}
+            >
+              <Home className="h-5 w-5" />
+            </Button>
           </div>
 
-          <form onSubmit={handleSendMessage} className="flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Napište zprávu..."
-              className="min-h-[60px] max-h-[200px]"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(e);
-                }
-              }}
-            />
-            <Button type="submit" size="lg" disabled={loading || !input.trim() || credits < 1}>
-              <Send className="h-5 w-5" />
-            </Button>
-          </form>
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Stiskněte Enter pro odeslání, Shift+Enter pro nový řádek • 1 kredit za zprávu
-          </p>
+          {/* Right Side - User Menu */}
+          <UserMenu credits={credits} showCredits={false} />
+        </div>
+
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="mb-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4 mx-auto">
+                  <Bot className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold mb-2">
+                  {assistant?.name || "AI Asistent"}
+                </h2>
+                <p className="text-muted-foreground">
+                  {assistant?.description || "Začněte konverzaci s AI asistentem"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto space-y-6">
+              {messages.map((msg, idx) => (
+                <ChatMessage key={idx} role={msg.role as any} content={msg.content} />
+              ))}
+              {loading && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>AI přemýšlí...</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t bg-card px-4 py-4 shrink-0">
+          <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSend} className="relative">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Napište zprávu..."
+                className="min-h-[60px] pr-12 resize-none"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(e);
+                  }
+                }}
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={loading || !input.trim()}
+                className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </AuthGuard>

@@ -1,73 +1,107 @@
-import { useEffect, useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Mic, MicOff, LogOut, Volume2, VolumeX, Loader2, Radio, MessageSquare, Settings, Coins, Play, Pause, StopCircle, Zap } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Mic, MicOff, Volume2, VolumeX, Loader2, Trash2, MessageSquare, Menu, Home, Plus } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { voiceService, type VoiceConversation, type VoiceProvider } from "@/services/voiceService";
+import { UserMenu } from "@/components/UserMenu";
+import { ChatMessage } from "@/components/ChatMessage";
 import { creditsService } from "@/services/creditsService";
-import { useToast } from "@/hooks/use-toast";
-import { ModuleHeader } from "@/components/ModuleHeader";
-
-const VOICE_PROVIDERS = [
-  { id: "openai", name: "OpenAI", icon: "🤖", description: "Whisper & TTS" },
-  { id: "elevenlabs", name: "ElevenLabs", icon: "🎙️", description: "Ultra-realistic voices" },
-  { id: "google", name: "Google Cloud", icon: "🔊", description: "Cloud TTS & STT" },
-];
+import { voiceService, type VoiceChat } from "@/services/voiceService";
+import { toast } from "@/hooks/use-toast";
 
 export default function VoiceChat() {
   const router = useRouter();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("record");
-  const [messages, setMessages] = useState<VoiceConversation[]>([]);
-  const [recording, setRecording] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [provider, setProvider] = useState<VoiceProvider>("openai");
   const [credits, setCredits] = useState(0);
-  const [conversation, setConversation] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
-  const [liveChatMode, setLiveChatMode] = useState(false);
-  const [isLiveChatActive, setIsLiveChatActive] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<VoiceChat[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<VoiceChat | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const shouldContinueRef = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    loadMessages();
-    loadCredits();
-  }, []);
-
-  useEffect(() => {
-    // Cleanup when component unmounts
+    loadData();
     return () => {
-      stopLiveChat();
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, []);
 
-  const loadCredits = async () => {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const loadData = async () => {
     try {
-      const userCredits = await creditsService.getCredits();
+      const [userCredits, chats] = await Promise.all([
+        creditsService.getCredits(),
+        voiceService.getChats(),
+      ]);
       setCredits(userCredits);
+      setConversations(chats);
     } catch (error) {
-      console.error("Error loading credits:", error);
+      console.error("Error loading data:", error);
     }
   };
 
-  const loadMessages = async () => {
+  const handleNewConversation = async () => {
     try {
-      const data = await voiceService.getVoiceConversations();
-      setMessages(data);
+      const newChat = await voiceService.createChat({
+        title: "Nová konverzace",
+      });
+      setSelectedConversation(newChat);
+      setMessages([]);
+      await loadData();
+      setMenuOpen(false);
     } catch (error) {
-      console.error("Error loading messages:", error);
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se vytvořit konverzaci",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSelectConversation = async (id: string) => {
+    const conv = conversations.find(c => c.id === id);
+    if (conv) {
+      setSelectedConversation(conv);
+      setMenuOpen(false);
+      
+      try {
+        const msgs = await voiceService.getMessages(id);
+        setMessages(msgs || []);
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      }
+    }
+  };
+
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await voiceService.deleteChat(id);
+      if (selectedConversation?.id === id) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+      await loadData();
+    } catch (error) {
+      toast({
+        title: "Chyba",
+        description: "Nepodařilo se smazat konverzaci",
+        variant: "destructive",
+      });
     }
   };
 
@@ -75,7 +109,6 @@ export default function VoiceChat() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
-      
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -88,471 +121,286 @@ export default function VoiceChat() {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         await processAudio(audioBlob);
-        
-        // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
-      setRecording(true);
-      
-      if (!liveChatMode) {
-        toast({
-          title: "Nahrávání",
-          description: "Mluvte do mikrofonu...",
-        });
-      }
+      setIsRecording(true);
     } catch (error) {
       console.error("Error starting recording:", error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se získat přístup k mikrofonu",
+        description: "Nepodařilo se spustit nahrávání. Povolte přístup k mikrofonu.",
         variant: "destructive",
       });
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && recording) {
+    if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
-      setRecording(false);
+      setIsRecording(false);
     }
-  };
-
-  const startLiveChat = async () => {
-    if (credits < 5) {
-      toast({
-        title: "Nedostatek kreditů",
-        description: "Potřebujete alespoň 5 kreditů pro živý chat",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLiveChatActive(true);
-    shouldContinueRef.current = true;
-    
-    toast({
-      title: "Živý chat aktivní",
-      description: "Začněte mluvit. Klikněte 'Ukončit' pro zastavení.",
-    });
-
-    // Start first recording
-    await startRecording();
-  };
-
-  const stopLiveChat = () => {
-    shouldContinueRef.current = false;
-    setIsLiveChatActive(false);
-    
-    if (recording) {
-      stopRecording();
-    }
-
-    toast({
-      title: "Živý chat ukončen",
-      description: "Konverzace byla zastavena",
-    });
   };
 
   const processAudio = async (audioBlob: Blob) => {
-    if (credits < 5) {
-      toast({
-        title: "Nedostatek kreditů",
-        description: "Potřebujete alespoň 5 kreditů pro hlasový chat",
-        variant: "destructive",
-      });
-      
-      if (isLiveChatActive) {
-        stopLiveChat();
-      }
+    if (!selectedConversation) {
+      await handleNewConversation();
       return;
     }
 
-    setProcessing(true);
+    setLoading(true);
     try {
-      // Convert blob to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      
-      reader.onloadend = async () => {
-        const base64Audio = reader.result as string;
+      const response = await fetch("/api/voice-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: selectedConversation.id,
+          audioData: await blobToBase64(audioBlob),
+        }),
+      });
 
-        try {
-          // Call backend API
-          const result = await voiceService.processVoiceMessage(base64Audio, provider);
+      if (!response.ok) {
+        throw new Error("Chyba při komunikaci s API");
+      }
 
-          // Add to conversation
-          const userMessage = { role: "user" as const, content: result.transcript };
-          const assistantMessage = { role: "assistant" as const, content: result.response };
-          setConversation(prev => [...prev, userMessage, assistantMessage]);
+      const data = await response.json();
 
-          // Save to database
-          await voiceService.createVoiceConversation({
-            provider,
-            transcript: result.transcript,
-            response_text: result.response,
-            response_audio_url: result.audioUrl,
-          });
-
-          // Deduct credits
-          const newCredits = await creditsService.deductCredits(5);
-          setCredits(newCredits);
-
-          // Play response audio
-          if (result.audioUrl && audioRef.current) {
-            audioRef.current.src = result.audioUrl;
-            
-            // If in live chat mode, continue after audio finishes
-            if (isLiveChatActive && shouldContinueRef.current) {
-              audioRef.current.onended = async () => {
-                if (shouldContinueRef.current && newCredits >= 5) {
-                  // Wait a moment before starting next recording
-                  setTimeout(async () => {
-                    if (shouldContinueRef.current) {
-                      await startRecording();
-                    }
-                  }, 500);
-                } else if (newCredits < 5) {
-                  toast({
-                    title: "Nedostatek kreditů",
-                    description: "Živý chat byl ukončen - nedostatek kreditů",
-                    variant: "destructive",
-                  });
-                  stopLiveChat();
-                }
-              };
-            }
-            
-            audioRef.current.play();
-          }
-
-          if (!liveChatMode) {
-            toast({
-              title: "Úspěch",
-              description: "Zpráva zpracována",
-            });
-          }
-
-          await loadMessages();
-        } catch (error: any) {
-          console.error("Error processing audio:", error);
-          toast({
-            title: "Chyba",
-            description: error.message || "Nepodařilo se zpracovat audio",
-            variant: "destructive",
-          });
-          
-          if (isLiveChatActive) {
-            stopLiveChat();
-          }
-        } finally {
-          setProcessing(false);
-        }
+      // Add user message
+      const userMessage = {
+        role: "user",
+        content: data.transcription,
+        created_at: new Date().toISOString(),
       };
-    } catch (error) {
-      console.error("Error in processAudio:", error);
-      setProcessing(false);
+      setMessages(prev => [...prev, userMessage]);
+
+      // Add assistant message
+      const assistantMessage = {
+        role: "assistant",
+        content: data.response,
+        created_at: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // Play audio response
+      if (data.audioUrl) {
+        await playAudio(data.audioUrl);
+      }
+
+      setCredits(data.remainingCredits || credits);
+    } catch (error: any) {
       toast({
         title: "Chyba",
-        description: "Nepodařilo se zpracovat nahrávku",
+        description: error.message || "Nepodařilo se zpracovat audio",
         variant: "destructive",
       });
-      
-      if (isLiveChatActive) {
-        stopLiveChat();
-      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/auth/login");
+  const playAudio = async (audioUrl: string) => {
+    try {
+      setIsSpeaking(true);
+      const audio = new Audio(audioUrl);
+      audio.onended = () => setIsSpeaking(false);
+      await audio.play();
+    } catch (error) {
+      console.error("Error playing audio:", error);
+      setIsSpeaking(false);
+    }
+  };
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   };
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background flex flex-col">
-        <ModuleHeader credits={credits} />
-
-        <div className="flex-1 flex overflow-hidden">
-          <main className="container mx-auto px-6 py-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-                <TabsTrigger value="record">
-                  <Radio className="h-4 w-4 mr-2" />
-                  Nahrávání
-                </TabsTrigger>
-                <TabsTrigger value="history">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Historie
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="record" className="space-y-6">
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <CardTitle className="font-heading flex items-center gap-2">
-                          <Mic className="h-5 w-5 text-primary" />
-                          Hlasová zpráva
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="live-mode" className="text-sm cursor-pointer">
-                            {liveChatMode ? "Živý chat" : "Jednorázově"}
-                          </Label>
-                          <Switch
-                            id="live-mode"
-                            checked={liveChatMode}
-                            onCheckedChange={setLiveChatMode}
-                            disabled={recording || processing || isLiveChatActive}
-                          />
-                        </div>
-                      </div>
-                      <CardDescription>
-                        {liveChatMode 
-                          ? "Kontinuální konverzace s AI. (5 kreditů za zprávu)" 
-                          : "Nahrajte hlasovou zprávu a AI vám odpoví. (5 kreditů za zprávu)"
-                        }
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="flex flex-col items-center justify-center py-8 space-y-6">
-                          <div className="relative">
-                            <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
-                              recording 
-                                ? "bg-accent/20 animate-pulse" 
-                                : processing
-                                  ? "bg-primary/20 animate-pulse"
-                                  : isLiveChatActive
-                                    ? "bg-green-500/20"
-                                    : "bg-muted"
-                            }`}>
-                              {recording && <Mic className="h-16 w-16 text-accent" />}
-                              {processing && <Loader2 className="h-16 w-16 text-primary animate-spin" />}
-                              {isLiveChatActive && !recording && !processing && <Zap className="h-16 w-16 text-green-500" />}
-                              {!recording && !processing && !isLiveChatActive && <MicOff className="h-16 w-16 text-muted-foreground" />}
-                            </div>
-                            {recording && (
-                              <div className="absolute -bottom-2 -right-2">
-                                <Badge variant="default" className="bg-accent">
-                                  <Radio className="h-3 w-3 mr-1 animate-pulse" />
-                                  REC
-                                </Badge>
-                              </div>
-                            )}
-                            {isLiveChatActive && !recording && (
-                              <div className="absolute -bottom-2 -right-2">
-                                <Badge variant="default" className="bg-green-500">
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  LIVE
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="text-center space-y-2">
-                            <p className="text-lg font-semibold">
-                              {!recording && !processing && !isLiveChatActive && "Připraveno"}
-                              {recording && "Nahrávám..."}
-                              {processing && "Zpracovávám..."}
-                              {isLiveChatActive && !recording && !processing && "Živý chat - čekám"}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {recording && "Mluvte do mikrofonu"}
-                              {processing && "Generuji odpověď AI..."}
-                              {isLiveChatActive && !recording && !processing && "Přehrávám odpověď..."}
-                            </p>
-                          </div>
-
-                          <div className="flex gap-3">
-                            {liveChatMode ? (
-                              <>
-                                {!isLiveChatActive && (
-                                  <Button
-                                    size="lg"
-                                    onClick={startLiveChat}
-                                    className="gap-2 bg-green-600 hover:bg-green-700"
-                                    disabled={processing}
-                                  >
-                                    <Zap className="h-5 w-5" />
-                                    Spustit živý chat
-                                  </Button>
-                                )}
-                                {isLiveChatActive && (
-                                  <Button
-                                    size="lg"
-                                    onClick={stopLiveChat}
-                                    variant="destructive"
-                                    className="gap-2"
-                                  >
-                                    <StopCircle className="h-5 w-5" />
-                                    Ukončit živý chat
-                                  </Button>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                {!recording && !processing && (
-                                  <Button
-                                    size="lg"
-                                    onClick={startRecording}
-                                    className="gap-2"
-                                  >
-                                    <Mic className="h-5 w-5" />
-                                    Začít nahrávat
-                                  </Button>
-                                )}
-                                {recording && (
-                                  <Button
-                                    size="lg"
-                                    onClick={stopRecording}
-                                    variant="destructive"
-                                    className="gap-2"
-                                  >
-                                    <StopCircle className="h-5 w-5" />
-                                    Zastavit
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t">
-                          <div className="space-y-2">
-                            <Label>AI Provider</Label>
-                            <Select value={provider} onValueChange={(v) => setProvider(v as VoiceProvider)} disabled={recording || processing || isLiveChatActive}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {VOICE_PROVIDERS.map((p) => (
-                                  <SelectItem key={p.id} value={p.id}>
-                                    {p.icon} {p.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="font-heading">Konverzace</CardTitle>
-                      <CardDescription>
-                        Přepis vaší konverzace s AI
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                        {conversation.length === 0 ? (
-                          <p className="text-center text-muted-foreground py-8">
-                            Zatím žádná konverzace. Začněte {liveChatMode ? "živý chat" : "nahrávat hlasovou zprávu"}.
-                          </p>
-                        ) : (
-                          conversation.map((msg, idx) => (
-                            <div 
-                              key={idx} 
-                              className={`p-3 rounded-lg ${
-                                msg.role === "user" 
-                                  ? "bg-primary/10 ml-8" 
-                                  : "bg-secondary/10 mr-8"
-                              }`}
-                            >
-                              <p className="text-xs font-semibold mb-1">
-                                {msg.role === "user" ? "Vy" : "AI Asistent"}
-                              </p>
-                              <p className="text-sm">{msg.content}</p>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+      {/* Mobile/PWA Fullscreen Layout */}
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-card shrink-0">
+          <div className="flex items-center gap-2">
+            {/* Menu Button */}
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0 flex flex-col">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="font-heading">Hlasové konverzace</SheetTitle>
+                </SheetHeader>
+                
+                {/* New Chat Button */}
+                <div className="p-3 border-b">
+                  <Button onClick={handleNewConversation} className="w-full" size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nový hlasový chat
+                  </Button>
                 </div>
 
-                <Card className="bg-muted/50">
-                  <CardHeader>
-                    <CardTitle className="text-sm">💡 Tipy pro hlasový chat</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground space-y-2">
-                    <p><strong>Jednorázový režim:</strong></p>
-                    <p>• Klikněte "Začít nahrávat", mluvte, klikněte "Zastavit"</p>
-                    <p>• AI odpoví a tím konverzace končí</p>
-                    <p className="pt-2"><strong>Živý chat režim:</strong></p>
-                    <p>• Zapněte přepínač "Živý chat"</p>
-                    <p>• Klikněte "Spustit živý chat"</p>
-                    <p>• Mluvte → AI odpoví → automaticky pokračuje nahrávání</p>
-                    <p>• Přirozená konverzace až do kliknutí "Ukončit živý chat"</p>
-                    <p className="pt-2">• Každá zpráva stojí 5 kreditů</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                {/* Conversations List */}
+                <div className="flex-1 overflow-y-auto p-2">
+                  {conversations.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Žádné konverzace
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {conversations.map((conv) => (
+                        <div
+                          key={conv.id}
+                          onClick={() => handleSelectConversation(conv.id)}
+                          className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                            selectedConversation?.id === conv.id ? "bg-muted" : ""
+                          }`}
+                        >
+                          <Mic className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{conv.title}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteConversation(conv.id, e)}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              <TabsContent value="history" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-heading">Historie konverzací</CardTitle>
-                    <CardDescription>
-                      Všechny vaše hlasové zprávy a přepisy
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {messages.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8">
-                        Zatím nemáte žádné nahrávky
-                      </p>
-                    ) : (
-                      <div className="space-y-4">
-                        {messages.map((message) => (
-                          <Card key={message.id}>
-                            <CardContent className="pt-4">
-                              <div className="flex items-start gap-4">
-                                <div className="p-3 bg-primary/10 rounded-lg">
-                                  <Mic className="h-5 w-5 text-primary" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium mb-2">
-                                    {new Date(message.created_at).toLocaleString("cs-CZ")}
-                                  </p>
-                                  {message.transcript && (
-                                    <div className="mb-3 p-3 bg-muted/50 rounded">
-                                      <p className="text-xs text-muted-foreground mb-1">Vy:</p>
-                                      <p className="text-sm">{message.transcript}</p>
-                                    </div>
-                                  )}
-                                  {message.response_text && (
-                                    <div className="p-3 bg-primary/5 rounded">
-                                      <p className="text-xs text-muted-foreground mb-1">AI:</p>
-                                      <p className="text-sm">{message.response_text}</p>
-                                    </div>
-                                  )}
-                                  <div className="flex gap-2 mt-3">
-                                    <Badge variant="secondary">
-                                      {VOICE_PROVIDERS.find(p => p.id === message.provider)?.name}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                {/* Bottom Close Button */}
+                <div className="p-4 border-t bg-muted/30">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Zavřít a pokračovat v chatu
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
 
-            {/* Hidden audio element for playing responses */}
-            <audio ref={audioRef} className="hidden" />
-          </main>
+            {/* Dashboard Button */}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => router.push("/dashboard")}
+            >
+              <Home className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Right Side - User Menu */}
+          <UserMenu credits={credits} showCredits={false} />
+        </div>
+
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="mb-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4 mx-auto">
+                  <Mic className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold mb-2">
+                  Hlasový chat
+                </h2>
+                <p className="text-muted-foreground">
+                  Stiskněte mikrofon a začněte mluvit
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto space-y-6">
+              {messages.map((msg, idx) => (
+                <ChatMessage key={idx} role={msg.role as any} content={msg.content} />
+              ))}
+              {loading && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Zpracovávám...</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Voice Controls Area */}
+        <div className="border-t bg-card px-4 py-6 shrink-0">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex flex-col items-center gap-4">
+              {/* Recording Button */}
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={loading || isSpeaking}
+                className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all ${
+                  isRecording
+                    ? "bg-destructive hover:bg-destructive/90 scale-110"
+                    : "bg-primary hover:bg-primary/90"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {loading ? (
+                  <Loader2 className="h-8 w-8 text-white animate-spin" />
+                ) : isRecording ? (
+                  <MicOff className="h-8 w-8 text-white" />
+                ) : (
+                  <Mic className="h-8 w-8 text-white" />
+                )}
+                
+                {isRecording && (
+                  <span className="absolute -inset-1 rounded-full border-4 border-destructive animate-ping" />
+                )}
+              </button>
+
+              {/* Status Text */}
+              <div className="text-center">
+                {isRecording && (
+                  <p className="text-sm font-medium text-destructive animate-pulse">
+                    Nahrávám...
+                  </p>
+                )}
+                {loading && (
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Zpracovávám hlasový vstup...
+                  </p>
+                )}
+                {isSpeaking && (
+                  <div className="flex items-center gap-2 text-primary">
+                    <Volume2 className="h-4 w-4 animate-pulse" />
+                    <p className="text-sm font-medium">AI mluví...</p>
+                  </div>
+                )}
+                {!isRecording && !loading && !isSpeaking && (
+                  <p className="text-sm text-muted-foreground">
+                    Stiskněte mikrofon pro nahrávání
+                  </p>
+                )}
+              </div>
+
+              {/* Cost Info */}
+              <p className="text-xs text-muted-foreground">
+                3 kredity za zprávu
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </AuthGuard>
