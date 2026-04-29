@@ -2,17 +2,23 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SEO } from "@/components/SEO";
-import { Send, Loader2, MessageSquarePlus } from "lucide-react";
+import { Send, Loader2, Menu, Home, Plus, Trash2, MessageSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { conversationsService, Message } from "@/services/conversationsService";
 import { UserMenu } from "@/components/UserMenu";
 import { authService } from "@/services/authService";
-import { ModuleHeader } from "@/components/ModuleHeader";
+import { creditsService } from "@/services/creditsService";
+
+const availableModels = [
+  { id: "gpt-4", name: "GPT-4" },
+  { id: "gpt-3.5-turbo", name: "GPT-3.5" },
+  { id: "claude-3-opus", name: "Claude 3" },
+  { id: "gemini-pro", name: "Gemini" },
+];
 
 export default function Chat() {
   const router = useRouter();
@@ -23,14 +29,8 @@ export default function Chat() {
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [credits, setCredits] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const availableModels = [
-    { id: "gpt-4", name: "GPT-4" },
-    { id: "gpt-3.5-turbo", name: "GPT-3.5" },
-    { id: "claude-3-opus", name: "Claude 3" },
-    { id: "gemini-pro", name: "Gemini" },
-  ];
 
   const loadConversations = useCallback(async () => {
     const user = await authService.getCurrentUser();
@@ -40,8 +40,12 @@ export default function Chat() {
     }
 
     try {
-      const data = await conversationsService.getConversations();
-      setConversations(data || []);
+      const [convData, userCredits] = await Promise.all([
+        conversationsService.getConversations(),
+        creditsService.getCredits(),
+      ]);
+      setConversations(convData || []);
+      setCredits(userCredits);
     } catch (error) {
       console.error("Error loading conversations:", error);
     }
@@ -69,6 +73,7 @@ export default function Chat() {
       setSelectedConversation(data);
       setMessages([]);
       await loadConversations();
+      setMenuOpen(false);
     } catch (error) {
       toast({
         title: "Chyba",
@@ -78,7 +83,24 @@ export default function Chat() {
     }
   };
 
-  const handleDeleteConversation = async (id: string) => {
+  const handleSelectConversation = async (id: string) => {
+    const conv = conversations.find(c => c.id === id);
+    if (conv) {
+      setSelectedConversation(conv);
+      setMenuOpen(false);
+      
+      // Load messages for this conversation
+      try {
+        const msgs = await conversationsService.getMessages(id);
+        setMessages(msgs || []);
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      }
+    }
+  };
+
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       await conversationsService.deleteConversation(id);
       if (selectedConversation?.id === id) {
@@ -161,110 +183,173 @@ export default function Chat() {
         title="AI Chat - kAIkus"
         description="Komunikujte s různými AI modely prostřednictvím jednotného rozhraní"
       />
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
-        <ModuleHeader credits={credits} />
-        
-        <div className="container mx-auto px-4 py-6 max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Sidebar s konverzacemi */}
-            <div className="lg:col-span-1">
-              <ConversationSidebar
-                selectedId={selectedConversation?.id}
-                onSelectConversation={(id) => {
-                  const conv = conversations.find(c => c.id === id);
-                  if (conv) setSelectedConversation(conv);
-                }}
-                onNewConversation={handleNewConversation}
-              />
-            </div>
+      
+      {/* Mobile/PWA Fullscreen Layout */}
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-card shrink-0">
+          <div className="flex items-center gap-2">
+            {/* Menu Button */}
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0 flex flex-col">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="font-heading">Konverzace</SheetTitle>
+                </SheetHeader>
+                
+                {/* New Chat Button */}
+                <div className="p-3 border-b">
+                  <Button onClick={handleNewConversation} className="w-full" size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nový chat
+                  </Button>
+                </div>
 
-            {/* Hlavní chat oblast */}
-            <div className="lg:col-span-3">
-              <Card className="h-[calc(100vh-10rem)] flex flex-col">
-                <CardHeader className="border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquarePlus className="h-5 w-5 text-primary" />
-                    {selectedConversation?.title || "Nová konverzace"}
-                  </CardTitle>
-                </CardHeader>
-
-                {/* Oblast zpráv */}
-                <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <p>Začněte konverzaci s AI modelem</p>
+                {/* Conversations List */}
+                <div className="flex-1 overflow-y-auto p-2">
+                  {conversations.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Žádné konverzace
                     </div>
                   ) : (
-                    messages.map((msg, idx) => (
-                      <ChatMessage key={idx} role={msg.role as any} content={msg.content} />
-                    ))
-                  )}
-                  {loading && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>AI přemýšlí...</span>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </CardContent>
-
-                {/* Input oblast */}
-                <CardContent className="border-t pt-4 pb-2">
-                  <form onSubmit={handleSend} className="space-y-3">
-                    <Textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Napište svou zprávu..."
-                      className="min-h-[100px] resize-none"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend(e);
-                        }
-                      }}
-                    />
-
-                    {/* Výběr AI modelu - KOMPAKTNÍ TLAČÍTKA */}
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Vyberte AI model:</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {availableModels.map((model) => (
+                    <div className="space-y-1">
+                      {conversations.map((conv) => (
+                        <div
+                          key={conv.id}
+                          onClick={() => handleSelectConversation(conv.id)}
+                          className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                            selectedConversation?.id === conv.id ? "bg-muted" : ""
+                          }`}
+                        >
+                          <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{conv.title}</p>
+                          </div>
                           <Button
-                            key={model.id}
-                            type="button"
-                            variant={selectedModel === model.id ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setSelectedModel(model.id)}
-                            className="text-xs"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteConversation(conv.id, e)}
                           >
-                            {model.name}
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                           </Button>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
+                  )}
+                </div>
 
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">
-                        Kredity: {credits}
-                      </span>
-                      <Button type="submit" disabled={loading || !input.trim()}>
-                        {loading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Odesílám...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="mr-2 h-4 w-4" />
-                            Odeslat
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
+                {/* Bottom Close Button */}
+                <div className="p-4 border-t bg-muted/30">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Zavřít a pokračovat v chatu
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {/* Dashboard Button */}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => router.push("/dashboard")}
+            >
+              <Home className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Right Side - User Menu */}
+          <UserMenu credits={credits} showCredits={false} />
+        </div>
+
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="mb-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4 mx-auto">
+                  <MessageSquare className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-heading font-bold mb-2">
+                  {selectedConversation ? selectedConversation.title : "Začněte nový chat"}
+                </h2>
+                <p className="text-muted-foreground">
+                  Položte otázku nebo začněte konverzaci s AI
+                </p>
+              </div>
             </div>
+          ) : (
+            <div className="max-w-3xl mx-auto space-y-6">
+              {messages.map((msg, idx) => (
+                <ChatMessage key={idx} role={msg.role as any} content={msg.content} />
+              ))}
+              {loading && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>AI přemýšlí...</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t bg-card px-4 py-4 shrink-0">
+          <div className="max-w-3xl mx-auto">
+            {/* Model Selection - Compact Pills */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {availableModels.map((model) => (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => setSelectedModel(model.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    selectedModel === model.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {model.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Input Form */}
+            <form onSubmit={handleSend} className="relative">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Napište zprávu..."
+                className="min-h-[60px] pr-12 resize-none"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(e);
+                  }
+                }}
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={loading || !input.trim()}
+                className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
           </div>
         </div>
       </div>
