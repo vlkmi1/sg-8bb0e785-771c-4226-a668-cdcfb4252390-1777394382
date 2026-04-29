@@ -17,6 +17,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { assistantService, assistantTemplates, type Assistant } from "@/services/assistantService";
 import { creditsService } from "@/services/creditsService";
 import { ModuleHeader } from "@/components/ModuleHeader";
+import { toast } from "@/hooks/use-toast";
 
 const AI_MODELS = [
   { id: "gpt-4", name: "GPT-4", provider: "OpenAI" },
@@ -37,7 +38,7 @@ export default function Assistants() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(null);
   const [credits, setCredits] = useState(0);
-  const [loading, setLoading] = useState(true); // Added loading state
+  const [loading, setLoading] = useState(true);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -55,17 +56,29 @@ export default function Assistants() {
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
     try {
+      console.log("Loading assistants data...");
+      
       const [assistantsData, userCredits] = await Promise.all([
         assistantService.getAssistants(),
         creditsService.getCredits(),
       ]);
+      
+      console.log("Assistants loaded:", assistantsData);
+      console.log("Credits loaded:", userCredits);
+      
       setAssistants(assistantsData);
       setCredits(userCredits);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading assistants data:", error);
+      toast({
+        title: "Chyba při načítání",
+        description: "Nepodařilo se načíst data asistentů",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false); // Ensure loading state is reset
+      setLoading(false);
     }
   };
 
