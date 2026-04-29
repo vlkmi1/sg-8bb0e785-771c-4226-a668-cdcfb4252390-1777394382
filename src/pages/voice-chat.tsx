@@ -247,7 +247,9 @@ export default function VoiceChat() {
                         >
                           <Mic className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{conv.title}</p>
+                            <p className="text-sm font-medium truncate">
+                              {conv.transcript ? (conv.transcript.length > 30 ? conv.transcript.substring(0, 30) + '...' : conv.transcript) : 'Hlasový záznam'}
+                            </p>
                           </div>
                           <Button
                             variant="ghost"
