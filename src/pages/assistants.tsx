@@ -52,26 +52,69 @@ export default function Assistants() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    let mounted = true;
+    let dataLoaded = false;
+
+    const loadInitialData = async () => {
+      if (dataLoaded) return;
+      dataLoaded = true;
+
+      setLoading(true);
+      try {
+        console.log("Loading assistants data...");
+        
+        const [assistantsData, userCredits] = await Promise.all([
+          assistantService.getAssistants(),
+          creditsService.getCredits(),
+        ]);
+        
+        if (!mounted) return;
+        
+        console.log("Assistants loaded:", assistantsData);
+        console.log("Credits loaded:", userCredits);
+        
+        setAssistants(assistantsData);
+        setCredits(userCredits);
+      } catch (error) {
+        console.error("Error loading assistants data:", error);
+        if (mounted) {
+          toast({
+            title: "Chyba při načítání",
+            description: "Nepodařilo se načíst data asistentů",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []); // Prázdný dependency array - spustí se jen jednou při mount
 
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log("Loading assistants data...");
+      console.log("Reloading assistants data...");
       
       const [assistantsData, userCredits] = await Promise.all([
         assistantService.getAssistants(),
         creditsService.getCredits(),
       ]);
       
-      console.log("Assistants loaded:", assistantsData);
-      console.log("Credits loaded:", userCredits);
+      console.log("Assistants reloaded:", assistantsData);
+      console.log("Credits reloaded:", userCredits);
       
       setAssistants(assistantsData);
       setCredits(userCredits);
     } catch (error) {
-      console.error("Error loading assistants data:", error);
+      console.error("Error reloading assistants data:", error);
       toast({
         title: "Chyba při načítání",
         description: "Nepodařilo se načíst data asistentů",

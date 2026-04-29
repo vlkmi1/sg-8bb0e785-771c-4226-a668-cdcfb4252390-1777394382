@@ -30,14 +30,57 @@ export default function AssistantChat() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (assistantId) {
-      loadData();
-    }
-  }, [assistantId]);
+    let mounted = true;
+    let dataLoaded = false;
+
+    const loadInitialData = async () => {
+      if (!assistantId || typeof assistantId !== "string" || dataLoaded) return;
+      dataLoaded = true;
+
+      console.log("[assistant-chat] Loading data for assistantId:", assistantId);
+
+      try {
+        const [userCredits, assistantData, convData] = await Promise.all([
+          creditsService.getCredits(),
+          assistantService.getAssistant(assistantId),
+          assistantService.getConversation(assistantId),
+        ]);
+
+        if (!mounted) return;
+
+        console.log("[assistant-chat] Data loaded:", {
+          credits: userCredits,
+          assistant: assistantData?.name,
+          conversationExists: !!convData,
+        });
+
+        setCredits(userCredits);
+        setAssistant(assistantData);
+        
+        if (convData) {
+          setConversations([convData]);
+          setSelectedConversation(convData);
+          setMessages((convData.messages as any[]) || []);
+        } else {
+          setConversations([]);
+          setSelectedConversation(null);
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [assistantId]); // Dependency array - znovu načíst pouze když se změní assistantId
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages]); // Dependency array - scroll pouze když se změní zprávy
 
   const loadData = async () => {
     if (!assistantId || typeof assistantId !== "string") {
@@ -45,7 +88,7 @@ export default function AssistantChat() {
       return;
     }
 
-    console.log("[assistant-chat] Loading data for assistantId:", assistantId);
+    console.log("[assistant-chat] Reloading data for assistantId:", assistantId);
 
     try {
       const [userCredits, assistantData, convData] = await Promise.all([
@@ -54,7 +97,7 @@ export default function AssistantChat() {
         assistantService.getConversation(assistantId),
       ]);
 
-      console.log("[assistant-chat] Data loaded:", {
+      console.log("[assistant-chat] Data reloaded:", {
         credits: userCredits,
         assistant: assistantData?.name,
         conversationExists: !!convData,
@@ -63,7 +106,6 @@ export default function AssistantChat() {
       setCredits(userCredits);
       setAssistant(assistantData);
       
-      // Pro Assistant API máme jednu konverzaci per asistent per uživatel
       if (convData) {
         setConversations([convData]);
         setSelectedConversation(convData);
@@ -74,7 +116,7 @@ export default function AssistantChat() {
         setMessages([]);
       }
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error reloading data:", error);
     }
   };
 
