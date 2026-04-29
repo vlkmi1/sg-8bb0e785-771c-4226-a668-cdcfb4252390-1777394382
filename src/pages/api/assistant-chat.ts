@@ -25,7 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       assistantId, 
       assistantIdType: typeof assistantId,
       userMessage: userMessage?.substring(0, 50), 
-      userId 
+      userId,
+      userIdType: typeof userId
     });
 
     if (!assistantId || !userMessage || !userId) {
@@ -38,19 +39,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get assistant details - using user_id filter instead of service role
-    console.log("[assistant-chat] Fetching assistant with ID:", assistantId);
+    console.log("[assistant-chat] Fetching assistant with ID:", assistantId, "for user:", userId);
     
     const { data: assistant, error: assistantError } = await supabase
       .from("assistants")
       .select("*")
       .eq("id", assistantId)
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
     console.log("[assistant-chat] Assistant query result:", { 
       found: !!assistant, 
       error: assistantError,
-      assistantName: assistant?.name 
+      assistantName: assistant?.name,
+      assistantUserId: assistant?.user_id
     });
 
     if (assistantError) {
@@ -62,8 +64,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!assistant) {
-      console.error("[assistant-chat] Assistant not found in database");
-      return res.status(404).json({ error: "Assistant not found" });
+      console.error("[assistant-chat] Assistant not found in database for:", { assistantId, userId });
+      return res.status(404).json({ 
+        error: "Assistant not found", 
+        details: "No assistant found with this ID for your user account" 
+      });
     }
 
     console.log("[assistant-chat] Assistant loaded:", { name: assistant.name, model: assistant.model });
