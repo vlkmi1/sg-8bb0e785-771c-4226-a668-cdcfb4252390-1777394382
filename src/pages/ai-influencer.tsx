@@ -59,6 +59,12 @@ export default function AIInfluencer() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [language, setLanguage] = useState("cs");
 
+  // Video cloning states
+  const [cloneVideoUrl, setCloneVideoUrl] = useState("");
+  const [cloneVideoFile, setCloneVideoFile] = useState<File | null>(null);
+  const [extractedScript, setExtractedScript] = useState("");
+  const [extracting, setExtracting] = useState(false);
+
   useEffect(() => {
     loadCredits();
     loadInfluencers();
@@ -221,6 +227,103 @@ export default function AIInfluencer() {
     router.push("/social-posts");
   };
 
+  const handleExtractScript = async () => {
+    if (!cloneVideoUrl && !cloneVideoFile) {
+      toast({
+        title: "Chyba",
+        description: "Vložte URL videa nebo nahrajte soubor",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExtracting(true);
+    try {
+      const formData = new FormData();
+      if (cloneVideoFile) {
+        formData.append("video", cloneVideoFile);
+      } else {
+        formData.append("videoUrl", cloneVideoUrl);
+      }
+
+      const response = await fetch("/api/extract-video-script", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Nepodařilo se extrahovat text z videa");
+      }
+
+      const data = await response.json();
+      setExtractedScript(data.script);
+      setScript(data.script);
+      
+      toast({
+        title: "Úspěch",
+        description: "Text byl úspěšně extrahován z videa",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se zpracovat video",
+        variant: "destructive",
+      });
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleCloneVideo = async () => {
+    if (!extractedScript || !selectedInfluencer) {
+      toast({
+        title: "Chyba",
+        description: "Nejprve extrahujte text z videa a vyberte influencera",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (credits < 15) {
+      toast({
+        title: "Nedostatek kreditů",
+        description: "Klonování videa stojí 15 kreditů (5 za extrakci + 10 za video)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await aiInfluencerService.createVideo({
+        influencer_id: selectedInfluencer.id,
+        script: extractedScript,
+      });
+
+      const newCredits = await creditsService.deductCredits(15);
+      setCredits(newCredits);
+
+      await loadVideos();
+      setActiveTab("videos");
+      setCloneVideoUrl("");
+      setCloneVideoFile(null);
+      setExtractedScript("");
+      
+      toast({
+        title: "Úspěch",
+        description: "Video bylo úspěšně naklonováno s vaším AI influencerem!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Chyba",
+        description: error.message || "Nepodařilo se naklonovat video",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background">
@@ -241,9 +344,10 @@ export default function AIInfluencer() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+              <TabsList className="grid w-full max-w-md mx-auto grid-cols-3">
                 <TabsTrigger value="influencers">Moji Influenceři</TabsTrigger>
                 <TabsTrigger value="videos">Videa</TabsTrigger>
+                <TabsTrigger value="clone">Klonovat Video</TabsTrigger>
               </TabsList>
 
               <TabsContent value="influencers" className="space-y-6">
@@ -441,76 +545,207 @@ export default function AIInfluencer() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="videos" className="space-y-6">
+              <TabsContent value="clone" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="font-heading flex items-center gap-2">
                       <Video className="h-5 w-5 text-primary" />
-                      Vygenerovaná videa
+                      Klonovat Video s AI Influencerem
                     </CardTitle>
                     <CardDescription>
-                      Historie videí vytvořených vašimi AI influencery
+                      Nahrajte video nebo vložte URL, extrahujte text a vytvořte novou verzi s vaším AI influencerem
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    {videos.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">
-                          Zatím jste nevytvořili žádná videa s AI influencery
-                        </p>
+                  <CardContent className="space-y-6">
+                    {/* Step 1: Upload/URL */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                          1
+                        </div>
+                        <h3 className="font-semibold">Nahrát nebo vložit video</h3>
                       </div>
-                    ) : (
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {videos.map((video) => (
-                          <Card 
-                            key={video.id} 
-                            className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                            onClick={() => handleVideoClick(video)}
-                          >
-                            <div className="aspect-video bg-muted relative flex items-center justify-center">
-                              <Play className="h-12 w-12 text-muted-foreground" />
-                              {video.duration && (
-                                <Badge className="absolute bottom-2 right-2">
-                                  {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, "0")}
-                                </Badge>
-                              )}
-                            </div>
-                            <CardContent className="pt-4 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6 bg-gradient-to-br from-primary to-accent">
-                                  <AvatarFallback className="text-white text-xs">
-                                    AI
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm font-medium truncate">
-                                  {video.ai_influencers?.name || "Neznámý influencer"}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {video.script}
-                              </p>
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(video.created_at).toLocaleDateString("cs-CZ")}
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteVideo(video.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                      
+                      <div className="space-y-3 pl-10">
+                        <div className="space-y-2">
+                          <Label htmlFor="videoUrl">URL videa (YouTube, TikTok, atd.)</Label>
+                          <Input
+                            id="videoUrl"
+                            type="url"
+                            placeholder="https://youtube.com/watch?v=..."
+                            value={cloneVideoUrl}
+                            onChange={(e) => {
+                              setCloneVideoUrl(e.target.value);
+                              setCloneVideoFile(null);
+                            }}
+                            disabled={!!cloneVideoFile}
+                          />
+                        </div>
+
+                        <div className="text-center text-sm text-muted-foreground">nebo</div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="videoFile">Nahrát video soubor</Label>
+                          <Input
+                            id="videoFile"
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setCloneVideoFile(file);
+                                setCloneVideoUrl("");
+                              }
+                            }}
+                            disabled={!!cloneVideoUrl}
+                          />
+                        </div>
+
+                        <Button 
+                          onClick={handleExtractScript}
+                          disabled={extracting || (!cloneVideoUrl && !cloneVideoFile)}
+                          className="w-full"
+                        >
+                          {extracting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Extrahuji text...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Extrahovat text z videa (5 kreditů)
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Review Script */}
+                    {extractedScript && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                            2
+                          </div>
+                          <h3 className="font-semibold">Zkontrolovat a upravit text</h3>
+                        </div>
+                        
+                        <div className="pl-10 space-y-3">
+                          <Textarea
+                            value={extractedScript}
+                            onChange={(e) => setExtractedScript(e.target.value)}
+                            rows={8}
+                            className="font-mono text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Můžete upravit extrahovaný text před klonováním
+                          </p>
+                        </div>
                       </div>
                     )}
+
+                    {/* Step 3: Select Influencer */}
+                    {extractedScript && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                            3
+                          </div>
+                          <h3 className="font-semibold">Vybrat AI influencera</h3>
+                        </div>
+                        
+                        <div className="pl-10 space-y-3">
+                          {influencers.length === 0 ? (
+                            <div className="text-center py-6 text-muted-foreground">
+                              <p>Zatím nemáte žádné AI influencery.</p>
+                              <Button
+                                variant="outline"
+                                className="mt-3"
+                                onClick={() => {
+                                  setActiveTab("influencers");
+                                  setDialogOpen(true);
+                                }}
+                              >
+                                Vytvořit prvního influencera
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {influencers.map((influencer) => (
+                                <Card
+                                  key={influencer.id}
+                                  className={`cursor-pointer transition-all ${
+                                    selectedInfluencer?.id === influencer.id
+                                      ? "ring-2 ring-primary"
+                                      : "hover:border-primary/50"
+                                  }`}
+                                  onClick={() => setSelectedInfluencer(influencer)}
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-10 w-10 bg-gradient-to-br from-primary to-accent">
+                                        <AvatarFallback className="text-white font-semibold">
+                                          {influencer.name.slice(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{influencer.name}</p>
+                                        <div className="flex gap-1 mt-1">
+                                          <Badge variant="secondary" className="text-xs">
+                                            {VOICE_TYPES.find(v => v.value === influencer.voice_type)?.label}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+
+                          {selectedInfluencer && (
+                            <Button 
+                              onClick={handleCloneVideo}
+                              disabled={loading || credits < 15}
+                              className="w-full mt-4"
+                              size="lg"
+                            >
+                              {loading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Klonuji video...
+                                </>
+                              ) : (
+                                <>
+                                  <Video className="h-4 w-4 mr-2" />
+                                  Vytvořit klonované video (10 kreditů)
+                                </>
+                              )}
+                            </Button>
+                          )}
+
+                          {credits < 15 && (
+                            <p className="text-sm text-destructive text-center mt-2">
+                              Potřebujete 15 kreditů (5 za extrakci + 10 za video)
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Info Box */}
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                        <Coins className="h-4 w-4 text-primary" />
+                        Cena klonování videa
+                      </h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Extrakce textu z videa: 5 kreditů</li>
+                        <li>• Generování nového videa: 10 kreditů</li>
+                        <li>• <strong>Celkem: 15 kreditů</strong></li>
+                      </ul>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
