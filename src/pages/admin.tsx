@@ -628,45 +628,49 @@ export default function Admin() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Plán</TableHead>
-                        <TableHead>Cena</TableHead>
-                        <TableHead>Kredity</TableHead>
-                        <TableHead>Moduly</TableHead>
-                        <TableHead className="text-right">Akce</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {plans.map((plan) => (
-                        <TableRow key={plan.id}>
-                          <TableCell className="font-medium">{plan.name}</TableCell>
-                          <TableCell>{plan.price} Kč/{plan.billing_period === "monthly" ? "měs" : "rok"}</TableCell>
-                          <TableCell>{plan.credits_included === 999999 ? "∞" : plan.credits_included}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              {(plan.modules as string[])?.slice(0, 3).map((m: string) => (
-                                <Badge key={m} variant="secondary" className="text-xs">
-                                  {m}
-                                </Badge>
-                              ))}
-                              {(plan.modules as string[])?.length > 3 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{(plan.modules as string[]).length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                  {plans.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Crown className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Načítání plánů...</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Plán</TableHead>
+                          <TableHead>Cena</TableHead>
+                          <TableHead>Kredity</TableHead>
+                          <TableHead>Období</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Akce</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {plans.map((plan) => (
+                          <TableRow key={plan.id}>
+                            <TableCell className="font-medium">{plan.name}</TableCell>
+                            <TableCell>{plan.price.toLocaleString('cs-CZ')} {plan.currency}</TableCell>
+                            <TableCell>{plan.credits_included === 999999 ? "∞" : plan.credits_included.toLocaleString('cs-CZ')}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {plan.billing_period === "monthly" ? "Měsíční" : "Roční"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={plan.is_active ? "default" : "secondary"}>
+                                {plan.is_active ? "Aktivní" : "Neaktivní"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -705,38 +709,53 @@ export default function Admin() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Název</TableHead>
-                        <TableHead>Kredity</TableHead>
-                        <TableHead>Bonus</TableHead>
-                        <TableHead>Cena</TableHead>
-                        <TableHead className="text-right">Akce</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {packages.map((pkg) => (
-                        <TableRow key={pkg.id}>
-                          <TableCell className="font-medium">{pkg.name}</TableCell>
-                          <TableCell>{pkg.credits}</TableCell>
-                          <TableCell>
-                            {pkg.bonus_credits > 0 && (
-                              <Badge variant="secondary" className="bg-accent/10">
-                                +{pkg.bonus_credits}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>{pkg.price} Kč</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                  {packages.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Coins className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Načítání balíčků...</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Název</TableHead>
+                          <TableHead>Kredity</TableHead>
+                          <TableHead>Bonus</TableHead>
+                          <TableHead>Cena</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Akce</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {packages.map((pkg) => (
+                          <TableRow key={pkg.id}>
+                            <TableCell className="font-medium">{pkg.name}</TableCell>
+                            <TableCell>{pkg.credits.toLocaleString('cs-CZ')}</TableCell>
+                            <TableCell>
+                              {pkg.bonus_credits > 0 ? (
+                                <Badge variant="secondary" className="bg-accent/10">
+                                  +{pkg.bonus_credits.toLocaleString('cs-CZ')}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{pkg.price.toLocaleString('cs-CZ')} {pkg.currency}</TableCell>
+                            <TableCell>
+                              <Badge variant={pkg.is_active ? "default" : "secondary"}>
+                                {pkg.is_active ? "Aktivní" : "Neaktivní"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
