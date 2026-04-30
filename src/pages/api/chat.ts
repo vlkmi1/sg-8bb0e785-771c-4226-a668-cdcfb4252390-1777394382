@@ -42,20 +42,23 @@ export default async function handler(
     const provider = getProviderFromModel(model);
     console.log("[chat] Provider determined:", provider, "for model:", model);
 
-    // Get API key from admin_settings
+    // Get API key from admin_settings - using .maybeSingle() and case-insensitive search
     console.log("[chat] Fetching API key for provider:", provider);
     
     const { data: setting, error: settingError } = await supabase
       .from("admin_settings")
-      .select("api_key")
-      .eq("provider", provider)
-      .single();
+      .select("api_key, provider")
+      .ilike("provider", provider)  // Case-insensitive search
+      .eq("is_active", true)
+      .maybeSingle();
 
     console.log("[chat] API Key fetch result:", {
       provider,
       hasSetting: !!setting,
+      foundProvider: setting?.provider,
       hasApiKey: !!setting?.api_key,
-      apiKeyPrefix: setting?.api_key?.substring(0, 10) + "...",
+      apiKeyLength: setting?.api_key?.length,
+      apiKeyPrefix: setting?.api_key?.substring(0, 15),
       error: settingError ? {
         message: settingError.message,
         code: settingError.code,
@@ -74,7 +77,7 @@ export default async function handler(
     if (!setting?.api_key) {
       console.error("[chat] API key not found for provider:", provider);
       return res.status(400).json({ 
-        error: `API klíč pro ${provider} není nastaven. Přidejte ho v admin panelu (Nastavení → API klíče).` 
+        error: `API klíč pro ${provider} není nastaven. Přidejte ho v admin panelu (Admin → API klíče).` 
       });
     }
 
