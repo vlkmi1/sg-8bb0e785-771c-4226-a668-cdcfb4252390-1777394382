@@ -15,81 +15,78 @@ export default async function handler(
   // Set JSON content type immediately
   res.setHeader('Content-Type', 'application/json');
 
+  console.log("[chat] Request received:", {
+    method: req.method,
+    body: req.body ? {
+      hasMessage: !!req.body.message,
+      hasModel: !!req.body.model,
+      model: req.body.model,
+      messageLength: req.body.message?.length
+    } : null
+  });
+
   try {
     if (req.method !== "POST") {
+      console.error("[chat] Invalid method:", req.method);
       return res.status(405).json({ error: "Method not allowed" });
     }
 
     const { message, model, conversationId } = req.body;
 
     if (!message || !model) {
+      console.error("[chat] Missing required fields:", { hasMessage: !!message, hasModel: !!model });
       return res.status(400).json({ error: "Chybí povinná pole (message nebo model)" });
-    }
-
-    // Check environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    console.log("Environment Check:", {
-      hasUrl: !!supabaseUrl,
-      urlLength: supabaseUrl?.length,
-      hasServiceKey: !!supabaseServiceKey,
-      serviceKeyLength: supabaseServiceKey?.length,
-      serviceKeyPrefix: supabaseServiceKey?.substring(0, 20) + "..."
-    });
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing environment variables:", { 
-        hasUrl: !!supabaseUrl, 
-        hasServiceKey: !!supabaseServiceKey 
-      });
-      return res.status(500).json({ 
-        error: "Server není správně nakonfigurován. Chybí environment variables." 
-      });
     }
 
     // Determine provider from model name
     const provider = getProviderFromModel(model);
-    console.log("Chat request:", { model, provider, messageLength: message.length });
+    console.log("[chat] Provider determined:", provider, "for model:", model);
 
     // Get API key from admin_settings
+    console.log("[chat] Fetching API key for provider:", provider);
+    
     const { data: setting, error: settingError } = await supabase
       .from("admin_settings")
       .select("api_key")
       .eq("provider", provider)
       .single();
 
-    console.log("API Key Fetch Debug:", {
+    console.log("[chat] API Key fetch result:", {
       provider,
-      settingError: settingError ? {
+      hasSetting: !!setting,
+      hasApiKey: !!setting?.api_key,
+      apiKeyPrefix: setting?.api_key?.substring(0, 10) + "...",
+      error: settingError ? {
         message: settingError.message,
         code: settingError.code,
         details: settingError.details
-      } : null,
-      hasSetting: !!setting,
-      hasApiKey: !!setting?.api_key
+      } : null
     });
 
     if (settingError) {
-      console.error("Error fetching API key:", settingError);
+      console.error("[chat] Error fetching API key:", settingError);
       return res.status(400).json({ 
-        error: `Nepodařilo se načíst API klíč pro ${provider}. Zkontrolujte nastavení v admin panelu.` 
+        error: `Nepodařilo se načíst API klíč pro ${provider}. Zkontrolujte nastavení v admin panelu.`,
+        details: settingError.message
       });
     }
 
     if (!setting?.api_key) {
-      console.error("API key not found for provider:", provider);
+      console.error("[chat] API key not found for provider:", provider);
       return res.status(400).json({ 
         error: `API klíč pro ${provider} není nastaven. Přidejte ho v admin panelu (Nastavení → API klíče).` 
       });
     }
 
     const apiKey = setting.api_key;
+    console.log("[chat] API key retrieved successfully, length:", apiKey.length);
 
     // Call appropriate AI API based on provider
     let response: string;
     
     try {
+      console.log("[chat] Calling AI provider:", provider);
+      
       switch (provider) {
         case "openai":
           response = await callOpenAI(message, model, apiKey);
@@ -107,14 +104,15 @@ export default async function handler(
           response = await callXAI(message, model, apiKey);
           break;
         default:
+          console.error("[chat] Unsupported provider:", provider);
           return res.status(400).json({ error: `Nepodporovaný AI model: ${model}` });
       }
 
-      console.log("AI response received, length:", response.length);
+      console.log("[chat] AI response received, length:", response.length);
       return res.status(200).json({ response });
       
     } catch (apiError: any) {
-      console.error("AI API Error:", {
+      console.error("[chat] AI API Error:", {
         provider,
         model,
         error: apiError.message,
@@ -126,10 +124,9 @@ export default async function handler(
     }
     
   } catch (error: any) {
-    console.error("Unhandled Chat API Error:", {
+    console.error("[chat] Unhandled error:", {
       message: error.message,
-      stack: error.stack,
-      error: error
+      stack: error.stack
     });
     return res.status(500).json({ 
       error: "Neočekávaná chyba serveru. Zkontrolujte logy." 
