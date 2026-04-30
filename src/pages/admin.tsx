@@ -92,39 +92,6 @@ const AI_PROVIDERS = [
   { id: "soundraw", name: "Soundraw", icon: "🎶", description: "AI Music Creator", url: "https://soundraw.io/", supportsBalance: false },
 ];
 
-// Provider to modules mapping
-const PROVIDER_MODULES = {
-  openai: [
-    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat GPT modely do chatu" },
-    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet AI asistenty s GPT" },
-  ],
-  anthropic: [
-    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Claude modely do chatu" },
-    { name: "Asistenti", path: "/assistants", icon: "🤖", description: "Vytvářet asistenty s Claude" },
-  ],
-  google: [
-    { name: "Chat", path: "/chat", icon: "💬", description: "Přidat Gemini do chatu" },
-  ],
-  stability: [
-    { name: "Generování obrázků", path: "/generate", icon: "🎨", description: "Vytvářet obrázky s Stable Diffusion" },
-  ],
-  suno: [
-    { name: "Music Generator", path: "/music-generate", icon: "🎵", description: "Generovat AI hudbu" },
-  ],
-  musicgen: [
-    { name: "Music Generator", path: "/music-generate", icon: "🎼", description: "Generovat hudbu s MusicGen" },
-  ],
-  mubert: [
-    { name: "Music Generator", path: "/music-generate", icon: "🎧", description: "Generovat royalty-free hudbu" },
-  ],
-  aiva: [
-    { name: "Music Generator", path: "/music-generate", icon: "🎹", description: "Komponovat AI hudbu" },
-  ],
-  soundraw: [
-    { name: "Music Generator", path: "/music-generate", icon: "🎶", description: "Vytvářet AI skladby" },
-  ],
-};
-
 export default function Admin() {
   const router = useRouter();
   const [settings, setSettings] = useState<AdminSetting[]>([]);
@@ -259,7 +226,7 @@ export default function Admin() {
             ? `Zůstatek: ${result.balance} ${result.currency || ""}`
             : result.message,
         });
-        loadData(); // Refresh to show updated balance
+        loadData();
       } else {
         toast({
           title: "Chyba",
@@ -643,7 +610,7 @@ export default function Admin() {
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <p className="text-sm text-muted-foreground">
-                            Funkce připravena - implementace formuláře pro vytváření plánů
+                            Formulář pro vytváření nových plánů - připraveno k implementaci
                           </p>
                         </div>
                       </DialogContent>
@@ -654,7 +621,8 @@ export default function Admin() {
                   {plans.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Crown className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Načítání plánů...</p>
+                      <p>Žádné subscription plány nenalezeny</p>
+                      <p className="text-sm mt-2">Načítání dat z databáze...</p>
                     </div>
                   ) : (
                     <Table>
@@ -724,7 +692,7 @@ export default function Admin() {
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <p className="text-sm text-muted-foreground">
-                            Funkce připravena - implementace formuláře pro vytváření balíčků
+                            Formulář pro vytváření nových balíčků - připraveno k implementaci
                           </p>
                         </div>
                       </DialogContent>
@@ -735,7 +703,8 @@ export default function Admin() {
                   {packages.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Coins className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Načítání balíčků...</p>
+                      <p>Žádné balíčky kreditů nenalezeny</p>
+                      <p className="text-sm mt-2">Načítání dat z databáze...</p>
                     </div>
                   ) : (
                     <Table>
@@ -989,7 +958,6 @@ export default function Admin() {
         </main>
       </div>
 
-      {/* Global API Key Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
