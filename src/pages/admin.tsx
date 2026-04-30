@@ -146,6 +146,7 @@ export default function Admin() {
 
   const loadData = useCallback(async () => {
     try {
+      console.log("Loading admin data...");
       const [settingsData, statsData, plansData, packagesData, paymentSettingsData] = await Promise.all([
         adminService.getAdminSettings(),
         adminService.getAPIUsageStats(),
@@ -153,6 +154,13 @@ export default function Admin() {
         loadPackages(),
         adminService.getPaymentSettings(),
       ]);
+      console.log("Admin data loaded:", {
+        settingsCount: settingsData.length,
+        statsCount: statsData.length,
+        plansCount: plansData.length,
+        packagesCount: packagesData.length,
+        paymentSettings: Object.keys(paymentSettingsData).length
+      });
       setSettings(settingsData);
       setUsageStats(statsData);
       setPlans(plansData);
@@ -160,28 +168,43 @@ export default function Admin() {
       setPaymentSettings(paymentSettingsData);
     } catch (error) {
       console.error("Error loading data:", error);
+      toast({
+        title: "Chyba při načítání dat",
+        description: error instanceof Error ? error.message : "Nepodařilo se načíst data",
+        variant: "destructive",
+      });
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   const loadPlans = async () => {
+    console.log("Loading subscription plans...");
     const { data, error } = await supabase
       .from("subscription_plans")
       .select("*")
       .order("price", { ascending: true });
-    if (error) throw error;
+    if (error) {
+      console.error("Error loading plans:", error);
+      throw error;
+    }
+    console.log("Plans loaded:", data?.length || 0, data);
     return data || [];
   };
 
   const loadPackages = async () => {
+    console.log("Loading credit packages...");
     const { data, error } = await supabase
       .from("credit_packages")
       .select("*")
       .order("display_order", { ascending: true });
-    if (error) throw error;
+    if (error) {
+      console.error("Error loading packages:", error);
+      throw error;
+    }
+    console.log("Packages loaded:", data?.length || 0, data);
     return data || [];
   };
 

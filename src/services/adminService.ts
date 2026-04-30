@@ -356,6 +356,7 @@ export const adminService = {
   },
 
   async getPaymentSettings(): Promise<Record<string, string>> {
+    console.log("Fetching payment settings...");
     const { data, error } = await supabase
       .from("payment_settings")
       .select("*")
@@ -366,6 +367,7 @@ export const adminService = {
       return {};
     }
 
+    console.log("Payment settings fetched:", data?.length || 0, data);
     const settings: Record<string, string> = {};
     (data || []).forEach((setting: any) => {
       settings[setting.setting_key] = setting.setting_value;
