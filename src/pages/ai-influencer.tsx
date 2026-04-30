@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User, Video, Sparkles, LogOut, Trash2, Play, Clock, Loader2, UserPlus, Coins } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { useToast } from "@/hooks/use-toast";
 import { creditsService } from "@/services/creditsService";
 import { aiInfluencerService, type AIInfluencer, type InfluencerVideo, type VoiceType, type Personality } from "@/services/aiInfluencerService";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +39,7 @@ const PERSONALITIES = [
 
 export default function AIInfluencer() {
   const router = useRouter();
+  const { toast } = useToast();
   const [credits, setCredits] = useState(0);
   const [influencers, setInfluencers] = useState<AIInfluencer[]>([]);
   const [videos, setVideos] = useState<InfluencerVideo[]>([]);
