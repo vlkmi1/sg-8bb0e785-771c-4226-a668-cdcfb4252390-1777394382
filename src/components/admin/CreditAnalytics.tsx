@@ -18,7 +18,6 @@ interface UsageData {
   usage_count: number;
   total_credits: number;
 }
-
 interface StatsCard {
   title: string;
   value: string;
